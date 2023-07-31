@@ -4,6 +4,7 @@ import subprocess
 import configparser
 import filecmp
 import json
+import shutil
 import psutil
 import requests
 import time
@@ -52,10 +53,20 @@ def run_steamcmd_command(command):
     global steampid
     steampid = process.pid
 
-    while True:
-        output = process.stdout.readline().rstrip()
-        if process.poll() is not None:
-            break
+    for output in process.stdout:
+        output = output.rstrip()
+        if output.strip():
+            print(output)
+
+    if process.poll() is not None:
+        return process.returncode
+
+    process.communicate()
+
+    if process.returncode != 0:
+        show_message("Warning", "SteamCMD encountered an error while downloading, try again!")
+
+    return process.returncode
 
 def get_steamcmd_path():
     config = configparser.ConfigParser()
@@ -158,17 +169,11 @@ def download_workshop_map(workshop_id, destination_folder, progress_bar, speed_l
             return
 
         os.makedirs(folder_name_path, exist_ok=True)
-        map_files = os.listdir(map_folder)
 
-        for map_file in map_files:
-            source_path = os.path.join(map_folder, map_file)
-            destination_path = os.path.join(folder_name_path, map_file)
-
-            if os.path.exists(destination_path) and filecmp.cmp(source_path, destination_path):
-                pass
-            else:
-                os.replace(source_path, destination_path)
-                QCoreApplication.processEvents()
+        try:
+            shutil.copytree(map_folder, folder_name_path, dirs_exist_ok=True)
+        except Exception as E:
+            print(f"Error copying files: {E}")
 
         show_message("Download Complete", f"{mod_type} files are downloaded at {folder_name_path}")
 
