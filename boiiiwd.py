@@ -11,6 +11,8 @@ from bs4 import BeautifulSoup
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox, QHBoxLayout, QProgressBar, QSizePolicy
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtCore import QCoreApplication
+from PyQt5.QtGui import QIcon
+import webbrowser
 import qdarktheme
 
 CONFIG_FILE_PATH = "config.ini"
@@ -167,12 +169,22 @@ class WorkshopDownloaderApp(QWidget):
 
     def initUI(self):
         self.setWindowTitle('BOIII Workshop Downloader')
+        self.setWindowIcon(QIcon('ryuk.ico'))
         self.setGeometry(100, 100, 400, 200)
 
         layout = QVBoxLayout()
 
+        browse_layout = QHBoxLayout()
+
         self.label_workshop_id = QLabel("Enter the Workshop ID of the map/mod you want to download:")
-        layout.addWidget(self.label_workshop_id)
+        browse_layout.addWidget(self.label_workshop_id, 3)
+
+        self.button_browse = QPushButton("Browse")
+        self.button_browse.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.button_browse.clicked.connect(self.open_browser)
+        browse_layout.addWidget(self.button_browse, 1)
+
+        layout.addLayout(browse_layout)
 
         self.edit_workshop_id = QLineEdit()
         layout.addWidget(self.edit_workshop_id)
@@ -249,6 +261,10 @@ class WorkshopDownloaderApp(QWidget):
     def on_download_finished(self):
         self.button_download.setEnabled(True)
         self.save_config(self.edit_destination_folder.text(), self.edit_steamcmd_path.text())
+
+    def open_browser(self):
+        link = "https://steamcommunity.com/app/311210/workshop/"
+        webbrowser.open(link)
 
     def load_config(self):
         config = configparser.ConfigParser()
