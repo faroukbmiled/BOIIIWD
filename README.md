@@ -4,7 +4,7 @@
 
 
 ## Pre Usage:
-- Place [SteamCMD](https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip) inside the same folder as the script and run it to let it update and install
+- Place [SteamCMD](https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip) in the script's folder, and execute it to initiate SteamCMD.
   
 ## Usage:
 - ```pip install -r requirements.txt```
