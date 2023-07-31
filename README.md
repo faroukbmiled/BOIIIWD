@@ -1,6 +1,7 @@
 # BOIIIWD
 - A GUI Steam Workshop downloader meant for BO3 (boiii client) built using PyQt5 <br>
-![image](https://github.com/faroukbmiled/BOIIIWD/assets/51106560/516daa16-e349-44b9-90cb-01718309f357)
+![image](https://github.com/faroukbmiled/BOIIIWD/assets/51106560/a33bd233-3879-47cf-99f3-0b22efa10da3)
+
 
 ## release:
 - Download the [release](https://github.com/faroukbmiled/BOIIIWD/releases/tag/Release) zip which has everything you need
