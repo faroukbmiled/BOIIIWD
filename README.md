@@ -1,5 +1,5 @@
 # BOIIIWD
-- A GUI Workshop downloader meant for BO3 (boiii) built using PyQt5 <br>
+- A GUI Steam Workshop downloader meant for BO3 (boiii client) built using PyQt5 <br>
 ![image](https://github.com/faroukbmiled/BOIIIWD/assets/51106560/516daa16-e349-44b9-90cb-01718309f357)
 
 
