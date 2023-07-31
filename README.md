@@ -3,7 +3,7 @@
 ![image](https://github.com/faroukbmiled/BOIIIWD/assets/51106560/d8b68cc0-2d94-4d12-8f4c-0a11cc7616c5)
 
 ## Pre Usage:
-- Place [SteamCMD](https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip) inside the same folder as the script and run it to do update and install
+- Place [SteamCMD](https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip) inside the same folder as the script and run it to let it update and install
   
 ## Usage:
 - ```pip install -r requirements.txt```
