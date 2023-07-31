@@ -1,0 +1,5 @@
+beautifulsoup4==4.11.1
+PyQt5==5.15.9
+PyQt5_sip==12.11.0
+Requests==2.31.0
+pyqtdarktheme==2.1.0
