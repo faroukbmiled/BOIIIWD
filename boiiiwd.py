@@ -4,6 +4,7 @@ import subprocess
 import configparser
 import filecmp
 import json
+import psutil
 import requests
 import time
 import threading
@@ -16,7 +17,8 @@ import webbrowser
 import qdarktheme
 
 CONFIG_FILE_PATH = "config.ini"
-global stopped
+global stopped, steampid
+steampid = None
 stopped = False
 
 def cwd():
@@ -37,6 +39,8 @@ def create_default_config():
 def run_steamcmd_command(command):
     steamcmd_path = get_steamcmd_path()
     process = subprocess.Popen([steamcmd_path + "\steamcmd.exe"] + command.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)
+    global steampid
+    steampid = process.pid
 
     while True:
         output = process.stdout.readline().rstrip()
@@ -85,26 +89,35 @@ def update_progress_bar(current_size, file_size, progress_bar):
         progress = int(current_size / file_size * 100)
         progress_bar.setValue(progress)
 
-def check_and_update_progress(file_size, folder_name_path, progress_bar):
+def check_and_update_progress(file_size, folder_name_path, progress_bar, speed_label):
+    previous_net_speed = 0
+
     while not stopped:
         current_size = sum(os.path.getsize(os.path.join(folder_name_path, f)) for f in os.listdir(folder_name_path))
         update_progress_bar(current_size, file_size, progress_bar)
+
+        current_net_speed = psutil.net_io_counters().bytes_recv
+
+        net_speed_kbps = (current_net_speed - previous_net_speed) / 1024
+        previous_net_speed = current_net_speed
+
+        speed_label.setText(f"Network Speed: {net_speed_kbps:.2f} KB/s")
+
         QCoreApplication.processEvents()
         time.sleep(1)
 
-def download_workshop_map(workshop_id, destination_folder, progress_bar):
+def download_workshop_map(workshop_id, destination_folder, progress_bar, speed_label):
     file_size = get_workshop_file_size(workshop_id)
     if file_size is None:
         show_message("Error", "Failed to retrieve file size.")
         return
 
     download_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "downloads", "311210", workshop_id)
-    print(download_folder)
     if not os.path.exists(download_folder):
         os.makedirs(download_folder)
 
     command = f"+login anonymous +workshop_download_item 311210 {workshop_id} +quit"
-    progress_thread = threading.Thread(target=check_and_update_progress, args=(file_size, download_folder, progress_bar))
+    progress_thread = threading.Thread(target=check_and_update_progress, args=(file_size, download_folder, progress_bar, speed_label))
     progress_thread.daemon = True
     progress_thread.start()
 
@@ -156,14 +169,15 @@ def show_message(title, message):
 class DownloadThread(QThread):
     finished = pyqtSignal()
 
-    def __init__(self, workshop_id, destination_folder, progress_bar):
+    def __init__(self, workshop_id, destination_folder, progress_bar, label_speed):
         super().__init__()
         self.workshop_id = workshop_id
         self.destination_folder = destination_folder
         self.progress_bar = progress_bar
+        self.label_speed = label_speed
 
     def run(self):
-        download_workshop_map(self.workshop_id, self.destination_folder, self.progress_bar)
+        download_workshop_map(self.workshop_id, self.destination_folder, self.progress_bar, self.label_speed)
         self.finished.emit()
 
 class WorkshopDownloaderApp(QWidget):
@@ -222,6 +236,9 @@ class WorkshopDownloaderApp(QWidget):
 
         layout.addLayout(buttons_layout)
 
+        self.label_speed = QLabel("Network Speed: 0 KB/s")
+        layout.addWidget(self.label_speed)
+
         self.progress_bar = QProgressBar()
         layout.addWidget(self.progress_bar)
 
@@ -249,7 +266,7 @@ class WorkshopDownloaderApp(QWidget):
         self.progress_bar.setValue(0)
         self.button_download.setEnabled(False)
 
-        self.download_thread = DownloadThread(workshop_id, destination_folder, self.progress_bar)
+        self.download_thread = DownloadThread(workshop_id, destination_folder, self.progress_bar, self.label_speed)
         self.download_thread.finished.connect(self.on_download_finished)
         self.download_thread.start()
 
@@ -264,9 +281,13 @@ class WorkshopDownloaderApp(QWidget):
 
         self.button_download.setEnabled(True)
         self.button_stop.setEnabled(False)
+        self.progress_bar.setValue(0)
+        self.label_speed.setText(f"Network Speed: {0:.2f} KB/s")
 
     def on_download_finished(self):
         self.button_download.setEnabled(True)
+        self.progress_bar.setValue(0)
+        self.label_speed.setText(f"Network Speed: {0:.2f} KB/s")
         self.save_config(self.edit_destination_folder.text(), self.edit_steamcmd_path.text())
 
     def open_browser(self):
