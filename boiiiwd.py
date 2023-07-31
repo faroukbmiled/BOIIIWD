@@ -27,6 +27,16 @@ def cwd():
     else:
         return os.path.dirname(os.path.abspath(__file__))
 
+def convert_speed(speed_bytes):
+    if speed_bytes < 1024:
+        return speed_bytes, "B/s"
+    elif speed_bytes < 1024 * 1024:
+        return speed_bytes / 1024, "KB/s"
+    elif speed_bytes < 1024 * 1024 * 1024:
+        return speed_bytes / (1024 * 1024), "MB/s"
+    else:
+        return speed_bytes / (1024 * 1024 * 1024), "GB/s"
+
 def create_default_config():
     config = configparser.ConfigParser()
     config["Settings"] = {
@@ -98,10 +108,12 @@ def check_and_update_progress(file_size, folder_name_path, progress_bar, speed_l
 
         current_net_speed = psutil.net_io_counters().bytes_recv
 
-        net_speed_kbps = (current_net_speed - previous_net_speed) / 1024
+        net_speed_bytes = current_net_speed - previous_net_speed
         previous_net_speed = current_net_speed
 
-        speed_label.setText(f"Network Speed: {net_speed_kbps:.2f} KB/s")
+        net_speed, speed_unit = convert_speed(net_speed_bytes)
+
+        speed_label.setText(f"Network Speed: {net_speed:.2f} {speed_unit}")
 
         QCoreApplication.processEvents()
         time.sleep(1)
