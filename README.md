@@ -1,5 +1,5 @@
 # BOIIIWD
-- A GUI Workshop downloader meant for BO3 (boiii) build using PyQt5 <br>
+- A GUI Workshop downloader meant for BO3 (boiii) built using PyQt5 <br>
 ![image](https://github.com/faroukbmiled/BOIIIWD/assets/51106560/d8b68cc0-2d94-4d12-8f4c-0a11cc7616c5)
 
 ## Pre Usage:
