@@ -9,6 +9,7 @@
 ## Usage:
 - ```pip install -r requirements.txt```
 - ```python boiiiwd.py```
+- to get a workshop id look at the link and get the id from it lol (For example: this workshop link "https://steamcommunity.com/sharedfiles/filedetails/?id=3011930738" 3011930738 would be the workshop id)
 
 ## Compiling into an exe (pyinstaller):
 - ```pip install pyinstaller```
