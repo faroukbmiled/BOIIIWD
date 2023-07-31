@@ -2,7 +2,11 @@
 - A GUI Steam Workshop downloader meant for BO3 (boiii client) built using PyQt5 <br>
 ![image](https://github.com/faroukbmiled/BOIIIWD/assets/51106560/516daa16-e349-44b9-90cb-01718309f357)
 
-
+## release:
+- Download the [release](https://github.com/faroukbmiled/BOIIIWD/releases/tag/Release) zip which has everything you need
+- Run steamcmd.exe to initialize it first
+- Finally run BOIIIWD.exe and use it
+  
 ## Pre Usage:
 - Place [SteamCMD](https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip) in the script's folder, and execute it to initiate SteamCMD.
   
