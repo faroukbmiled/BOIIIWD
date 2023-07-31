@@ -4,7 +4,7 @@
 
 ## release:
 - Download the [release](https://github.com/faroukbmiled/BOIIIWD/releases/tag/Release) zip which has everything you need
-- Run steamcmd.exe to initialize it first
+- Run steamcmd.exe to initialize it first -> Should only be done once
 - Finally run BOIIIWD.exe and use it
   
 ## Pre Usage:
