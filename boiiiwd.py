@@ -58,7 +58,17 @@ def create_default_config():
 
 def run_steamcmd_command(command):
     steamcmd_path = get_steamcmd_path()
-    process = subprocess.Popen([steamcmd_path + "\steamcmd.exe"] + command.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)
+
+    process = subprocess.Popen(
+        [steamcmd_path + "\steamcmd.exe"] + command.split(),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        universal_newlines=True,
+        creationflags=subprocess.CREATE_NO_WINDOW
+    )
+
     global steampid
     steampid = process.pid
 
