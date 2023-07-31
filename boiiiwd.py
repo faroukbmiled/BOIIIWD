@@ -19,10 +19,16 @@ CONFIG_FILE_PATH = "config.ini"
 global stopped
 stopped = False
 
+def cwd():
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    else:
+        return os.path.dirname(os.path.abspath(__file__))
+
 def create_default_config():
     config = configparser.ConfigParser()
     config["Settings"] = {
-        "SteamCMDPath": "steamcmd",
+        "SteamCMDPath": cwd(),
         "DestinationFolder": ""
     }
     with open(CONFIG_FILE_PATH, "w") as config_file:
@@ -30,7 +36,7 @@ def create_default_config():
 
 def run_steamcmd_command(command):
     steamcmd_path = get_steamcmd_path()
-    process = subprocess.Popen([steamcmd_path] + command.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)
+    process = subprocess.Popen([steamcmd_path + "\steamcmd.exe"] + command.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)
 
     while True:
         output = process.stdout.readline().rstrip()
@@ -40,7 +46,7 @@ def run_steamcmd_command(command):
 def get_steamcmd_path():
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_PATH)
-    return config.get("Settings", "SteamCMDPath", fallback="steamcmd")
+    return config.get("Settings", "SteamCMDPath", fallback=cwd())
 
 def set_steamcmd_path(steamcmd_path):
     config = configparser.ConfigParser()
@@ -92,7 +98,8 @@ def download_workshop_map(workshop_id, destination_folder, progress_bar):
         show_message("Error", "Failed to retrieve file size.")
         return
 
-    download_folder = os.path.join("steamapps", "workshop", "downloads", "311210", workshop_id)
+    download_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "downloads", "311210", workshop_id)
+    print(download_folder)
     if not os.path.exists(download_folder):
         os.makedirs(download_folder)
 
@@ -107,7 +114,7 @@ def download_workshop_map(workshop_id, destination_folder, progress_bar):
     stopped = True
     progress_bar.setValue(100)
 
-    map_folder = os.path.join("steamapps", "workshop", "content", "311210", workshop_id)
+    map_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", workshop_id)
 
     json_file_path = os.path.join(map_folder, "workshop.json")
 
@@ -271,7 +278,7 @@ class WorkshopDownloaderApp(QWidget):
         if os.path.exists(CONFIG_FILE_PATH):
             config.read(CONFIG_FILE_PATH)
             destination_folder = config.get("Settings", "DestinationFolder", fallback="")
-            steamcmd_path = config.get("Settings", "SteamCMDPath", fallback="")
+            steamcmd_path = config.get("Settings", "SteamCMDPath", fallback=cwd())
             self.edit_destination_folder.setText(destination_folder)
             self.edit_steamcmd_path.setText(steamcmd_path)
         else:
