@@ -2,18 +2,18 @@ import os
 import sys
 import subprocess
 import configparser
-import filecmp
 import json
 import shutil
+import zipfile
 import psutil
 import requests
 import time
 import threading
 from bs4 import BeautifulSoup
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox, QHBoxLayout, QProgressBar, QSizePolicy
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox, QHBoxLayout, QProgressBar, QSizePolicy, QFileDialog
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtCore import QCoreApplication
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QPixmap
 import webbrowser
 import qdarktheme
 
@@ -27,6 +27,15 @@ def cwd():
         return os.path.dirname(sys.executable)
     else:
         return os.path.dirname(os.path.abspath(__file__))
+
+def check_steamcmd():
+    steamcmd_path = get_steamcmd_path()
+    steamcmd_exe_path = os.path.join(steamcmd_path, "steamcmd.exe")
+
+    if not os.path.exists(steamcmd_exe_path):
+        return False
+
+    return True
 
 def convert_speed(speed_bytes):
     if speed_bytes < 1024:
@@ -92,11 +101,17 @@ def get_file_size(url):
         return file_size
     return None
 
-def get_workshop_file_size(workshop_id):
+def get_workshop_file_size(workshop_id, raw=None):
     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}&searchtext="
     response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
     file_size_element = soup.find("div", class_="detailsStatRight")
+
+    if raw:
+        file_size_text = file_size_element.get_text(strip=True)
+        file_size_text = file_size_text.replace(",", "")
+        return file_size_text
+
     if file_size_element:
         file_size_text = file_size_element.get_text(strip=True)
         file_size_text = file_size_text.replace(",", "")
@@ -175,12 +190,13 @@ def download_workshop_map(workshop_id, destination_folder, progress_bar, speed_l
         except Exception as E:
             print(f"Error copying files: {E}")
 
-        show_message("Download Complete", f"{mod_type} files are downloaded at {folder_name_path}")
+        show_message("Download Complete", f"{mod_type} files are downloaded at {folder_name_path}", icon=QMessageBox.Information)
 
-def show_message(title, message):
+def show_message(title, message, icon=QMessageBox.Warning):
     msg = QMessageBox()
     msg.setWindowTitle(title)
     msg.setText(message)
+    msg.setIcon(icon)
     msg.exec_()
 
 class DownloadThread(QThread):
@@ -201,9 +217,54 @@ class WorkshopDownloaderApp(QWidget):
     def __init__(self):
         super().__init__()
         self.initUI()
+
+        if not check_steamcmd():
+            self.show_warning_message()
+
         self.download_thread = None
         self.button_download.setEnabled(True)
         self.button_stop.setEnabled(False)
+
+    def show_warning_message(self):
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Warning")
+        msg_box.setWindowIcon(QIcon('ryuk.ico'))
+        msg_box.setText("steamcmd.exe was not found in the specified directory.\nPress Download to get it or Press OK and select it from there!.")
+        msg_box.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+
+        download_button = msg_box.addButton("Download", QMessageBox.AcceptRole)
+        download_button.clicked.connect(self.download_steamcmd)
+
+        result = msg_box.exec_()
+        if result == QMessageBox.Cancel:
+            sys.exit(0)
+
+    def download_steamcmd(self):
+        steamcmd_url = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip"
+        steamcmd_zip_path = os.path.join(cwd(), "steamcmd.zip")
+
+        try:
+            response = requests.get(steamcmd_url)
+            response.raise_for_status()
+
+            with open(steamcmd_zip_path, "wb") as zip_file:
+                zip_file.write(response.content)
+
+            with zipfile.ZipFile(steamcmd_zip_path, "r") as zip_ref:
+                zip_ref.extractall(cwd())
+
+            if check_steamcmd():
+                show_message("Success", "SteamCMD has been downloaded and extracted.", icon=QMessageBox.Information)
+                os.remove(steamcmd_zip_path)
+            else:
+                show_message("Error", "Failed to find steamcmd.exe after extraction.")
+                os.remove(steamcmd_zip_path)
+        except requests.exceptions.RequestException as e:
+            show_message("Error", f"Failed to download SteamCMD: {e}")
+            os.remove(steamcmd_zip_path)
+        except zipfile.BadZipFile:
+            show_message("Error", "Failed to extract SteamCMD. The downloaded file might be corrupted.")
+            os.remove(steamcmd_zip_path)
 
     def initUI(self):
         self.setWindowTitle('BOIII Workshop Downloader')
@@ -224,20 +285,47 @@ class WorkshopDownloaderApp(QWidget):
 
         layout.addLayout(browse_layout)
 
+        info_workshop_layout = QHBoxLayout()
+
         self.edit_workshop_id = QLineEdit()
-        layout.addWidget(self.edit_workshop_id)
+        self.edit_workshop_id.setPlaceholderText("Workshop ID => Press info to see map/mod info")
+        info_workshop_layout.addWidget(self.edit_workshop_id, 3)
+
+        layout.addLayout(info_workshop_layout)
+        self.info_button = QPushButton("Info")
+        self.info_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.info_button.clicked.connect(self.show_map_info)
+        info_workshop_layout.addWidget(self.info_button, 1)
 
         self.label_destination_folder = QLabel("Enter Your BOIII folder:")
-        layout.addWidget(self.label_destination_folder)
+        layout.addWidget(self.label_destination_folder, 3)
 
+        Boiii_Input = QHBoxLayout()
         self.edit_destination_folder = QLineEdit()
-        layout.addWidget(self.edit_destination_folder)
+        self.edit_destination_folder.setPlaceholderText("Your BOIII Instalation folder")
+        Boiii_Input.addWidget(self.edit_destination_folder, 90)
+
+        layout.addLayout(Boiii_Input)
+
+        self.button_BOIII_browse = QPushButton("Select")
+        self.button_BOIII_browse.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.button_BOIII_browse.clicked.connect(self.open_BOIII_browser)
+        Boiii_Input.addWidget(self.button_BOIII_browse, 10)
 
         self.label_steamcmd_path = QLabel("Enter SteamCMD path (default):")
         layout.addWidget(self.label_steamcmd_path)
 
+        steamcmd_path = QHBoxLayout()
         self.edit_steamcmd_path = QLineEdit()
-        layout.addWidget(self.edit_steamcmd_path)
+        steamcmd_path.addWidget(self.edit_steamcmd_path, 90)
+
+        self.button_steamcmd_browse = QPushButton("Select")
+        self.button_steamcmd_browse.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.button_steamcmd_browse.clicked.connect(self.open_steamcmd_path_browser)
+        steamcmd_path.addWidget(self.button_steamcmd_browse, 10)
+
+        layout.addLayout(steamcmd_path)
+        layout.addSpacing(10)
 
         buttons_layout = QHBoxLayout()
 
@@ -253,11 +341,21 @@ class WorkshopDownloaderApp(QWidget):
 
         layout.addLayout(buttons_layout)
 
+        InfoBar = QHBoxLayout()
+
         self.label_speed = QLabel("Network Speed: 0 KB/s")
-        layout.addWidget(self.label_speed)
+        InfoBar.addWidget(self.label_speed, 3)
+
+        self.label_file_size = QLabel("File size: 0KB")
+        InfoBar.addWidget(self.label_file_size, 1)
+
+        InfoWidget = QWidget()
+        InfoWidget.setLayout(InfoBar)
+
+        layout.addWidget(InfoWidget)
 
         self.progress_bar = QProgressBar()
-        layout.addWidget(self.progress_bar)
+        layout.addWidget(self.progress_bar, 75)
 
         self.setLayout(layout)
 
@@ -267,9 +365,20 @@ class WorkshopDownloaderApp(QWidget):
         global stopped
         stopped = False
 
+        if not check_steamcmd():
+            self.show_warning_message()
+            return
+
+        steamcmd_path = get_steamcmd_path()
+        steamcmd_exe_path = os.path.join(steamcmd_path, "steamcmd.exe")
+        steamcmd_size = os.path.getsize(steamcmd_exe_path)
+        if steamcmd_size < 3 * 1024 * 1024:
+            show_message("Warning", "Please wait a bit until SteamCMD downloads and initializes. It might take some time, but it will only happen once.", icon=QMessageBox.Warning)
+
         workshop_id = self.edit_workshop_id.text()
         destination_folder = self.edit_destination_folder.text()
         steamcmd_path = self.edit_steamcmd_path.text()
+        self.label_file_size.setText(f"File size: {get_workshop_file_size(workshop_id, raw=True)}")
 
         if not destination_folder:
             show_message("Error", "Please select a destination folder.")
@@ -300,11 +409,24 @@ class WorkshopDownloaderApp(QWidget):
         self.button_stop.setEnabled(False)
         self.progress_bar.setValue(0)
         self.label_speed.setText(f"Network Speed: {0:.2f} KB/s")
+        self.label_file_size.setText(f"File size: 0KB")
+
+    def open_BOIII_browser(self):
+        selected_folder = QFileDialog.getExistingDirectory(self, "Select BOIII Folder", "")
+        if selected_folder:
+            self.edit_destination_folder.setText(selected_folder)
+
+    def open_steamcmd_path_browser(self):
+        selected_folder = QFileDialog.getExistingDirectory(self, "Select SteamCMD Folder", "")
+        if selected_folder:
+            self.edit_steamcmd_path.setText(selected_folder)
 
     def on_download_finished(self):
         self.button_download.setEnabled(True)
         self.progress_bar.setValue(0)
         self.label_speed.setText(f"Network Speed: {0:.2f} KB/s")
+        self.label_file_size.setText(f"File size: 0KB")
+        self.button_stop.setEnabled(False)
         self.save_config(self.edit_destination_folder.text(), self.edit_steamcmd_path.text())
 
     def open_browser(self):
@@ -329,6 +451,72 @@ class WorkshopDownloaderApp(QWidget):
         config.set("Settings", "SteamCMDPath", steamcmd_path)
         with open(CONFIG_FILE_PATH, "w") as config_file:
             config.write(config_file)
+
+    def show_map_info(self):
+        workshop_id = self.edit_workshop_id.text()
+        if not workshop_id:
+            QMessageBox.warning(self, "Warning", "Please enter a Workshop ID first.")
+            return
+
+        self.label_file_size.setText(f"File size: {get_workshop_file_size(workshop_id, raw=True)}")
+        try:
+            url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
+            response = requests.get(url)
+            response.raise_for_status()
+            content = response.text
+
+            soup = BeautifulSoup(content, "html.parser")
+
+            map_mod_type = soup.find("div", class_="rightDetailsBlock").text.strip()
+            map_name = soup.find("div", class_="workshopItemTitle").text.strip()
+            map_size = soup.find("div", class_="detailsStatRight").text.strip()
+            stars_div = soup.find("div", class_="fileRatingDetails")
+            stars = stars_div.find("img")["src"]
+
+            try:
+                preview_image_element = soup.find("img", id="previewImage")
+                workshop_item_image_url = preview_image_element["src"]
+            except:
+                preview_image_element = soup.find("img", id="previewImageMain")
+                workshop_item_image_url = preview_image_element["src"]
+
+            image_response = requests.get(workshop_item_image_url)
+            image_response.raise_for_status()
+
+            stars_response = requests.get(stars)
+            stars_response.raise_for_status()
+
+            pixmap = QPixmap()
+            pixmap.loadFromData(image_response.content)
+
+            pixmap_stars = QPixmap()
+            pixmap_stars.loadFromData(stars_response.content)
+
+            label = QLabel(self)
+            label.setPixmap(pixmap)
+            label.setAlignment(Qt.AlignCenter)
+
+            label_stars = QLabel(self)
+            label_stars.setPixmap(pixmap_stars)
+            label_stars.setAlignment(Qt.AlignCenter)
+
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle("Map/Mod Information")
+            msg_box.setIconPixmap(pixmap)
+            msg_box.setText(f"Name: {map_name}\nType: {map_mod_type}\nSize: {map_size}")
+
+            layout = QVBoxLayout()
+            layout.addWidget(label)
+            layout.addWidget(label_stars)
+            msg_box.setLayout(layout)
+
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.setDetailedText(f"Stars: {stars}\nLink: {url}")
+
+            msg_box.exec_()
+
+        except requests.exceptions.RequestException as e:
+            QMessageBox.warning(self, "Error", f"Failed to fetch map information.\nError: {e}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
