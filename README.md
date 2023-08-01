@@ -5,7 +5,7 @@
 ## Usage (exe):
 - (optional) Download and Run [steamcmd.exe](https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip) to initialize it first (in the same dir as the script/exe) -> Should only be done once
 - Run [BOIIIWD.exe](https://github.com/faroukbmiled/BOIIIWD/releases/download/v0.1.2/Release.zip) and use it (it'll ask you to download steamcmd within the app if not found)
-- That's it put in your map/mod workshop id then hit Download and wait for it to finish, when it does just launch your game (Please check [Notes](#notes) before you ask something)
+- That's it put in your map/mod workshop id then hit Download and wait for it to finish, when it does just launch your game (Please check [Notes](#notes) before you ask anything)
 
 ## Usage (script):
 - ```pip install -r requirements.txt```
