@@ -5,7 +5,7 @@
 ## release:
 - (optional) Download the [release](https://github.com/faroukbmiled/BOIIIWD/releases/tag/Release) zip which has everything you need
 - (optional) Run steamcmd.exe to initialize it first -> Should only be done once
-- Run BOIIIWD.exe and use it (it'll ask you to download steamcmd if not found)
+- Run [BOIIIWD.exe](https://github.com/faroukbmiled/BOIIIWD/releases/download/v0.1.2/Release.zip) and use it (it'll ask you to download steamcmd if not found)
   
 ## Pre Usage:
 - Place [SteamCMD](https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip) in the script's folder, and execute it to initiate SteamCMD.
