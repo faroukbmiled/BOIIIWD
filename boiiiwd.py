@@ -104,24 +104,10 @@ def get_steamcmd_path():
     config.read(CONFIG_FILE_PATH)
     return config.get("Settings", "SteamCMDPath", fallback=cwd())
 
-def set_steamcmd_path(steamcmd_path):
-    config = configparser.ConfigParser()
-    config.read(CONFIG_FILE_PATH)
-    config.set("Settings", "SteamCMDPath", steamcmd_path)
-    with open(CONFIG_FILE_PATH, "w") as config_file:
-        config.write(config_file)
-
 def extract_json_data(json_path):
     with open(json_path, "r") as json_file:
         data = json.load(json_file)
     return data["Type"], data["FolderName"]
-
-def get_file_size(url):
-    response = requests.head(url)
-    if "Content-Length" in response.headers:
-        file_size = int(response.headers["Content-Length"])
-        return file_size
-    return None
 
 def convert_bytes_to_readable(size_in_bytes):
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
