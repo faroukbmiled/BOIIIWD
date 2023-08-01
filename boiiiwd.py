@@ -123,6 +123,12 @@ def get_file_size(url):
         return file_size
     return None
 
+def convert_bytes_to_readable(size_in_bytes):
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if size_in_bytes < 1024.0:
+            return f"{size_in_bytes:.2f} {unit}"
+        size_in_bytes /= 1024.0
+
 def get_workshop_file_size(workshop_id, raw=None):
     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}&searchtext="
     response = requests.get(url)
@@ -133,7 +139,9 @@ def get_workshop_file_size(workshop_id, raw=None):
         if raw:
             file_size_text = file_size_element.get_text(strip=True)
             file_size_text = file_size_text.replace(",", "")
-            return file_size_text
+            file_size_in_mb = float(file_size_text.replace(" MB", ""))
+            file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
+            return convert_bytes_to_readable(file_size_in_bytes)
 
         if file_size_element:
             file_size_text = file_size_element.get_text(strip=True)
