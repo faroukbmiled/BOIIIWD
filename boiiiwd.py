@@ -292,7 +292,7 @@ class WorkshopDownloaderApp(QWidget):
             os.remove(steamcmd_zip_path)
 
     def initUI(self):
-        self.setWindowTitle('BOIII Workshop Downloader')
+        self.setWindowTitle('BOIII Workshop Downloader v0.1.2-beta')
         self.setWindowIcon(QIcon('ryuk.ico'))
         self.setGeometry(100, 100, 400, 200)
 
