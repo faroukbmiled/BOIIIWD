@@ -3,8 +3,7 @@
 ![image](https://github.com/faroukbmiled/BOIIIWD/assets/51106560/2395fe6d-a92e-4ac5-93d2-4b42130f700c)
 
 ## release:
-- (optional) Download the [release](https://github.com/faroukbmiled/BOIIIWD/releases/tag/v0.1.2) zip which has everything you need
-- (optional) Run steamcmd.exe to initialize it first -> Should only be done once
+- (optional) Download and Run steamcmd.exe to initialize it first (in the same dir as the script/exe) -> Should only be done once
 - Run [BOIIIWD.exe](https://github.com/faroukbmiled/BOIIIWD/releases/download/v0.1.2/Release.zip) and use it (it'll ask you to download steamcmd if not found)
   
 ## Pre Usage:
