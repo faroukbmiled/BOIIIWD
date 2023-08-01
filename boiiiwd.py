@@ -308,6 +308,7 @@ class WorkshopDownloaderApp(QWidget):
 
         self.edit_workshop_id = QLineEdit()
         self.edit_workshop_id.setPlaceholderText("Workshop ID => Press info to see map/mod info")
+        self.edit_workshop_id.textChanged.connect(self.reset_file_size)
         info_workshop_layout.addWidget(self.edit_workshop_id, 3)
 
         layout.addLayout(info_workshop_layout)
@@ -478,6 +479,9 @@ class WorkshopDownloaderApp(QWidget):
         config.set("Settings", "SteamCMDPath", steamcmd_path)
         with open(CONFIG_FILE_PATH, "w") as config_file:
             config.write(config_file)
+
+    def reset_file_size(self):
+        self.label_file_size.setText(f"File size: 0KB")
 
     def show_map_info(self):
         workshop_id = self.edit_workshop_id.text()
