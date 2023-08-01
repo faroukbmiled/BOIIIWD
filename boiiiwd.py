@@ -37,6 +37,23 @@ def check_steamcmd():
 
     return True
 
+def valid_id(workshop_id):
+    url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
+    response = requests.get(url)
+    response.raise_for_status()
+    content = response.text
+    soup = BeautifulSoup(content, "html.parser")
+
+    try:
+        soup.find("div", class_="rightDetailsBlock").text.strip()
+        soup.find("div", class_="workshopItemTitle").text.strip()
+        soup.find("div", class_="detailsStatRight").text.strip()
+        stars_div = soup.find("div", class_="fileRatingDetails")
+        stars_div.find("img")["src"]
+        return True
+    except:
+        return False
+
 def convert_speed(speed_bytes):
     if speed_bytes < 1024:
         return speed_bytes, "B/s"
@@ -71,11 +88,6 @@ def run_steamcmd_command(command):
 
     global steampid
     steampid = process.pid
-
-    for output in process.stdout:
-        output = output.rstrip()
-        if output.strip():
-            print(output)
 
     if process.poll() is not None:
         return process.returncode
@@ -117,18 +129,21 @@ def get_workshop_file_size(workshop_id, raw=None):
     soup = BeautifulSoup(response.text, "html.parser")
     file_size_element = soup.find("div", class_="detailsStatRight")
 
-    if raw:
-        file_size_text = file_size_element.get_text(strip=True)
-        file_size_text = file_size_text.replace(",", "")
-        return file_size_text
+    try:
+        if raw:
+            file_size_text = file_size_element.get_text(strip=True)
+            file_size_text = file_size_text.replace(",", "")
+            return file_size_text
 
-    if file_size_element:
-        file_size_text = file_size_element.get_text(strip=True)
-        file_size_text = file_size_text.replace(",", "")
-        file_size_in_mb = float(file_size_text.replace(" MB", ""))
-        file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
-        return file_size_in_bytes
-    return None
+        if file_size_element:
+            file_size_text = file_size_element.get_text(strip=True)
+            file_size_text = file_size_text.replace(",", "")
+            file_size_in_mb = float(file_size_text.replace(" MB", ""))
+            file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
+            return file_size_in_bytes
+        return None
+    except:
+        return None
 
 def update_progress_bar(current_size, file_size, progress_bar):
     if file_size is not None:
@@ -200,7 +215,7 @@ def download_workshop_map(workshop_id, destination_folder, progress_bar, speed_l
         except Exception as E:
             print(f"Error copying files: {E}")
 
-        show_message("Download Complete", f"{mod_type} files are downloaded at {folder_name_path}", icon=QMessageBox.Information)
+        show_message("Download Complete", f"{mod_type} files are downloaded at \n{folder_name_path}\nYou can run the game now!", icon=QMessageBox.Information)
 
 def show_message(title, message, icon=QMessageBox.Warning):
     msg = QMessageBox()
@@ -379,13 +394,21 @@ class WorkshopDownloaderApp(QWidget):
             self.show_warning_message()
             return
 
+        workshop_id = self.edit_workshop_id.text()
+        if not workshop_id.isdigit():
+            QMessageBox.warning(self, "Warning", "Please enter a valid Workshop ID.")
+            return
+
+        if not valid_id(workshop_id):
+            QMessageBox.warning(self, "Warning", "Please enter a valid Workshop ID.")
+            return
+
         steamcmd_path = get_steamcmd_path()
         steamcmd_exe_path = os.path.join(steamcmd_path, "steamcmd.exe")
         steamcmd_size = os.path.getsize(steamcmd_exe_path)
         if steamcmd_size < 3 * 1024 * 1024:
             show_message("Warning", "Please wait a bit until SteamCMD downloads and initializes. It might take some time, but it will only happen once.", icon=QMessageBox.Warning)
 
-        workshop_id = self.edit_workshop_id.text()
         destination_folder = self.edit_destination_folder.text()
         steamcmd_path = self.edit_steamcmd_path.text()
         self.label_file_size.setText(f"File size: {get_workshop_file_size(workshop_id, raw=True)}")
@@ -464,8 +487,13 @@ class WorkshopDownloaderApp(QWidget):
 
     def show_map_info(self):
         workshop_id = self.edit_workshop_id.text()
+
         if not workshop_id:
             QMessageBox.warning(self, "Warning", "Please enter a Workshop ID first.")
+            return
+
+        if not workshop_id.isdigit():
+            QMessageBox.warning(self, "Warning", "Please enter a valid Workshop ID.")
             return
 
         self.label_file_size.setText(f"File size: {get_workshop_file_size(workshop_id, raw=True)}")
@@ -477,11 +505,15 @@ class WorkshopDownloaderApp(QWidget):
 
             soup = BeautifulSoup(content, "html.parser")
 
-            map_mod_type = soup.find("div", class_="rightDetailsBlock").text.strip()
-            map_name = soup.find("div", class_="workshopItemTitle").text.strip()
-            map_size = soup.find("div", class_="detailsStatRight").text.strip()
-            stars_div = soup.find("div", class_="fileRatingDetails")
-            stars = stars_div.find("img")["src"]
+            try:
+                map_mod_type = soup.find("div", class_="rightDetailsBlock").text.strip()
+                map_name = soup.find("div", class_="workshopItemTitle").text.strip()
+                map_size = soup.find("div", class_="detailsStatRight").text.strip()
+                stars_div = soup.find("div", class_="fileRatingDetails")
+                stars = stars_div.find("img")["src"]
+            except:
+                QMessageBox.warning(self, "Warning", "Please enter a valid Workshop ID.")
+                return
 
             try:
                 preview_image_element = soup.find("img", id="previewImage")
