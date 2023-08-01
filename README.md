@@ -21,5 +21,5 @@
 ### Notes:
 . It saves your input except for workshop id <br>
 . Excuse the progress bar its pretty shit atm, will be working on it <br>
-. If you do not know where to find your map in-game check this [video](https://youtu.be/XIQjfXXlgQs?t=260) out ,for mods find "mods" in the game's main menu
+. If you do not know where to find your map in-game check this [video](https://youtu.be/XIQjfXXlgQs?t=260) out ,for mods find "mods" in the game's main menu <br>
 . Initializing SteamCMD for the first time could take some time depending on your internet speed
