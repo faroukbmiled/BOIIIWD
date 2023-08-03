@@ -677,8 +677,6 @@ class WorkshopDownloaderApp(QWidget):
 
         layout.addLayout(check_for_update_layout)
 
-        layout.addLayout(check_for_update_layout)
-
         self.setLayout(layout)
 
         self.load_config()
