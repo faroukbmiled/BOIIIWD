@@ -21,4 +21,10 @@
 . Excuse the progress bar its pretty shit atm, will be working on it <br>
 . If you do not know where to find your map in-game check this [video](https://youtu.be/XIQjfXXlgQs?t=260) out ,for mods find "mods" in the game's main menu <br>
 . Initializing SteamCMD for the first time could take some time depending on your internet speed <br>
-. If the download fails when getting big maps its SteamCMD's fault, still working on a workaround
+. If the download fails when getting big maps its SteamCMD's fault, still working on a workaround <br>
+
+### todos:
+- add a menu that shows you current installed mods/maps
+- add an option to login with your account (for better download stability apparently)
+- fix the progress bar (dont know how still, steamcmd sucks in some ways)
+- other improvements regarding the download (steamcmd likes to fail sometimes for no reason)
