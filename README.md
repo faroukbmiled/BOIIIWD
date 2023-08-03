@@ -1,17 +1,15 @@
 # BOIIIWD
-- A GUI Steam Workshop downloader meant for BO3 (boiii client) built using PyQt5 <br>
-![image](https://github.com/faroukbmiled/BOIIIWD/assets/51106560/2395fe6d-a92e-4ac5-93d2-4b42130f700c)
+- A GUI Steam Workshop downloader meant for BO3 ([boiii client](https://github.com/Ezz-lol/boiii-free)) built using PyQt5 <br>
+![image](https://github.com/faroukbmiled/BOIIIWD/assets/51106560/d66a09bf-9601-4443-a08e-217721671adb)
 
 ## Usage (exe):
-- (optional) Download and Run [steamcmd.exe](https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip) to initialize it first (in the same dir as the script/exe) -> Should only be done once
-- Run [BOIIIWD.exe](https://github.com/faroukbmiled/BOIIIWD/releases/download/v0.1.2/Release.zip) and use it (it'll ask you to download steamcmd within the app if not found)
-- That's it put in your map/mod workshop id then hit Download and wait for it to finish, when it does just launch your game (Please check [Notes](#notes) before you ask anything)
+- Run [BOIIIWD.exe](https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip) and use it (it'll ask you to download steamcmd within the app if not found)
+- That's it slap in your workshop item link or just the id then hit Download and wait for it to finish, when it does just launch your game (Please check [Notes](#notes) before you ask anything)
 
 ## Usage (script):
 - ```pip install -r requirements.txt```
 - ```python boiiiwd.py```
-- To get a workshop id look at the link and get the id from it lol (For example: this workshop link "https://steamcommunity.com/sharedfiles/filedetails/?id=3011930738" 3011930738 would be the workshop id)
-* ![image](https://github.com/faroukbmiled/BOIIIWD/assets/51106560/79b7a4f8-894e-4d50-a885-eabed6e5be4e)
+- Slap in your workshop item link for example: "https://steamcommunity.com/sharedfiles/filedetails/?id=3011930738" or just the id 3011930738)
 
 ## Compiling into an exe (pyinstaller):
 - ```pip install pyinstaller```
@@ -22,4 +20,5 @@
 . It saves your input except for workshop id <br>
 . Excuse the progress bar its pretty shit atm, will be working on it <br>
 . If you do not know where to find your map in-game check this [video](https://youtu.be/XIQjfXXlgQs?t=260) out ,for mods find "mods" in the game's main menu <br>
-. Initializing SteamCMD for the first time could take some time depending on your internet speed
+. Initializing SteamCMD for the first time could take some time depending on your internet speed <br>
+. If the download fails when getting big maps its SteamCMD's fault, still working on a workaround
