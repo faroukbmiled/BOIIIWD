@@ -24,7 +24,7 @@
 . If the download fails when getting big maps its SteamCMD's fault, still working on a workaround <br>
 
 ### todos:
-- add a menu that shows you current installed mods/maps
-- add an option to login with your account (for better download stability apparently)
-- fix the progress bar (dont know how still, steamcmd sucks in some ways)
-- other improvements regarding the download (steamcmd likes to fail sometimes for no reason)
+- [ ] add a menu that shows you current installed mods/maps
+- [ ] add an option to login with your account (for better download stability apparently)
+- [ ] fix the progress bar (dont know how still, steamcmd sucks in some ways)
+- [ ] other improvements regarding the download (steamcmd likes to fail sometimes for no reason)
