@@ -873,19 +873,19 @@ class WorkshopDownloaderApp(QWidget):
             label_stars.setPixmap(pixmap_stars)
             label_stars.setAlignment(Qt.AlignCenter)
 
+            info = (
+            f"Name: {map_name}<br>"
+            f"Type: {map_mod_type}<br>"
+            f"Size: {map_size}<br>"
+            )
+
             msg_box = QMessageBox(self)
             msg_box.setWindowTitle("Map/Mod Information")
             msg_box.setWindowIcon(QIcon('ryuk.ico'))
             msg_box.setIconPixmap(pixmap)
-            msg_box.setText(f"Name: {map_name}\nType: {map_mod_type}\nSize: {map_size}")
-
-            layout = QVBoxLayout()
-            layout.addWidget(label)
-            layout.addWidget(label_stars)
-            msg_box.setLayout(layout)
-
-            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.setInformativeText(info)
             msg_box.setDetailedText(f"Stars: {stars}\nLink: {url}")
+            msg_box.setStandardButtons(QMessageBox.Ok)
 
             msg_box.exec_()
 
