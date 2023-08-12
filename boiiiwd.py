@@ -563,7 +563,7 @@ class BOIIIWD(ctk.CTk):
         # set default values
         self.appearance_mode_optionemenu.set("Dark")
         self.scaling_optionemenu.set("100%")
-        self.progress_bar.set(0)
+        self.progress_bar.set(0.0)
         self.hide_settings_widgets()
         self.button_stop.configure(state="disabled")
 
@@ -866,7 +866,7 @@ class BOIIIWD(ctk.CTk):
             return
 
         workshop_id = self.edit_workshop_id.get().strip()
-        destination_folder = self.edit_destination_folder.get()
+        destination_folder = self.edit_destination_folder.get().strip()
 
         if not workshop_id.isdigit():
             try:
@@ -889,16 +889,17 @@ class BOIIIWD(ctk.CTk):
             show_message("Error", "Failed to retrieve file size.", icon="cancel")
             return
 
-        if not Path(destination_folder).exists():
+        if not Path(destination_folder).exists() and not destination_folder:
             show_message("Error", "Please select a valid destination folder.")
             return
 
-        if not Path(steamcmd_path).exists():
+        if not Path(steamcmd_path).exists() and not steamcmd_path.strip():
             show_message("Error", "Please enter a valid SteamCMD path.")
             return
 
         self.after(1, lambda mid=workshop_id: self.label_file_size.configure(text=f"File size: {get_workshop_file_size(mid ,raw=True)}"))
         download_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "downloads", "311210", workshop_id)
+        map_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", workshop_id)
         if not os.path.exists(download_folder):
             os.makedirs(download_folder)
 
@@ -907,7 +908,10 @@ class BOIIIWD(ctk.CTk):
             previous_net_speed = 0
 
             while not stopped:
-                current_size = sum(os.path.getsize(os.path.join(download_folder, f)) for f in os.listdir(download_folder))
+                try:
+                    current_size = sum(os.path.getsize(os.path.join(download_folder, f)) for f in os.listdir(download_folder))
+                except:
+                    current_size = sum(os.path.getsize(os.path.join(map_folder, f)) for f in os.listdir(map_folder))
 
                 progress = int(current_size / file_size * 100)
                 self.after(1, lambda v=progress / 100.0: self.progress_bar.set(v))
@@ -964,7 +968,19 @@ class BOIIIWD(ctk.CTk):
                 except Exception as E:
                     show_message("Error", f"Error copying files: {E}", icon="cancel")
 
-                show_message("Download Complete", f"{mod_type} files are downloaded at \n{folder_name_path}\nYou can run the game now!", icon="info")
+                msg = CTkMessagebox(title="Download Complete", message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!", icon="info", option_1="Launch", option_2="Ok")
+                response = msg.get()
+                if response=="Launch":
+                    try:
+                        boiii_path = os.path.join(self.edit_destination_folder.get().strip(), "boiii.exe")
+                        subprocess.Popen([boiii_path], cwd=self.edit_destination_folder.get().strip())
+                    except Exception as e:
+                        show_message("Error: Failed to launch BOIII", f"Failed to launch boiii.exe\nMake sure to put in your correct boiii path\n{e}")
+                if response=="Ok":
+                    pass
+
+                self.button_download.configure(state="normal")
+                self.button_stop.configure(state="disabled")
 
         update_wait_thread = threading.Thread(target=wait_for_threads)
         update_wait_thread.start()
