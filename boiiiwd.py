@@ -1,35 +1,39 @@
-import os
-import sys
-import re
-import subprocess
-import configparser
-import json
-import shutil
-import zipfile
-import psutil
-import requests
-import time
-import threading
+from CTkMessagebox import CTkMessagebox
 from bs4 import BeautifulSoup
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QDialog, \
-    QVBoxLayout, QMessageBox, QHBoxLayout, QProgressBar, QSizePolicy, QFileDialog, QCheckBox, QSpacerItem
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from PyQt5.QtCore import QCoreApplication, QSettings
-from PyQt5.QtGui import QIcon, QPixmap, QCloseEvent
+import customtkinter as ctk
+from pathlib import Path
+from CTkToolTip import *
+from PIL import Image
+import configparser
 import webbrowser
-import qdarktheme
+import subprocess
+import threading
+import requests
+import zipfile
+import shutil
+import psutil
+import json
+import math
+import time
+import sys
+import io
+import os
+import re
 
-VERSION = "v0.1.3"
+VERSION = "v0.2.0"
 GITHUB_REPO = "faroukbmiled/BOIIIWD"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 UPDATER_FOLDER = "update"
 CONFIG_FILE_PATH = "config.ini"
-global stopped, steampid, console, up_cancelled
+global stopped, steampid, console
 steampid = None
 stopped = False
 console = False
-up_cancelled = False
 
+ctk.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
+ctk.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
+
+# Start Helper Functions
 def get_latest_release_version():
     try:
         release_api_url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
@@ -94,16 +98,17 @@ def check_steamcmd():
 
     return True
 
-def initialize_steam():
+def initialize_steam(master):
     try:
         steamcmd_path = get_steamcmd_path()
         steamcmd_exe_path = os.path.join(steamcmd_path, "steamcmd.exe")
         process = subprocess.Popen([steamcmd_exe_path, "+quit"], creationflags=subprocess.CREATE_NEW_CONSOLE)
+        master.attributes('-alpha', 0.0)
         process.wait()
-
-        show_message("Done!", "BOIIIWD is ready for action.", icon=QMessageBox.Information)
+        show_message("SteamCMD has terminated!", "BOIIIWD is ready for action.", icon="info")
     except:
-        show_message("Done!", "An error occurred please check your paths and try again.")
+        show_message("Error!", "An error occurred please check your paths and try again.", icon="cancel")
+    master.attributes('-alpha', 1.0)
 
 def valid_id(workshop_id):
     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
@@ -143,7 +148,7 @@ def create_default_config():
     with open(CONFIG_FILE_PATH, "w") as config_file:
         config.write(config_file)
 
-def run_steamcmd_command(command):
+def run_steamcmd_command(command, self):
     steamcmd_path = get_steamcmd_path()
     show_console = subprocess.CREATE_NO_WINDOW
     if console:
@@ -167,39 +172,34 @@ def run_steamcmd_command(command):
 
     process.communicate()
 
-    if process.returncode != 0:
-        show_message("Warning", "SteamCMD encountered an error while downloading, try again!")
+    show_message("SteamCMD has terminated", "SteamCMD has been terminated\nTry again if it randomly stopped!")
+    global stopped
+    stopped = True
+    self.button_download.configure(state="normal")
+    self.button_stop.configure(state="disabled")
 
     return process.returncode
+
 
 def get_steamcmd_path():
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_PATH)
     return config.get("Settings", "SteamCMDPath", fallback=cwd())
 
-def config_check_for_updates(state=None):
-    if state:
-        config = configparser.ConfigParser()
-        config.read(CONFIG_FILE_PATH)
-        config["Settings"]["checkforupdtes"] = state
-        with open(CONFIG_FILE_PATH, "w") as config_file:
-            config.write(config_file)
-        return
+def check_config(name, fallback=None):
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_PATH)
-    return config.get("Settings", "checkforupdtes", fallback="on")
+    if fallback:
+        return config.get("Settings", name, fallback=fallback)
+    return config.get("Settings", name, fallback="on")
 
-def config_console_state(state=None):
-    if state:
-        config = configparser.ConfigParser()
-        config.read(CONFIG_FILE_PATH)
-        config["Settings"]["console"] = state
-        with open(CONFIG_FILE_PATH, "w") as config_file:
-            config.write(config_file)
-        return
+def save_config(name, value):
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_PATH)
-    return config.get("Settings", "console", fallback="off")
+    if name and value:
+        config.set("Settings", name, value)
+    with open(CONFIG_FILE_PATH, "w") as config_file:
+        config.write(config_file)
 
 def extract_json_data(json_path):
     with open(json_path, "r") as json_file:
@@ -236,107 +236,58 @@ def get_workshop_file_size(workshop_id, raw=None):
     except:
         return None
 
-def update_progress_bar(current_size, file_size, progress_bar):
-    if file_size is not None:
-        progress = int(current_size / file_size * 100)
-        progress_bar.setValue(progress)
-
-def check_and_update_progress(file_size, folder_name_path, progress_bar, speed_label):
-    previous_net_speed = 0
-
-    while not stopped:
-        current_size = sum(os.path.getsize(os.path.join(folder_name_path, f)) for f in os.listdir(folder_name_path))
-        update_progress_bar(current_size, file_size, progress_bar)
-
-        current_net_speed = psutil.net_io_counters().bytes_recv
-
-        net_speed_bytes = current_net_speed - previous_net_speed
-        previous_net_speed = current_net_speed
-
-        net_speed, speed_unit = convert_speed(net_speed_bytes)
-
-        speed_label.setText(f"Network Speed: {net_speed:.2f} {speed_unit}")
-
-        QCoreApplication.processEvents()
-        time.sleep(1)
-
-def download_workshop_map(workshop_id, destination_folder, progress_bar, speed_label):
-    file_size = get_workshop_file_size(workshop_id)
-    if file_size is None:
-        show_message("Error", "Failed to retrieve file size.")
-        return
-
-    download_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "downloads", "311210", workshop_id)
-    if not os.path.exists(download_folder):
-        os.makedirs(download_folder)
-
-    command = f"+login anonymous +workshop_download_item 311210 {workshop_id} +quit"
-    progress_thread = threading.Thread(target=check_and_update_progress, args=(file_size, download_folder, progress_bar, speed_label))
-    progress_thread.daemon = True
-    progress_thread.start()
-
-    run_steamcmd_command(command)
-
-    global stopped
-    stopped = True
-    progress_bar.setValue(100)
-
-    map_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", workshop_id)
-
-    json_file_path = os.path.join(map_folder, "workshop.json")
-
-    if os.path.exists(json_file_path):
-        global mod_type
-        mod_type, folder_name = extract_json_data(json_file_path)
-
-        if mod_type == "mod":
-            mods_folder = os.path.join(destination_folder, "mods")
-            folder_name_path = os.path.join(mods_folder, folder_name, "zone")
-        elif mod_type == "map":
-            usermaps_folder = os.path.join(destination_folder, "usermaps")
-            folder_name_path = os.path.join(usermaps_folder, folder_name, "zone")
-        else:
-            show_message("Error", "Invalid map type in workshop.json.")
-            return
-
-        os.makedirs(folder_name_path, exist_ok=True)
-
-        try:
-            shutil.copytree(map_folder, folder_name_path, dirs_exist_ok=True)
-        except Exception as E:
-            show_message("Error", f"Error copying files: {E}")
-
-        show_message("Download Complete", f"{mod_type} files are downloaded at \n{folder_name_path}\nYou can run the game now!", icon=QMessageBox.Information)
-
-def show_message(title, message, icon=QMessageBox.Warning, exit_on_close=False):
-    msg = QMessageBox()
-    msg.setWindowTitle(title)
-    msg.setWindowIcon(QIcon('ryuk.ico'))
-    msg.setText(message)
-    msg.setIcon(icon)
+def show_message(title, message, icon="warning", exit_on_close=False):
 
     if exit_on_close:
-        msg.setStandardButtons(QMessageBox.Ok | QMessageBox.No)
-        msg.setDefaultButton(QMessageBox.Ok)
-        result = msg.exec_()
-
-        if result == QMessageBox.No:
-            sys.exit(0)
+        msg = CTkMessagebox(title=title, message=message, icon=icon, option_1="No", option_2="Ok")
+        response = msg.get()
+        if response=="No":
+            return False
+        if response=="Ok":
+            return True
+        else:
+            return False
     else:
-        msg.exec_()
+        msg = CTkMessagebox(title=title, message=message, icon=icon)
+# End helper functions
 
-class UpdatePorgressThread(QThread):
-    global up_cancelled
-    progress_update = pyqtSignal(int)
+class UpdateWindow(ctk.CTkToplevel):
+    def __init__(self, master, update_url):
+        global master_win
+        master_win = master
+        super().__init__(master)
+        self.title("BOIIIWD Self-Updater")
+        self.geometry("400x150")
+        self.after(250, lambda: self.iconbitmap('ryuk.ico'))
+        self.protocol("WM_DELETE_WINDOW", self.cancel_update)
+        self.attributes('-topmost', 'true')
 
-    def __init__(self, label_progress, progress_bar, label_size):
-        super().__init__()
-        self.label_progress = label_progress
-        self.progress_bar = progress_bar
-        self.label_size = label_size
-        self.cancelled = False
+        self.columnconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
 
-    def run(self):
+        self.label_download = ctk.CTkLabel(self, text="Starting...")
+        self.label_download.grid(row=0, column=0, padx=30, pady=(10, 0), sticky="w")
+
+        self.label_size = ctk.CTkLabel(self, text="Size: 0")
+        self.label_size.grid(row=0, column=1, padx=30, pady=(10, 0), sticky="e")
+
+        self.progress_bar = ctk.CTkProgressBar(self, mode="determinate", height=20, corner_radius=7)
+        self.progress_bar.grid(row=1, column=0, columnspan=4, padx=30, pady=10, sticky="ew")
+        self.progress_bar.set(0)
+
+        self.progress_label = ctk.CTkLabel(self.progress_bar, text="0%", font=("Helvetica", 12), fg_color="transparent", height=0, width=0, corner_radius=0)
+        self.progress_label.place(relx=0.5, rely=0.5, anchor="center")
+
+        self.cancel_button = ctk.CTkButton(self, text="Cancel", command=self.cancel_update)
+        self.cancel_button.grid(row=2, column=0, padx=30, pady=(0, 10), sticky="w")
+
+        self.update_url = update_url
+        self.total_size = None
+        self.up_cancelled = False
+
+    def update_progress_bar(self):
         try:
             update_dir = os.path.join(os.getcwd(), UPDATER_FOLDER)
             response = requests.get(LATEST_RELEASE_URL, stream=True)
@@ -348,149 +299,436 @@ class UpdatePorgressThread(QThread):
             if not os.path.exists(update_dir):
                 os.makedirs(update_dir)
 
+            self.progress_bar.set(0.0)
+            self.total_size = int(response.headers.get('content-length', 0))
+            self.label_size.configure(text=f"Size: {convert_bytes_to_readable(self.total_size)}")
             zip_path = os.path.join(update_dir, "latest_version.zip")
-            total_size = int(response.headers.get('content-length', 0))
-            size = convert_bytes_to_readable(total_size)
-            self.label_size.setText(f"Size: {size}")
 
-            with open(zip_path, "wb") as zip_file:
-                chunk_size = 8192
-                current_size = 0
-
-                for chunk in response.iter_content(chunk_size=chunk_size):
-                    if up_cancelled:
+            with open(zip_path, "wb") as file:
+                downloaded_size = 0
+                for chunk in response.iter_content(chunk_size=8192):
+                    if self.up_cancelled:
                         break
-
                     if chunk:
-                        zip_file.write(chunk)
-                        current_size += len(chunk)
-                        progress = int(current_size / total_size * 100)
-                        self.progress_update.emit(progress)
-                        QCoreApplication.processEvents()
+                        file.write(chunk)
+                        downloaded_size += len(chunk)
+                        progress = int((downloaded_size / self.total_size) * 100)
 
-            if not up_cancelled:
+                        self.after(1, lambda p=progress: self.label_download.configure(text=f"Downloading update..."))
+                        self.after(1, lambda v=progress / 100.0: self.progress_bar.set(v))
+                        self.after(1, lambda p=progress: self.progress_label.configure(text=f"{p}%"))
+
+            if not self.up_cancelled:
+                self.progress_bar.set(1.0)
                 with zipfile.ZipFile(zip_path, "r") as zip_ref:
                     zip_ref.extractall(update_dir)
-
-                self.label_progress.setText("Update installed successfully!")
-                time.sleep(1)
+                self.label_download.configure(text="Update Downloaded successfully!")
+                if not show_message("Success!", "Update Downloaded successfully!\nPress ok to install it", icon="info", exit_on_close=True):
+                    return
                 script_path = create_update_script(current_exe, new_exe, update_dir, program_name)
                 subprocess.run(('cmd', '/C', 'start', '', fr'{script_path}'))
                 sys.exit(0)
             else:
                 if os.path.exists(zip_path):
                     os.remove(fr"{zip_path}")
-                self.label_progress.setText("Update cancelled.")
-
+                self.label_download.configure(text="Update cancelled.")
+                self.progress_bar.set(0.0)
+                # there's a better solution ill implement it later
+                global master_win
+                master_win.attributes('-alpha', 1.0)
+                show_message("Cancelled!", "Update cancelled by user", icon="warning")
         except Exception as e:
-            self.label_progress.setText("Error installing the update.")
-            show_message("Warning", f"Error installing the update: {e}")
-
-class UpdateProgressWindow(QDialog):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Updating...")
-        self.setWindowIcon(QIcon('ryuk.ico'))
-
-        layout = QVBoxLayout()
-
-        info_layout = QHBoxLayout()
-        self.label_progress = QLabel("Downloading latest update from Github...")
-        info_layout.addWidget(self.label_progress, 3)
-
-        self.label_size = QLabel("File size: 0KB")
-        info_layout.addWidget(self.label_size, 1)
-
-        layout.addLayout(info_layout)
-
-        self.progress_bar = QProgressBar()
-        layout.addWidget(self.progress_bar)
-
-        spacer = QSpacerItem(20, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-        layout.addSpacerItem(spacer)
-
-        button_layout = QHBoxLayout()
-        self.cancel_button = QPushButton("Cancel")
-        self.cancel_button.clicked.connect(self.cancel_update)
-        button_layout.addItem(QSpacerItem(20, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        button_layout.addWidget(self.cancel_button)
-        layout.addLayout(button_layout)
-
-        self.setLayout(layout)
-
-        global up_cancelled
-        self.thread = None
-        up_cancelled = False
-
-
-    def update_progress(self, value):
-        self.progress_bar.setValue(value)
+            self.progress_bar.set(0.0)
+            self.label_download.configure(text="Update failed")
+            show_message("Error", f"Error installing the update\n{e}", icon="cancel")
 
     def start_update(self):
-        self.thread = UpdatePorgressThread(self.label_progress, self.progress_bar, self.label_size)
-        self.thread.progress_update.connect(self.update_progress)
-        self.thread.finished.connect(self.on_update_finished)
+        self.thread = threading.Thread(target=self.update_progress_bar)
         self.thread.start()
 
-    def on_update_finished(self):
-        """code"""
-        # self.accept()
-
     def cancel_update(self):
-        global up_cancelled
-        up_cancelled = True
-        self.label_progress.setText("Update cancelled.")
+        self.up_cancelled = True
+        self.withdraw()
 
-    def closeEvent(self, event: QCloseEvent):
-        global up_cancelled
-        if not up_cancelled:
-            self.cancel_update()
-        super().closeEvent(event)
+class SettingsTab(ctk.CTkFrame):
+    def __init__(self, master=None):
+        super().__init__(master)
 
-class DownloadThread(QThread):
-    finished = pyqtSignal()
+        # Check for updates checkbox
+        self.check_updates_var = ctk.BooleanVar()
+        self.check_updates_var.trace_add("write", self.enable_save_button)
+        self.check_updates_checkbox = ctk.CTkSwitch(self, text="Check for updates on launch", variable=self.check_updates_var)
+        self.check_updates_checkbox.grid(row=0, column=1, padx=20 , pady=(20, 0), sticky="nsew")
+        self.check_updates_var.set(self.load_settings(updates=True))
 
-    def __init__(self, workshop_id, destination_folder, progress_bar, label_speed):
-        super().__init__()
-        self.workshop_id = workshop_id
-        self.destination_folder = destination_folder
-        self.progress_bar = progress_bar
-        self.label_speed = label_speed
+        # Show console checkbox
+        self.console_var = ctk.BooleanVar()
+        self.console_var.trace_add("write", self.enable_save_button)
+        self.checkbox_show_console = ctk.CTkSwitch(self, text="Console (On Download)", variable=self.console_var)
+        self.checkbox_show_console.grid(row=1, column=1, padx=20, pady=(20, 0), sticky="nsew")
+        self.checkbox_show_console_tooltip = CTkToolTip(self.checkbox_show_console, message="Toggle SteamCMD console\nPlease don't close the Console If you want to stop press the Stop boutton")
+        self.console_var.set(self.load_settings(console=True))
 
-    def run(self):
-        download_workshop_map(self.workshop_id, self.destination_folder, self.progress_bar, self.label_speed)
-        self.finished.emit()
+        # Check for updates button
+        self.check_for_updates = ctk.CTkButton(self, text="Check for updates", command=self.check_for_updates)
+        self.check_for_updates.grid(row=2, column=1, padx=20, pady=(20, 0), sticky="nsew")
 
-class WorkshopDownloaderApp(QWidget):
+        # Save button
+        self.save_button = ctk.CTkButton(self, text="Save", command=self.save_settings, state='disabled')
+        self.save_button.grid(row=3, column=1, padx=20, pady=(150, 0), sticky="nsew")
+
+    def enable_save_button(self, *args):
+        self.save_button.configure(state='normal')
+
+    def save_settings(self):
+        self.save_button.configure(state='disabled')
+        global console
+        if self.check_updates_checkbox.get():
+            save_config("checkforupdtes", "on")
+        else:
+            save_config("checkforupdtes", "off")
+
+        if self.checkbox_show_console.get():
+            save_config("console", "on")
+            console = True
+        else:
+            save_config("console", "off")
+            console = False
+
+    def load_settings(self, console=None, updates=None):
+        if updates:
+            if check_config("checkforupdtes") == "on":
+                return 1
+            else:
+                return 0
+        if console:
+            if check_config("console") == "on":
+                console = True
+                return 1
+            else:
+                console = False
+                return 0
+
+    def check_for_updates(self, ignore_up_todate=False):
+        try:
+            latest_version = get_latest_release_version()
+            current_version = VERSION
+
+            if latest_version and latest_version != current_version:
+                msg_box = CTkMessagebox(title="Update Available", message=f"An update is available!\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes")
+
+                result = msg_box.get()
+
+                if result == "View":
+                    webbrowser.open(f"https://github.com/{GITHUB_REPO}/releases/latest")
+
+                if result == "Yes":
+                    update_window = UpdateWindow(self, LATEST_RELEASE_URL)
+                    update_window.start_update()
+
+                if result == "No":
+                    return
+
+            elif latest_version == current_version:
+                if ignore_up_todate:
+                    return
+                msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok")
+                result = msg_box.get()
+        except Exception as e:
+            show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
+
+    def load_on_switch_screen(self):
+        self.check_updates_var.set(self.load_settings(updates=True))
+        self.console_var.set(self.load_settings(console=True))
+
+        # keep last cuz of trace_add()
+        self.save_button.configure(state='disabled')
+
+class BOIIIWD(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.initUI()
+        # self.app_instance = BOIIIWD()
+
+        # configure window
+        self.title("BOIII Workshop Downloader - Main")
+        self.geometry(f"{910}x{560}")
+        self.wm_iconbitmap('ryuk.ico')
+
+        # configure grid layout (4x4)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure((2, 3), weight=0)
+        self.grid_rowconfigure((0, 1, 2), weight=1)
+        self.settings_tab = SettingsTab(self)
+
+        # create sidebar frame with widgets
+        self.sidebar_icon = ctk.CTkImage(light_image=Image.open("ryuk.png"), dark_image=Image.open("ryuk.png"), size=(40, 40))
+        self.sidebar_frame = ctk.CTkFrame(self, width=140, corner_radius=10)
+        self.sidebar_frame.grid(row=0, column=0, rowspan=4, padx=(10, 10), pady=(10, 10), sticky="nsew")
+        self.sidebar_frame.grid_rowconfigure(4, weight=1)
+        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text='',image=self.sidebar_icon)
+        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+        self.txt_label = ctk.CTkLabel(self.sidebar_frame, text="- Sidebar -")
+        self.txt_label.grid(row=1, column=0, padx=20, pady=(20, 10))
+        self.sidebar_button_1 = ctk.CTkButton(self.sidebar_frame)
+        self.sidebar_button_1.grid(row=2, column=0, padx=20, pady=10)
+        self.sidebar_button_2 = ctk.CTkButton(self.sidebar_frame)
+        self.sidebar_button_2.grid(row=3, column=0, padx=20, pady=10)
+        self.sidebar_button_3 = ctk.CTkButton(self.sidebar_frame)
+        self.sidebar_button_3.grid(row=5, column=0, padx=20, pady=10)
+        self.appearance_mode_label = ctk.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
+        self.appearance_mode_label.grid(row=6, column=0, padx=20, pady=(10, 0))
+        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.sidebar_frame, values=["Light", "Dark", "System"],
+                                                                       command=self.change_appearance_mode_event)
+        self.appearance_mode_optionemenu.grid(row=7, column=0, padx=20, pady=(10, 10))
+        self.scaling_label = ctk.CTkLabel(self.sidebar_frame, text="UI Scaling:", anchor="w")
+        self.scaling_label.grid(row=8, column=0, padx=20, pady=(10, 0))
+        self.scaling_optionemenu = ctk.CTkOptionMenu(self.sidebar_frame, values=["80%", "90%", "100%", "110%", "120%"],
+                                                               command=self.change_scaling_event)
+        self.scaling_optionemenu.grid(row=9, column=0, padx=20, pady=(10, 20))
+
+        # create optionsframe
+        self.optionsframe = ctk.CTkFrame(self)
+        self.optionsframe.grid(row=0, column=1, padx=(20, 20), pady=(20, 0), sticky="nsew")
+
+        # create slider and progressbar frame
+        self.slider_progressbar_frame = ctk.CTkFrame(self)
+        self.slider_progressbar_frame.grid(row=1, column=1, padx=(20, 20), pady=(20, 0), sticky="nsew")
+
+        self.slider_progressbar_frame.columnconfigure(0, weight=0)
+        self.slider_progressbar_frame.columnconfigure(1, weight=1)
+        self.slider_progressbar_frame.columnconfigure(2, weight=0)
+        self.slider_progressbar_frame.rowconfigure(0, weight=1)
+        self.slider_progressbar_frame.rowconfigure(1, weight=1)
+        self.slider_progressbar_frame.rowconfigure(2, weight=1)
+        self.slider_progressbar_frame.rowconfigure(3, weight=1)
+
+        self.spacer = ctk.CTkLabel(master=self.slider_progressbar_frame, text="")
+        self.spacer.grid(row=0, column=0, columnspan=1)
+
+        self.label_speed = ctk.CTkLabel(master=self.slider_progressbar_frame, text="Network Speed: 0 KB/s")
+        self.label_speed.grid(row=1, column=0, padx=20, pady=(0, 10), sticky="w")
+
+        self.label_file_size = ctk.CTkLabel(master=self.slider_progressbar_frame, text="File size: 0KB")
+        self.label_file_size.grid(row=1, column=2, padx=(0, 20), pady=(0, 10), sticky="e")
+
+        self.progress_bar = ctk.CTkProgressBar(master=self.slider_progressbar_frame, mode="determinate", height=20, corner_radius=7)
+        self.progress_bar.grid(row=2, column=0, padx=20, pady=(0, 10), columnspan=3, sticky="ew")
+
+        self.progress_text = ctk.CTkLabel(self.progress_bar, text="0%", font=("Helvetica", 12), fg_color="transparent", height=0, width=0, corner_radius=0)
+        self.progress_text.place(relx=0.5, rely=0.5, anchor="center")
+
+        self.button_download = ctk.CTkButton(master=self.slider_progressbar_frame, text="Download", command=self.download_map)
+        self.button_download.grid(row=4, column=0, padx=20, pady=(10, 20), columnspan=2, sticky="ew")
+
+        self.button_stop = ctk.CTkButton(master=self.slider_progressbar_frame, text="Stop", command=self.stop_download)
+        self.button_stop.grid(row=4, column=2, padx=(0, 20), pady=(10, 20), columnspan=1, sticky="ew")
+
+        # options frame
+        self.optionsframe.columnconfigure(1, weight=1)
+        self.optionsframe.columnconfigure(2, weight=1)
+        self.optionsframe.columnconfigure(3, weight=1)
+
+        self.label_workshop_id = ctk.CTkLabel(master=self.optionsframe, text="Enter the Workshop ID or Link of the map/mod you want to download:")
+        self.label_workshop_id.grid(row=0, column=1, padx=20, pady=(20, 0), columnspan=3, sticky="w")
+
+        self.check_if_changed = ctk.StringVar()
+        self.check_if_changed.trace_add("write", self.id_chnaged_handler)
+        self.edit_workshop_id = ctk.CTkEntry(master=self.optionsframe, textvariable=self.check_if_changed)
+        self.edit_workshop_id.grid(row=1, column=1, padx=20, pady=(0, 10), columnspan=4, sticky="ew")
+
+        self.button_browse = ctk.CTkButton(master=self.optionsframe, text="Browse", command=self.open_browser)
+        self.button_browse.grid(row=1, column=5, padx=(0, 20), pady=(0, 10), sticky="ew")
+
+        self.info_button = ctk.CTkButton(master=self.optionsframe, text="Info", command=self.show_map_info)
+        self.info_button.grid(row=2, column=5, padx=(0, 20), pady=(0, 10), sticky="ew")
+
+        self.label_destination_folder = ctk.CTkLabel(master=self.optionsframe, text="Enter Your BOIII folder:")
+        self.label_destination_folder.grid(row=3, column=1, padx=20, pady=(0, 10), columnspan=4, sticky="w")
+
+        self.edit_destination_folder = ctk.CTkEntry(master=self.optionsframe, placeholder_text="Your BOIII Instalation folder")
+        self.edit_destination_folder.grid(row=4, column=1, padx=20, pady=(0, 10), columnspan=4, sticky="ew")
+
+        self.button_BOIII_browse = ctk.CTkButton(master=self.optionsframe, text="Select", command=self.open_BOIII_browser)
+        self.button_BOIII_browse.grid(row=4, column=5, padx=(0, 20), pady=(0, 10), sticky="ew")
+
+        self.label_steamcmd_path = ctk.CTkLabel(master=self.optionsframe, text="Enter SteamCMD path:")
+        self.label_steamcmd_path.grid(row=5, column=1, padx=20, pady=(20, 0), columnspan=3, sticky="w")
+
+        self.edit_steamcmd_path = ctk.CTkEntry(master=self.optionsframe, placeholder_text="Enter your SteamCMD path")
+        self.edit_steamcmd_path.grid(row=6, column=1, padx=20, pady=(0, 10), columnspan=4, sticky="ew")
+
+        self.button_steamcmd_browse = ctk.CTkButton(master=self.optionsframe, text="Select", command=self.open_steamcmd_path_browser)
+        self.button_steamcmd_browse.grid(row=6, column=5, padx=(0, 20), pady=(0, 10), sticky="ew")
+
+        # set default values
+        self.appearance_mode_optionemenu.set("Dark")
+        self.scaling_optionemenu.set("100%")
+        self.progress_bar.set(0)
+        self.hide_settings_widgets()
+        self.button_stop.configure(state="disabled")
+
+        # sidebar windows bouttons
+        self.sidebar_button_1.configure(command=self.main_button_event, text="Main", fg_color=("#3d3d3d"))
+        self.sidebar_button_2.configure(state="disabled", text="Library")
+        self.sidebar_button_3.configure(command=self.settings_button_event, text="Settings")
+
+        # load ui configs
+        self.load_configs()
+
+        if check_config("checkforupdtes") == "on":
+            self.withdraw()
+            self.check_for_updates(ignore_up_todate=True)
+            self.update()
+            self.deiconify()
+
+        try:
+            global console
+            if check_config("console") == "on":
+                console = True
+            else:
+                console = False
+        except:
+            pass
 
         if not check_steamcmd():
             self.show_warning_message()
 
-        self.download_thread = None
-        self.button_download.setEnabled(True)
-        self.button_stop.setEnabled(False)
+
+    def id_chnaged_handler(self, some=None, other=None ,shit=None):
+        self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
+
+    def check_for_updates(self, ignore_up_todate=False):
+        try:
+            latest_version = get_latest_release_version()
+            current_version = VERSION
+
+            if latest_version and latest_version != current_version:
+                msg_box = CTkMessagebox(title="Update Available", message=f"An update is available!\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes")
+
+                result = msg_box.get()
+
+                if result == "View":
+                    webbrowser.open(f"https://github.com/{GITHUB_REPO}/releases/latest")
+
+                if result == "Yes":
+                    self.attributes('-alpha', 0)
+                    update_window = UpdateWindow(self, LATEST_RELEASE_URL)
+                    update_window.start_update()
+
+                if result == "No":
+                    return
+
+            elif latest_version == current_version:
+                if ignore_up_todate:
+                    return
+                msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok")
+                result = msg_box.get()
+        except Exception as e:
+            show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
+
+    def change_appearance_mode_event(self, new_appearance_mode: str):
+        ctk.set_appearance_mode(new_appearance_mode)
+        save_config("appearance", new_appearance_mode)
+
+    def change_scaling_event(self, new_scaling: str):
+        new_scaling_float = int(new_scaling.replace("%", "")) / 100
+        ctk.set_widget_scaling(new_scaling_float)
+        save_config("scaling", str(new_scaling_float))
+
+    def sidebar_button_event(self):
+        print("sidebar_button click")
+
+    def hide_main_widgets(self):
+        self.optionsframe.grid_remove()
+        self.slider_progressbar_frame.grid_remove()
+
+    def show_main_widgets(self):
+        self.title("BOIII Workshop Downloader - Main")
+        self.optionsframe.grid(row=0, column=1, padx=(20, 20), pady=(20, 0), sticky="nsew")
+        self.slider_progressbar_frame.grid(row=1, column=1, padx=(20, 20), pady=(20, 0), sticky="nsew")
+
+    def hide_settings_widgets(self):
+        self.settings_tab.pack_forget()
+
+    def show_settings_widgets(self):
+        self.title("BOIII Workshop Downloader - Settings")
+        self.settings_tab.grid(row=0, column=1, padx=(20, 20), pady=(20, 0), sticky="nsew")
+        self.settings_tab.load_on_switch_screen()
+
+    def main_button_event(self):
+        self.sidebar_button_1.configure(state="active", fg_color=("#3d3d3d"))
+        self.sidebar_button_3.configure(state="normal", fg_color=("#1f538d"))
+        self.hide_settings_widgets()
+        self.show_main_widgets()
+
+    def settings_button_event(self):
+        self.sidebar_button_1.configure(state="normal", fg_color=("#1f538d"))
+        self.sidebar_button_3.configure(state="active", fg_color=("#3d3d3d"))
+        self.hide_main_widgets()
+        self.show_settings_widgets()
+
+    def load_configs(self):
+        if os.path.exists(CONFIG_FILE_PATH):
+            destination_folder = check_config("DestinationFolder", "")
+            steamcmd_path = check_config("SteamCMDPath", os.getcwd())
+            new_appearance_mode = check_config("appearance", "Dark")
+            new_scaling = check_config("scaling", 1.0)
+            self.edit_destination_folder.delete(0, "end")
+            self.edit_destination_folder.insert(0, destination_folder)
+            self.edit_steamcmd_path.delete(0, "end")
+            self.edit_steamcmd_path.insert(0, steamcmd_path)
+            ctk.set_appearance_mode(new_appearance_mode)
+            ctk.set_widget_scaling(float(new_scaling))
+            self.appearance_mode_optionemenu.set(new_appearance_mode)
+            scaling_float = float(new_scaling)*100
+            scaling_int = math.trunc(scaling_float)
+            self.scaling_optionemenu.set(f"{scaling_int}%")
+        else:
+            new_appearance_mode = check_config("appearance", "Dark")
+            new_scaling = check_config("scaling", 1.0)
+            ctk.set_appearance_mode(new_appearance_mode)
+            ctk.set_widget_scaling(float(new_scaling))
+            self.appearance_mode_optionemenu.set(new_appearance_mode)
+            scaling_float = float(new_scaling)*100
+            scaling_int = math.trunc(scaling_float)
+            self.scaling_optionemenu.set(f"{scaling_int}%")
+            create_default_config()
+
+    def open_BOIII_browser(self):
+        selected_folder = ctk.filedialog.askdirectory(title="Select BOIII Folder")
+        if selected_folder:
+            self.edit_destination_folder.delete(0, "end")
+            self.edit_destination_folder.insert(0, selected_folder)
+            save_config("DestinationFolder" ,self.edit_destination_folder.get())
+            save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
+
+    def open_steamcmd_path_browser(self):
+        selected_folder = ctk.filedialog.askdirectory(title="Select SteamCMD Folder")
+        if selected_folder:
+            self.edit_steamcmd_path.delete(0, "end")
+            self.edit_steamcmd_path.insert(0, selected_folder)
+            save_config("DestinationFolder" ,self.edit_destination_folder.get())
+            save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
 
     def show_warning_message(self):
-        msg_box = QMessageBox(self)
-        msg_box.setWindowTitle("Warning")
-        msg_box.setWindowIcon(QIcon('ryuk.ico'))
-        msg_box.setText("steamcmd.exe was not found in the specified directory.\nPress Download to get it or Press OK and select it from there!.")
-        msg_box.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        msg = CTkMessagebox(title="Warning", message="steamcmd.exe was not found in the specified directory.\nPress Download to get it or Press Cancel and select it from there!.",
+                            icon="warning", option_1="Cancel", option_2="Download")
 
-        download_button = msg_box.addButton("Download", QMessageBox.AcceptRole)
-        download_button.clicked.connect(self.download_steamcmd)
-        msg_box.setDefaultButton(download_button)
+        response = msg.get()
+        if response == "Cancel":
+            return
+        elif response == "Download":
+            self.download_steamcmd()
 
-        result = msg_box.exec_()
-        if result == QMessageBox.Cancel:
-            sys.exit(0)
+    def open_browser(self):
+        link = "https://steamcommunity.com/app/311210/workshop/"
+        webbrowser.open(link)
 
     def download_steamcmd(self):
-        self.edit_steamcmd_path.setText(cwd())
-        self.save_config(self.edit_destination_folder.text(), self.edit_steamcmd_path.text())
+        self.edit_steamcmd_path.delete(0, "end")
+        self.edit_steamcmd_path.insert(0, cwd())
+        save_config("DestinationFolder" ,self.edit_destination_folder.get())
+        save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
         steamcmd_url = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip"
         steamcmd_zip_path = os.path.join(cwd(), "steamcmd.zip")
 
@@ -506,199 +744,110 @@ class WorkshopDownloaderApp(QWidget):
 
             if check_steamcmd():
                 os.remove(fr"{steamcmd_zip_path}")
-                show_message("Success", "SteamCMD has been downloaded ,Press ok to initialize it.", icon=QMessageBox.Information, exit_on_close=True)
-                initialize_steam()
-
+                if not show_message("Success", "SteamCMD has been downloaded ,Press ok to initialize it.", icon="info", exit_on_close=True):
+                    pass
+                else:
+                    initialize_steam_thread = threading.Thread(target=lambda: initialize_steam(self))
+                    initialize_steam_thread.start()
             else:
-                show_message("Error", "Failed to find steamcmd.exe after extraction.\nMake you sure to select the correct SteamCMD path (which is the current BOIIIWD path)")
+                show_message("Error", "Failed to find steamcmd.exe after extraction.\nMake you sure to select the correct SteamCMD path (by default current BOIIIWD path)", icon="cancel")
                 os.remove(fr"{steamcmd_zip_path}")
         except requests.exceptions.RequestException as e:
-            show_message("Error", f"Failed to download SteamCMD: {e}")
+            show_message("Error", f"Failed to download SteamCMD: {e}", icon="cancel")
             os.remove(fr"{steamcmd_zip_path}")
         except zipfile.BadZipFile:
-            show_message("Error", "Failed to extract SteamCMD. The downloaded file might be corrupted.")
+            show_message("Error", "Failed to extract SteamCMD. The downloaded file might be corrupted.", icon="cancel")
             os.remove(fr"{steamcmd_zip_path}")
 
-    def check_for_updates(self, ignore_up_todate=False):
-        try:
-            latest_version = get_latest_release_version()
-            current_version = VERSION
+    def show_map_info(self):
+        def show_map_thread():
+            workshop_id = self.edit_workshop_id.get().strip()
 
-            if latest_version and latest_version != current_version:
-                msg_box = QMessageBox()
-                msg_box.setWindowTitle("Update Available")
-                msg_box.setWindowIcon(QIcon('ryuk.ico'))
-                msg_box.setText(f"An update is available!, Do you want to install it?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}")
-                msg_box.setIcon(QMessageBox.Information)
-                msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No | QMessageBox.Open)
-                msg_box.setDefaultButton(QMessageBox.Yes)
-                result = msg_box.exec_()
+            if not workshop_id:
+                show_message("Warning", "Please enter a Workshop ID first.")
+                return
 
-                if result == QMessageBox.Open:
-                    webbrowser.open(f"https://github.com/{GITHUB_REPO}/releases/latest")
-
-                if result == QMessageBox.Yes:
-                    update_progress_window = UpdateProgressWindow()
-                    update_progress_window.start_update()
-                    update_progress_window.exec_()
-            elif latest_version == current_version:
-                if ignore_up_todate:
+            if not workshop_id.isdigit():
+                try:
+                    if extract_workshop_id(workshop_id).strip().isdigit():
+                        workshop_id = extract_workshop_id(workshop_id).strip()
+                    else:
+                        show_message("Warning", "Please enter a valid Workshop ID.")
+                except:
+                    show_message("Warning", "Please enter a valid Workshop ID.")
                     return
-                msg_box = QMessageBox()
-                msg_box.setWindowTitle("Up to Date!")
-                msg_box.setWindowIcon(QIcon('ryuk.ico'))
-                msg_box.setText(f"No Updates Available!")
-                msg_box.setIcon(QMessageBox.Information)
-                msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.setDefaultButton(QMessageBox.Ok)
-                result = msg_box.exec_()
-        except Exception as e:
-            show_message("Error", f"Error while checking for updates: \n{e}")
 
-    def initUI(self):
-        self.setWindowTitle(f'BOIII Workshop Downloader {VERSION}-beta')
-        self.setWindowIcon(QIcon('ryuk.ico'))
-        self.setGeometry(100, 100, 400, 200)
-        self.settings = QSettings("MyApp", "MyWindow")
-        self.restore_geometry()
+            self.after(1, lambda mid=workshop_id: self.label_file_size.configure(text=f"File size: {get_workshop_file_size(mid ,raw=True)}"))
 
-        layout = QVBoxLayout()
+            try:
+                url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
+                response = requests.get(url)
+                response.raise_for_status()
+                content = response.text
 
-        browse_layout = QHBoxLayout()
+                soup = BeautifulSoup(content, "html.parser")
 
-        self.label_workshop_id = QLabel("Enter the Workshop ID or Link of the map/mod you want to download:")
-        browse_layout.addWidget(self.label_workshop_id, 3)
+                try:
+                    map_mod_type = soup.find("div", class_="rightDetailsBlock").text.strip()
+                    map_name = soup.find("div", class_="workshopItemTitle").text.strip()
+                    map_size = soup.find("div", class_="detailsStatRight").text.strip()
+                except:
+                    show_message("Warning", "Please enter a valid Workshop ID.")
+                    return
 
-        self.button_browse = QPushButton("Browse")
-        self.button_browse.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.button_browse.clicked.connect(self.open_browser)
-        browse_layout.addWidget(self.button_browse, 1)
+                try:
+                    preview_image_element = soup.find("img", id="previewImage")
+                    workshop_item_image_url = preview_image_element["src"]
+                except:
+                    try:
+                        preview_image_element = soup.find("img", id="previewImageMain")
+                        workshop_item_image_url = preview_image_element["src"]
+                    except Exception as e:
+                        show_message("Warning", f"Failed to get preview image ,probably wrong link/id if not please open an issue on github.\n{e}")
+                        return
 
-        layout.addLayout(browse_layout)
+                image_response = requests.get(workshop_item_image_url)
+                image_response.raise_for_status()
 
-        info_workshop_layout = QHBoxLayout()
+                image = Image.open(io.BytesIO(image_response.content))
+                image = image.resize((200, 200), Image.Resampling.LANCZOS)
 
-        self.edit_workshop_id = QLineEdit()
-        self.edit_workshop_id.setPlaceholderText("Workshop ID/Link => Press info to see map/mod info")
-        self.edit_workshop_id.textChanged.connect(self.reset_file_size)
-        info_workshop_layout.addWidget(self.edit_workshop_id, 3)
+                self.toplevel_info_window(map_name, map_mod_type, map_size, image)
 
-        layout.addLayout(info_workshop_layout)
-        self.info_button = QPushButton("Info")
-        self.info_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.info_button.clicked.connect(self.show_map_info)
-        info_workshop_layout.addWidget(self.info_button, 1)
+            except requests.exceptions.RequestException as e:
+                show_message("Error", f"Failed to fetch map information.\nError: {e}", icon="cancel")
 
-        self.label_destination_folder = QLabel("Enter Your BOIII folder:")
-        layout.addWidget(self.label_destination_folder, 3)
+        info_thread = threading.Thread(target=show_map_thread)
+        info_thread.start()
 
-        Boiii_Input = QHBoxLayout()
-        self.edit_destination_folder = QLineEdit()
-        self.edit_destination_folder.setPlaceholderText("Your BOIII Instalation folder")
-        Boiii_Input.addWidget(self.edit_destination_folder, 90)
+    def toplevel_info_window(self, map_name, map_mod_type, map_size, image):
+        top = ctk.CTkToplevel(self)
+        top.after(210, lambda: top.iconbitmap("ryuk.ico"))
+        top.geometry("340x430")
+        top.title("Map/Mod Information")
+        top.attributes('-topmost', 'true')
 
-        layout.addLayout(Boiii_Input)
+        label = ctk.CTkLabel(top, text="")
+        image = ctk.CTkImage(image, size=(260, 200))
+        label.configure(image=image)
+        label.pack()
 
-        self.button_BOIII_browse = QPushButton("Select")
-        self.button_BOIII_browse.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.button_BOIII_browse.clicked.connect(self.open_BOIII_browser)
-        Boiii_Input.addWidget(self.button_BOIII_browse, 10)
+        info = (
+            f"Name: {map_name}\n"
+            f"Type: {map_mod_type}\n"
+            f"Size: {map_size}\n"
+        )
 
-        self.label_steamcmd_path = QLabel("Enter SteamCMD path (default):")
-        layout.addWidget(self.label_steamcmd_path)
-
-        steamcmd_path = QHBoxLayout()
-        self.edit_steamcmd_path = QLineEdit()
-        steamcmd_path.addWidget(self.edit_steamcmd_path, 90)
-
-        self.button_steamcmd_browse = QPushButton("Select")
-        self.button_steamcmd_browse.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.button_steamcmd_browse.clicked.connect(self.open_steamcmd_path_browser)
-        steamcmd_path.addWidget(self.button_steamcmd_browse, 10)
-
-        layout.addLayout(steamcmd_path)
-        layout.addSpacing(10)
-
-        buttons_layout = QHBoxLayout()
-
-        self.button_download = QPushButton("Download")
-        self.button_download.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.button_download.clicked.connect(self.download_map)
-        buttons_layout.addWidget(self.button_download, 70)
-
-        self.button_stop = QPushButton("Stop")
-        self.button_stop.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.button_stop.clicked.connect(self.stop_download)
-        buttons_layout.addWidget(self.button_stop, 25)
-
-        layout.addLayout(buttons_layout)
-
-        InfoBar = QHBoxLayout()
-
-        self.label_speed = QLabel("Network Speed: 0 KB/s")
-        InfoBar.addWidget(self.label_speed, 3)
-
-        self.label_file_size = QLabel("File size: 0KB")
-        InfoBar.addWidget(self.label_file_size, 1)
-
-        InfoWidget = QWidget()
-        InfoWidget.setLayout(InfoBar)
-
-        layout.addWidget(InfoWidget)
-
-        self.progress_bar = QProgressBar()
-        layout.addWidget(self.progress_bar, 75)
-
-        spacer = QSpacerItem(10, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
-        layout.addSpacerItem(spacer)
-
-        check_for_update_layout = QHBoxLayout()
-        check_update_button = QPushButton("Check for Updates")
-        check_update_button.clicked.connect(self.check_for_updates)
-        check_update_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-
-        self.check_for_update_layout = QVBoxLayout()
-        self.check_for_update_layout.addWidget(check_update_button)
-
-        self.show_more_button = QPushButton("Launch boiii")
-        self.show_more_button.clicked.connect(self.launch_boiii)
-
-        check_for_update_layout = QHBoxLayout()
-        check_for_update_layout.addWidget(check_update_button)
-
-        self.check_for_updates_checkbox = QPushButton("Settings")
-        self.check_for_updates_checkbox.clicked.connect(self.open_settings_dialog)
-
-
-        check_for_update_layout = QHBoxLayout()
-        check_for_update_layout.addWidget(check_update_button)
-        check_for_update_layout.addWidget(self.check_for_updates_checkbox)
-        check_for_update_layout.addWidget(self.show_more_button)
-
-        layout.addLayout(check_for_update_layout)
-
-        self.setLayout(layout)
-
-        self.load_config()
-
-        if config_check_for_updates() == "on":
-            self.check_for_updates(ignore_up_todate=True)
-
-        try:
-            global console
-            if config_console_state() == "on":
-                console = True
-                return 1
-            else:
-                console = False
-                return 0
-        except:
-            pass
+        text = ctk.CTkLabel(top)
+        text.configure(text=info)
+        text.pack()
 
     def download_map(self):
         global stopped
         stopped = False
-        self.save_config(self.edit_destination_folder.text(), self.edit_steamcmd_path.text())
+
+        save_config("DestinationFolder" ,self.edit_destination_folder.get())
+        save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
 
         if not check_steamcmd():
             self.show_warning_message()
@@ -708,291 +857,135 @@ class WorkshopDownloaderApp(QWidget):
         steamcmd_exe_path = os.path.join(steamcmd_path, "steamcmd.exe")
         steamcmd_size = os.path.getsize(steamcmd_exe_path)
         if steamcmd_size < 3 * 1024 * 1024:
-            show_message("Warning", "SteamCMD is not initialized, Press OK to do so!\nProgram may go unresponsive until SteamCMD is finished downloading.", icon=QMessageBox.Warning, exit_on_close=True)
-            initialize_steam()
+            if not show_message("Warning", "SteamCMD is not initialized, Press OK to do so!\nProgram may go unresponsive until SteamCMD is finished downloading.",
+                         icon="warning" ,exit_on_close=True):
+                pass
+            else:
+                initialize_steam_thread = threading.Thread(target=lambda: initialize_steam(self))
+                initialize_steam_thread.start()
             return
 
-        workshop_id = self.edit_workshop_id.text().strip()
+        workshop_id = self.edit_workshop_id.get().strip()
+        destination_folder = self.edit_destination_folder.get()
+
         if not workshop_id.isdigit():
             try:
                 if extract_workshop_id(workshop_id).strip().isdigit():
                     workshop_id = extract_workshop_id(workshop_id).strip()
                 else:
-                    QMessageBox.warning(self, "Warning", "Please enter a valid Workshop ID.")
+                    show_message("Warning", "Please enter a valid Workshop ID.", icon="warning")
                     return
             except:
-                QMessageBox.warning(self, "Warning", "Please enter a valid Workshop ID.")
+                show_message("Warning", "Please enter a valid Workshop ID.", icon="warning")
                 return
 
+        file_size = get_workshop_file_size(workshop_id)
+
         if not valid_id(workshop_id):
-            QMessageBox.warning(self, "Warning", "Please enter a valid Workshop ID.")
+            show_message("Warning", "Please enter a valid Workshop ID.", icon="warning")
             return
 
-        destination_folder = self.edit_destination_folder.text()
-        steamcmd_path = self.edit_steamcmd_path.text()
-        self.label_file_size.setText(f"File size: {get_workshop_file_size(workshop_id, raw=True)}")
-
-        if not destination_folder:
-            show_message("Error", "Please select a destination folder.")
+        if file_size is None:
+            show_message("Error", "Failed to retrieve file size.", icon="cancel")
             return
 
-        if not steamcmd_path:
-            show_message("Error", "Please enter the SteamCMD path.")
+        if not Path(destination_folder).exists():
+            show_message("Error", "Please select a valid destination folder.")
             return
 
-        self.button_stop.setEnabled(True)
-        self.progress_bar.setValue(0)
-        self.button_download.setEnabled(False)
+        if not Path(steamcmd_path).exists():
+            show_message("Error", "Please enter a valid SteamCMD path.")
+            return
 
-        self.download_thread = DownloadThread(workshop_id, destination_folder, self.progress_bar, self.label_speed)
-        self.download_thread.finished.connect(self.on_download_finished)
-        self.download_thread.start()
+        self.after(1, lambda mid=workshop_id: self.label_file_size.configure(text=f"File size: {get_workshop_file_size(mid ,raw=True)}"))
+        download_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "downloads", "311210", workshop_id)
+        if not os.path.exists(download_folder):
+            os.makedirs(download_folder)
+
+        def check_and_update_progress():
+            global stopped
+            previous_net_speed = 0
+
+            while not stopped:
+                current_size = sum(os.path.getsize(os.path.join(download_folder, f)) for f in os.listdir(download_folder))
+
+                progress = int(current_size / file_size * 100)
+                self.after(1, lambda v=progress / 100.0: self.progress_bar.set(v))
+
+                current_net_speed = psutil.net_io_counters().bytes_recv
+
+                net_speed_bytes = current_net_speed - previous_net_speed
+                previous_net_speed = current_net_speed
+
+                net_speed, speed_unit = convert_speed(net_speed_bytes)
+
+                self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
+                self.after(1, lambda p=progress: self.progress_text.configure(text=f"{p}%"))
+                time.sleep(1)
+
+        command = f"+login anonymous +workshop_download_item 311210 {workshop_id} +quit"
+        steamcmd_thread = threading.Thread(target=lambda: run_steamcmd_command(command, self))
+        steamcmd_thread.start()
+
+        def wait_for_threads():
+            update_ui_thread = threading.Thread(target=check_and_update_progress)
+            update_ui_thread.daemon = True
+            update_ui_thread.start()
+            update_ui_thread.join()
+
+            global stopped
+            stopped = True
+
+            self.label_speed.configure(text="Network Speed: 0 KB/s")
+            self.progress_text.configure(text="0%")
+            self.progress_bar.set(0.0)
+
+            map_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", workshop_id)
+
+            json_file_path = os.path.join(map_folder, "workshop.json")
+
+            if os.path.exists(json_file_path):
+                mod_type, folder_name = extract_json_data(json_file_path)
+
+                if mod_type == "mod":
+                    mods_folder = os.path.join(destination_folder, "mods")
+                    folder_name_path = os.path.join(mods_folder, folder_name, "zone")
+                elif mod_type == "map":
+                    usermaps_folder = os.path.join(destination_folder, "usermaps")
+                    folder_name_path = os.path.join(usermaps_folder, folder_name, "zone")
+                else:
+                    show_message("Error", "Invalid map type in workshop.json.", icon="cancel")
+                    return
+
+                os.makedirs(folder_name_path, exist_ok=True)
+
+                try:
+                    shutil.copytree(map_folder, folder_name_path, dirs_exist_ok=True)
+                except Exception as E:
+                    show_message("Error", f"Error copying files: {E}", icon="cancel")
+
+                show_message("Download Complete", f"{mod_type} files are downloaded at \n{folder_name_path}\nYou can run the game now!", icon="info")
+
+        update_wait_thread = threading.Thread(target=wait_for_threads)
+        update_wait_thread.start()
+
+        self.button_download.configure(state="disabled")
+        self.button_stop.configure(state="normal")
 
     def stop_download(self):
         global stopped
         stopped = True
 
-        subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                       creationflags=subprocess.CREATE_NO_WINDOW)
 
-        if self.download_thread and self.download_thread.isRunning():
-            self.download_thread.terminate()
+        self.button_download.configure(state="normal")
+        self.button_stop.configure(state="disabled")
+        self.label_speed.configure(text="Network Speed: 0 KB/s")
+        self.progress_text.configure(text="0%")
+        self.progress_bar.set(0.0)
 
-        self.button_download.setEnabled(True)
-        self.button_stop.setEnabled(False)
-        self.progress_bar.setValue(0)
-        self.label_speed.setText(f"Network Speed: {0:.2f} KB/s")
-        self.label_file_size.setText(f"File size: 0KB")
-
-    def open_BOIII_browser(self):
-        selected_folder = QFileDialog.getExistingDirectory(self, "Select BOIII Folder", "")
-        if selected_folder:
-            self.edit_destination_folder.setText(selected_folder)
-            self.save_config(self.edit_destination_folder.text(), self.edit_steamcmd_path.text())
-
-    def open_steamcmd_path_browser(self):
-        selected_folder = QFileDialog.getExistingDirectory(self, "Select SteamCMD Folder", "")
-        if selected_folder:
-            self.edit_steamcmd_path.setText(selected_folder)
-            self.save_config(self.edit_destination_folder.text(), self.edit_steamcmd_path.text())
-
-    def on_download_finished(self):
-        self.button_download.setEnabled(True)
-        self.progress_bar.setValue(0)
-        self.label_speed.setText(f"Network Speed: {0:.2f} KB/s")
-        self.label_file_size.setText(f"File size: 0KB")
-        self.button_stop.setEnabled(False)
-        self.save_config(self.edit_destination_folder.text(), self.edit_steamcmd_path.text())
-
-    def open_browser(self):
-        link = "https://steamcommunity.com/app/311210/workshop/"
-        webbrowser.open(link)
-
-    def load_config(self):
-        config = configparser.ConfigParser()
-        if os.path.exists(CONFIG_FILE_PATH):
-            config.read(CONFIG_FILE_PATH)
-            destination_folder = config.get("Settings", "DestinationFolder", fallback="")
-            steamcmd_path = config.get("Settings", "SteamCMDPath", fallback=cwd())
-            self.edit_destination_folder.setText(destination_folder)
-            self.edit_steamcmd_path.setText(steamcmd_path)
-        else:
-            create_default_config()
-
-    def save_config(self, destination_folder, steamcmd_path):
-        config = configparser.ConfigParser()
-        config.read(CONFIG_FILE_PATH)
-        config.set("Settings", "DestinationFolder", destination_folder)
-        config.set("Settings", "SteamCMDPath", steamcmd_path)
-        with open(CONFIG_FILE_PATH, "w") as config_file:
-            config.write(config_file)
-
-    def reset_file_size(self):
-        self.label_file_size.setText(f"File size: 0KB")
-
-    def show_map_info(self):
-        workshop_id = self.edit_workshop_id.text().strip()
-
-        if not workshop_id:
-            QMessageBox.warning(self, "Warning", "Please enter a Workshop ID first.")
-            return
-
-        if not workshop_id.isdigit():
-            try:
-                if extract_workshop_id(workshop_id).strip().isdigit():
-                    workshop_id = extract_workshop_id(workshop_id).strip()
-                else:
-                    QMessageBox.warning(self, "Warning", "Please enter a valid Workshop ID.")
-                    return
-            except:
-                QMessageBox.warning(self, "Warning", "Please enter a valid Workshop ID.")
-                return
-
-        self.label_file_size.setText(f"File size: {get_workshop_file_size(workshop_id, raw=True)}")
-        try:
-            url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
-            response = requests.get(url)
-            response.raise_for_status()
-            content = response.text
-
-            soup = BeautifulSoup(content, "html.parser")
-
-            try:
-                map_mod_type = soup.find("div", class_="rightDetailsBlock").text.strip()
-                map_name = soup.find("div", class_="workshopItemTitle").text.strip()
-                map_size = soup.find("div", class_="detailsStatRight").text.strip()
-                stars_div = soup.find("div", class_="fileRatingDetails")
-                stars = stars_div.find("img")["src"]
-            except:
-                QMessageBox.warning(self, "Warning", "Please enter a valid Workshop ID.")
-                return
-
-            try:
-                preview_image_element = soup.find("img", id="previewImage")
-                workshop_item_image_url = preview_image_element["src"]
-            except:
-                preview_image_element = soup.find("img", id="previewImageMain")
-                workshop_item_image_url = preview_image_element["src"]
-
-            image_response = requests.get(workshop_item_image_url)
-            image_response.raise_for_status()
-
-            stars_response = requests.get(stars)
-            stars_response.raise_for_status()
-
-            pixmap = QPixmap()
-            pixmap.loadFromData(image_response.content)
-
-            pixmap_stars = QPixmap()
-            pixmap_stars.loadFromData(stars_response.content)
-
-            label = QLabel(self)
-            label.setPixmap(pixmap)
-            label.setAlignment(Qt.AlignCenter)
-
-            label_stars = QLabel(self)
-            label_stars.setPixmap(pixmap_stars)
-            label_stars.setAlignment(Qt.AlignCenter)
-
-            info = (
-            f"Name: {map_name}<br>"
-            f"Type: {map_mod_type}<br>"
-            f"Size: {map_size}<br>"
-            )
-
-            msg_box = QMessageBox(self)
-            msg_box.setWindowTitle("Map/Mod Information")
-            msg_box.setWindowIcon(QIcon('ryuk.ico'))
-            msg_box.setIconPixmap(pixmap)
-            msg_box.setInformativeText(info)
-            msg_box.setDetailedText(f"Stars: {stars}\nLink: {url}")
-            msg_box.setStandardButtons(QMessageBox.Ok)
-
-            msg_box.exec_()
-
-        except requests.exceptions.RequestException as e:
-            show_message("Error", f"Failed to fetch map information.\nError: {e}")
-
-    def launch_boiii(self):
-        try:
-            boiii_path = os.path.join(self.edit_destination_folder.text(), "boiii.exe")
-            subprocess.Popen([boiii_path], cwd=self.edit_destination_folder.text())
-        except Exception as e:
-            show_message("Error: Failed to launch BOIII", f"Failed to launch boiii.exe\nMake sure to put in your correct boiii path\n{e}")
-
-    def open_settings_dialog(self):
-        settings_dialog = SettingsDialog()
-        settings_dialog.exec_()
-
-    def closeEvent(self, event):
-        self.settings.setValue("geometry", self.saveGeometry())
-        super().closeEvent(event)
-
-    def restore_geometry(self):
-        geometry = self.settings.value("geometry", None)
-        if geometry is not None:
-            self.restoreGeometry(geometry)
-
-class SettingsDialog(QDialog):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Settings")
-        self.setWindowIcon(QIcon('ryuk.ico'))
-        self.setGeometry(50, 50, 250, 120)
-        self.settings = QSettings("MyApp2", "MyWindow2")
-        self.restore_geometry()
-        self.initUI()
-
-    def initUI(self):
-        layout = QVBoxLayout()
-
-        self.check_updates_checkbox = QCheckBox("Check for updates on launch")
-        self.check_updates_checkbox.setChecked(self.load_settings(updates=True))
-        layout.addWidget(self.check_updates_checkbox)
-
-        buttons_layout = QHBoxLayout()
-        self.checkbox_show_console = QCheckBox("Console (On Download)", self)
-        self.checkbox_show_console.setChecked(self.load_settings(console=True))
-        tooltip_text = "<font color='black'>Toggle SteamCMD console\nPlease don't close the Console If you want to stop press the Stop boutton.</font>"
-        self.checkbox_show_console.setToolTip(tooltip_text)
-
-        buttons_layout.addWidget(self.checkbox_show_console, 5)
-
-        layout.addLayout(buttons_layout)
-
-        save_button = QPushButton("Save")
-        save_button.setFixedWidth(60)
-        save_button.clicked.connect(self.save_settings)
-        layout.addWidget(save_button, alignment=Qt.AlignLeft)
-
-        self.setLayout(layout)
-
-    def save_settings(self):
-        global console
-        if self.check_updates_checkbox.isChecked():
-            config_check_for_updates(state="on")
-        else:
-            config_check_for_updates(state="off")
-
-        if self.checkbox_show_console.isChecked():
-            config_console_state(state="on")
-            console = True
-        else:
-            config_console_state(state="off")
-            console = False
-
-        self.accept()
-
-    def load_settings(self, console=None, updates=None):
-        if updates:
-            if config_check_for_updates() == "on":
-                return 1
-            else:
-                return 0
-        if console:
-            if config_console_state() == "on":
-                console = True
-                return 1
-            else:
-                console = False
-                return 0
-
-    def closeEvent(self, event):
-        self.settings.setValue("geometry", self.saveGeometry())
-        super().closeEvent(event)
-
-    def restore_geometry(self):
-        geometry = self.settings.value("geometry", None)
-        if geometry is not None:
-            self.restoreGeometry(geometry)
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    qdarktheme.setup_theme()
-
-    if not os.path.exists(CONFIG_FILE_PATH):
-        create_default_config()
-
-    window = WorkshopDownloaderApp()
-    window.show()
-
-    sys.exit(app.exec_())
+    app = BOIIIWD()
+    app.mainloop()
