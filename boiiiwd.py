@@ -335,7 +335,10 @@ class UpdateWindow(ctk.CTkToplevel):
                 self.progress_bar.set(0.0)
                 # there's a better solution ill implement it later
                 global master_win
-                master_win.attributes('-alpha', 1.0)
+                try:
+                    master_win.attributes('-alpha', 1.0)
+                except:
+                    pass
                 show_message("Cancelled!", "Update cancelled by user", icon="warning")
         except Exception as e:
             self.progress_bar.set(0.0)
@@ -354,31 +357,47 @@ class SettingsTab(ctk.CTkFrame):
     def __init__(self, master=None):
         super().__init__(master)
 
+        # Left and right frames, use fg_color="transparent"
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        left_frame = ctk.CTkFrame(self)
+        left_frame.grid(row=0, column=0, padx=(20, 20), pady=(20, 0), sticky="nsew")
+        left_frame.grid_columnconfigure(1, weight=1)
+        right_frame = ctk.CTkFrame(self)
+        right_frame.grid(row=0, column=1, padx=(20, 20), pady=(20, 0), sticky="nsew")
+        right_frame.grid_columnconfigure(1, weight=1)
+        self.update_idletasks()
+
         # Check for updates checkbox
         self.check_updates_var = ctk.BooleanVar()
         self.check_updates_var.trace_add("write", self.enable_save_button)
-        self.check_updates_checkbox = ctk.CTkSwitch(self, text="Check for updates on launch", variable=self.check_updates_var)
-        self.check_updates_checkbox.grid(row=0, column=1, padx=20 , pady=(20, 0), sticky="nsew")
-        self.check_updates_var.set(self.load_settings(updates=True))
+        self.check_updates_checkbox = ctk.CTkSwitch(left_frame, text="Check for updates on launch", variable=self.check_updates_var)
+        self.check_updates_checkbox.grid(row=0, column=1, padx=20 , pady=(20, 0), sticky="nw")
+        self.check_updates_var.set(self.load_settings("checkforupdates"))
 
         # Show console checkbox
         self.console_var = ctk.BooleanVar()
         self.console_var.trace_add("write", self.enable_save_button)
-        self.checkbox_show_console = ctk.CTkSwitch(self, text="Console (On Download)", variable=self.console_var)
-        self.checkbox_show_console.grid(row=1, column=1, padx=20, pady=(20, 0), sticky="nsew")
-        self.checkbox_show_console_tooltip = CTkToolTip(self.checkbox_show_console, message="Toggle SteamCMD console\nPlease don't close the Console If you want to stop press the Stop boutton")
-        self.console_var.set(self.load_settings(console=True))
+        self.checkbox_show_console = ctk.CTkSwitch(left_frame, text="Console (On Download)", variable=self.console_var)
+        self.checkbox_show_console.grid(row=1, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.checkbox_show_console_tooltip = CTkToolTip(self.checkbox_show_console, message="Toggle SteamCMD console\nPlease don't close the Console If you want to stop press the Stop button")
+        self.console_var.set(self.load_settings("console"))
 
         # Check for updates button
-        self.check_for_updates = ctk.CTkButton(self, text="Check for updates", command=self.check_for_updates)
-        self.check_for_updates.grid(row=2, column=1, padx=20, pady=(20, 0), sticky="nsew")
+        self.check_for_updates = ctk.CTkButton(right_frame, text="Check for updates", command=self.check_for_updates_func)
+        self.check_for_updates.grid(row=2, column=1, padx=20, pady=(20, 0), sticky="n")
 
         # Save button
         self.save_button = ctk.CTkButton(self, text="Save", command=self.save_settings, state='disabled')
-        self.save_button.grid(row=3, column=1, padx=20, pady=(150, 0), sticky="nsew")
+        self.save_button.grid(row=3, column=0, padx=20, pady=(20, 20), sticky="nw")
+
 
     def enable_save_button(self, *args):
-        self.save_button.configure(state='normal')
+        try:
+            self.save_button.configure(state='normal')
+        except:
+            pass
 
     def save_settings(self):
         self.save_button.configure(state='disabled')
@@ -395,21 +414,22 @@ class SettingsTab(ctk.CTkFrame):
             save_config("console", "off")
             console = False
 
-    def load_settings(self, console=None, updates=None):
-        if updates:
-            if check_config("checkforupdtes") == "on":
-                return 1
-            else:
-                return 0
-        if console:
-            if check_config("console") == "on":
+    def load_settings(self, setting):
+        global console
+        if setting == "console":
+            if check_config(setting) == "on":
                 console = True
                 return 1
             else:
                 console = False
                 return 0
+        else:
+            if check_config(setting) == "on":
+                return 1
+            else:
+                return 0
 
-    def check_for_updates(self, ignore_up_todate=False):
+    def check_for_updates_func(self, ignore_up_todate=False):
         try:
             latest_version = get_latest_release_version()
             current_version = VERSION
@@ -438,8 +458,8 @@ class SettingsTab(ctk.CTkFrame):
             show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
 
     def load_on_switch_screen(self):
-        self.check_updates_var.set(self.load_settings(updates=True))
-        self.console_var.set(self.load_settings(console=True))
+        self.check_updates_var.set(self.load_settings("checkforupdtes"))
+        self.console_var.set(self.load_settings("console"))
 
         # keep last cuz of trace_add()
         self.save_button.configure(state='disabled')
@@ -639,8 +659,8 @@ class BOIIIWD(ctk.CTk):
         print("sidebar_button click")
 
     def hide_main_widgets(self):
-        self.optionsframe.grid_remove()
-        self.slider_progressbar_frame.grid_remove()
+        self.optionsframe.grid_forget()
+        self.slider_progressbar_frame.grid_forget()
 
     def show_main_widgets(self):
         self.title("BOIII Workshop Downloader - Main")
@@ -648,11 +668,11 @@ class BOIIIWD(ctk.CTk):
         self.slider_progressbar_frame.grid(row=1, column=1, padx=(20, 20), pady=(20, 0), sticky="nsew")
 
     def hide_settings_widgets(self):
-        self.settings_tab.pack_forget()
+        self.settings_tab.grid_forget()
 
     def show_settings_widgets(self):
         self.title("BOIII Workshop Downloader - Settings")
-        self.settings_tab.grid(row=0, column=1, padx=(20, 20), pady=(20, 0), sticky="nsew")
+        self.settings_tab.grid(row=0, rowspan=3, column=1, padx=(20, 20), pady=(20, 20), sticky="nsew")
         self.settings_tab.load_on_switch_screen()
 
     def main_button_event(self):
