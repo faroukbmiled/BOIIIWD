@@ -25,10 +25,13 @@ GITHUB_REPO = "faroukbmiled/BOIIIWD"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 UPDATER_FOLDER = "update"
 CONFIG_FILE_PATH = "config.ini"
-global stopped, steampid, console
+
+# fuck it we ball, ill remove these when i finish with eveything (and replace them with none global bools)
+global stopped, steampid, console, clean_on_finish
 steampid = None
 stopped = False
 console = False
+clean_on_finish = True
 
 ctk.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 ctk.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -70,6 +73,34 @@ def create_update_script(current_exe, new_exe, updater_folder, program_name):
         script_file.write(script_content)
 
     return script_path
+
+def check_for_updates_func(window, ignore_up_todate=False):
+    try:
+        latest_version = get_latest_release_version()
+        current_version = VERSION
+
+        if latest_version and latest_version != current_version:
+            msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1))
+
+            result = msg_box.get()
+
+            if result == "View":
+                webbrowser.open(f"https://github.com/{GITHUB_REPO}/releases/latest")
+
+            if result == "Yes":
+                update_window = UpdateWindow(window, LATEST_RELEASE_URL)
+                update_window.start_update()
+
+            if result == "No":
+                return
+
+        elif latest_version == current_version:
+            if ignore_up_todate:
+                return
+            msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok")
+            result = msg_box.get()
+    except Exception as e:
+        show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
 
 def cwd():
     if getattr(sys, 'frozen', False):
@@ -249,6 +280,25 @@ def show_message(title, message, icon="warning", exit_on_close=False):
             return False
     else:
         msg = CTkMessagebox(title=title, message=message, icon=icon)
+
+def launch_boiii_func(path):
+    try:
+        boiii_path = os.path.join(path, "boiii.exe")
+        subprocess.Popen([boiii_path], cwd=path)
+    except Exception as e:
+        show_message("Error: Failed to launch BOIII", f"Failed to launch boiii.exe\nMake sure to put in your correct boiii path\n{e}")
+
+def remove_tree(folder_path, show_error=None):
+    if show_error:
+        try:
+            shutil.rmtree(folder_path)
+        except Exception as e:
+            show_message("Error!", f"An error occurred while trying to remove files:\n{e}", icon="cancel")
+    try:
+        shutil.rmtree(folder_path)
+    except Exception as e:
+        pass
+
 # End helper functions
 
 class UpdateWindow(ctk.CTkToplevel):
@@ -384,9 +434,24 @@ class SettingsTab(ctk.CTkFrame):
         self.checkbox_show_console_tooltip = CTkToolTip(self.checkbox_show_console, message="Toggle SteamCMD console\nPlease don't close the Console If you want to stop press the Stop button")
         self.console_var.set(self.load_settings("console"))
 
-        # Check for updates button
-        self.check_for_updates = ctk.CTkButton(right_frame, text="Check for updates", command=self.check_for_updates_func)
-        self.check_for_updates.grid(row=2, column=1, padx=20, pady=(20, 0), sticky="n")
+        # clean on finish checkbox
+        self.clean_checkbox_var = ctk.BooleanVar()
+        self.clean_checkbox_var.trace_add("write", self.enable_save_button)
+        self.clean_checkbox = ctk.CTkSwitch(left_frame, text="Clean on finish", variable=self.clean_checkbox_var)
+        self.clean_checkbox.grid(row=2, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.clean_checkbox_tooltip = CTkToolTip(self.clean_checkbox, message="Cleans the map that have been downloaded and installed from steamcmd's steamapps folder ,to save space")
+        self.clean_checkbox_var.set(self.load_settings("clean_on_finish", "on"))
+
+        # Check for updates button n Launch boiii
+        self.check_for_updates = ctk.CTkButton(right_frame, text="Check for updates", command=self.settings_check_for_updates)
+        self.check_for_updates.grid(row=1, column=1, padx=20, pady=(20, 0), sticky="n")
+
+        self.launch_boiii = ctk.CTkButton(right_frame, text="Launch boiii", command=self.settings_launch_boiii)
+        self.launch_boiii.grid(row=2, column=1, padx=20, pady=(20, 0), sticky="n")
+
+        self.reset_steamcmd = ctk.CTkButton(right_frame, text="Reset SteamCMD", command=self.settings_reset_steamcmd)
+        self.reset_steamcmd.grid(row=3, column=1, padx=20, pady=(20, 0), sticky="n")
+        self.reset_steamcmd_tooltip = CTkToolTip(self.reset_steamcmd, message="This will remove steamapps folder + all the maps that are potentioaly corrupted or not so use at ur own risk (could fix some issues as well)")
 
         # Save button
         self.save_button = ctk.CTkButton(self, text="Save", command=self.save_settings, state='disabled')
@@ -401,7 +466,7 @@ class SettingsTab(ctk.CTkFrame):
 
     def save_settings(self):
         self.save_button.configure(state='disabled')
-        global console
+        global console, clean_on_finish
         if self.check_updates_checkbox.get():
             save_config("checkforupdtes", "on")
         else:
@@ -414,48 +479,37 @@ class SettingsTab(ctk.CTkFrame):
             save_config("console", "off")
             console = False
 
-    def load_settings(self, setting):
-        global console
+        if self.clean_checkbox.get():
+            save_config("clean_on_finish", "on")
+            clean_on_finish = True
+        else:
+            save_config("clean_on_finish", "off")
+            clean_on_finish = False
+
+    def load_settings(self, setting, fallback=None):
+        global console, clean_on_finish
         if setting == "console":
-            if check_config(setting) == "on":
+            if check_config(setting, fallback) == "on":
                 console = True
                 return 1
             else:
                 console = False
                 return 0
+        if setting == "clean_on_finish":
+            if check_config(setting, fallback) == "on":
+                clean_on_finish = True
+                return 1
+            else:
+                clean_on_finish = False
+                return 0
         else:
-            if check_config(setting) == "on":
+            if check_config(setting, fallback) == "on":
                 return 1
             else:
                 return 0
 
-    def check_for_updates_func(self, ignore_up_todate=False):
-        try:
-            latest_version = get_latest_release_version()
-            current_version = VERSION
-
-            if latest_version and latest_version != current_version:
-                msg_box = CTkMessagebox(title="Update Available", message=f"An update is available!\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes")
-
-                result = msg_box.get()
-
-                if result == "View":
-                    webbrowser.open(f"https://github.com/{GITHUB_REPO}/releases/latest")
-
-                if result == "Yes":
-                    update_window = UpdateWindow(self, LATEST_RELEASE_URL)
-                    update_window.start_update()
-
-                if result == "No":
-                    return
-
-            elif latest_version == current_version:
-                if ignore_up_todate:
-                    return
-                msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok")
-                result = msg_box.get()
-        except Exception as e:
-            show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
+    def settings_check_for_updates(self):
+        check_for_updates_func(self, ignore_up_todate=False)
 
     def load_on_switch_screen(self):
         self.check_updates_var.set(self.load_settings("checkforupdtes"))
@@ -463,6 +517,18 @@ class SettingsTab(ctk.CTkFrame):
 
         # keep last cuz of trace_add()
         self.save_button.configure(state='disabled')
+
+    def settings_launch_boiii(self):
+        launch_boiii_func(check_config("destinationfolder"))
+
+    def settings_reset_steamcmd(self):
+        steamcmd_path = get_steamcmd_path()
+        steamcmd_steamapps = os.path.join(steamcmd_path, "steamapps")
+        if os.path.exists(steamcmd_steamapps):
+            remove_tree(steamcmd_steamapps, show_error=True)
+            show_message("Success!", "SteamCMD has been reset successfully!", icon="info")
+        else:
+            show_message("Warning!", "steamapps folder was not found, maybe already removed?", icon="warning")
 
 class BOIIIWD(ctk.CTk):
     def __init__(self):
@@ -489,12 +555,14 @@ class BOIIIWD(ctk.CTk):
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
         self.txt_label = ctk.CTkLabel(self.sidebar_frame, text="- Sidebar -")
         self.txt_label.grid(row=1, column=0, padx=20, pady=(20, 10))
-        self.sidebar_button_1 = ctk.CTkButton(self.sidebar_frame)
-        self.sidebar_button_1.grid(row=2, column=0, padx=20, pady=10)
-        self.sidebar_button_2 = ctk.CTkButton(self.sidebar_frame)
-        self.sidebar_button_2.grid(row=3, column=0, padx=20, pady=10)
-        self.sidebar_button_3 = ctk.CTkButton(self.sidebar_frame)
-        self.sidebar_button_3.grid(row=5, column=0, padx=20, pady=10)
+        self.sidebar_main = ctk.CTkButton(self.sidebar_frame)
+        self.sidebar_main.grid(row=2, column=0, padx=20, pady=10)
+        self.sidebar_library = ctk.CTkButton(self.sidebar_frame)
+        self.sidebar_library.grid(row=3, column=0, padx=20, pady=10)
+        self.sidebar_queue = ctk.CTkButton(self.sidebar_frame)
+        self.sidebar_queue.grid(row=4, column=0, padx=20, pady=10, sticky="n")
+        self.sidebar_settings = ctk.CTkButton(self.sidebar_frame)
+        self.sidebar_settings.grid(row=5, column=0, padx=20, pady=10)
         self.appearance_mode_label = ctk.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
         self.appearance_mode_label.grid(row=6, column=0, padx=20, pady=(10, 0))
         self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.sidebar_frame, values=["Light", "Dark", "System"],
@@ -588,16 +656,19 @@ class BOIIIWD(ctk.CTk):
         self.button_stop.configure(state="disabled")
 
         # sidebar windows bouttons
-        self.sidebar_button_1.configure(command=self.main_button_event, text="Main", fg_color=("#3d3d3d"))
-        self.sidebar_button_2.configure(state="disabled", text="Library")
-        self.sidebar_button_3.configure(command=self.settings_button_event, text="Settings")
+        self.sidebar_main.configure(command=self.main_button_event, text="Main", fg_color=("#3d3d3d"))
+        self.sidebar_library.configure(state="disabled", text="Library")
+        self.sidebar_queue.configure(state="disabled", text="Queue")
+        self.sidebar_settings.configure(command=self.settings_button_event, text="Settings")
+        self.sidebar_library_tooltip = CTkToolTip(self.sidebar_library, message="Coming soon")
+        self.sidebar_queue_tooltip = CTkToolTip(self.sidebar_queue, message="Coming soon")
 
         # load ui configs
         self.load_configs()
 
         if check_config("checkforupdtes") == "on":
             self.withdraw()
-            self.check_for_updates(ignore_up_todate=True)
+            check_for_updates_func(self, ignore_up_todate=True)
             self.update()
             self.deiconify()
 
@@ -617,34 +688,8 @@ class BOIIIWD(ctk.CTk):
     def id_chnaged_handler(self, some=None, other=None ,shit=None):
         self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
 
-    def check_for_updates(self, ignore_up_todate=False):
-        try:
-            latest_version = get_latest_release_version()
-            current_version = VERSION
-
-            if latest_version and latest_version != current_version:
-                msg_box = CTkMessagebox(title="Update Available", message=f"An update is available!\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes")
-
-                result = msg_box.get()
-
-                if result == "View":
-                    webbrowser.open(f"https://github.com/{GITHUB_REPO}/releases/latest")
-
-                if result == "Yes":
-                    self.attributes('-alpha', 0)
-                    update_window = UpdateWindow(self, LATEST_RELEASE_URL)
-                    update_window.start_update()
-
-                if result == "No":
-                    return
-
-            elif latest_version == current_version:
-                if ignore_up_todate:
-                    return
-                msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok")
-                result = msg_box.get()
-        except Exception as e:
-            show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
+    def check_for_updates(self):
+        check_for_updates_func(self, ignore_up_todate=False)
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         ctk.set_appearance_mode(new_appearance_mode)
@@ -676,14 +721,14 @@ class BOIIIWD(ctk.CTk):
         self.settings_tab.load_on_switch_screen()
 
     def main_button_event(self):
-        self.sidebar_button_1.configure(state="active", fg_color=("#3d3d3d"))
-        self.sidebar_button_3.configure(state="normal", fg_color=("#1f538d"))
+        self.sidebar_main.configure(state="active", fg_color=("#3d3d3d"))
+        self.sidebar_settings.configure(state="normal", fg_color=("#1f538d"))
         self.hide_settings_widgets()
         self.show_main_widgets()
 
     def settings_button_event(self):
-        self.sidebar_button_1.configure(state="normal", fg_color=("#1f538d"))
-        self.sidebar_button_3.configure(state="active", fg_color=("#3d3d3d"))
+        self.sidebar_main.configure(state="normal", fg_color=("#1f538d"))
+        self.sidebar_settings.configure(state="active", fg_color=("#3d3d3d"))
         self.hide_main_widgets()
         self.show_settings_widgets()
 
@@ -988,14 +1033,14 @@ class BOIIIWD(ctk.CTk):
                 except Exception as E:
                     show_message("Error", f"Error copying files: {E}", icon="cancel")
 
+                if clean_on_finish:
+                    remove_tree(map_folder)
+                    remove_tree(download_folder)
+
                 msg = CTkMessagebox(title="Download Complete", message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!", icon="info", option_1="Launch", option_2="Ok")
                 response = msg.get()
                 if response=="Launch":
-                    try:
-                        boiii_path = os.path.join(self.edit_destination_folder.get().strip(), "boiii.exe")
-                        subprocess.Popen([boiii_path], cwd=self.edit_destination_folder.get().strip())
-                    except Exception as e:
-                        show_message("Error: Failed to launch BOIII", f"Failed to launch boiii.exe\nMake sure to put in your correct boiii path\n{e}")
+                    launch_boiii_func(self.edit_destination_folder.get().strip())
                 if response=="Ok":
                     pass
 
@@ -1020,7 +1065,6 @@ class BOIIIWD(ctk.CTk):
         self.label_speed.configure(text="Network Speed: 0 KB/s")
         self.progress_text.configure(text="0%")
         self.progress_bar.set(0.0)
-
 
 if __name__ == "__main__":
     app = BOIIIWD()
