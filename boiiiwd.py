@@ -26,12 +26,14 @@ LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/do
 UPDATER_FOLDER = "update"
 CONFIG_FILE_PATH = "config.ini"
 
-# fuck it we ball, ill remove these when i finish with eveything (and replace them with none global bools)
-global stopped, steampid, console, clean_on_finish
+# fuck it we ball, ill get rid of globals when i finish everything cant be bothered rn
+global stopped, steampid, console, clean_on_finish, continuous, estimated_progress
 steampid = None
 stopped = False
 console = False
 clean_on_finish = True
+continuous = True
+estimated_progress = True
 
 ctk.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 ctk.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -179,38 +181,58 @@ def create_default_config():
     with open(CONFIG_FILE_PATH, "w") as config_file:
         config.write(config_file)
 
-def run_steamcmd_command(command, self):
+def run_steamcmd_command(command, self, map_folder):
+    global steampid, stopped
     steamcmd_path = get_steamcmd_path()
     show_console = subprocess.CREATE_NO_WINDOW
     if console:
         show_console = subprocess.CREATE_NEW_CONSOLE
 
-    process = subprocess.Popen(
-        [steamcmd_path + "\steamcmd.exe"] + command.split(),
-        stdout=None if console else subprocess.PIPE,
-        stderr=None if console else subprocess.PIPE,
-        text=True,
-        bufsize=1,
-        universal_newlines=True,
-        creationflags=show_console
-    )
+    if continuous:
+        while not os.path.exists(map_folder) and not stopped:
+            process = subprocess.Popen(
+                [steamcmd_path + "\steamcmd.exe"] + command.split(),
+                stdout=None if console else subprocess.PIPE,
+                stderr=None if console else subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+                creationflags=show_console
+            )
 
-    global steampid
-    steampid = process.pid
+            steampid = process.pid
 
-    if process.poll() is not None:
-        return process.returncode
+            if process.poll() is not None:
+                return process.returncode
 
-    process.communicate()
+            process.communicate()
+    else:
+        process = subprocess.Popen(
+            [steamcmd_path + "\steamcmd.exe"] + command.split(),
+            stdout=None if console else subprocess.PIPE,
+            stderr=None if console else subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            universal_newlines=True,
+            creationflags=show_console
+        )
 
-    show_message("SteamCMD has terminated", "SteamCMD has been terminated\nTry again if it randomly stopped!")
-    global stopped
+
+        steampid = process.pid
+
+        if process.poll() is not None:
+            return process.returncode
+
+        process.communicate()
+
+        if not os.path.exists(map_folder):
+            show_message("SteamCMD has terminated", "SteamCMD has been terminated\nAnd failed to download the map/mod, try again or enable continuous download in settings")
+
     stopped = True
     self.button_download.configure(state="normal")
     self.button_stop.configure(state="disabled")
 
     return process.returncode
-
 
 def get_steamcmd_path():
     config = configparser.ConfigParser()
@@ -237,9 +259,11 @@ def extract_json_data(json_path):
         data = json.load(json_file)
     return data["Type"], data["FolderName"]
 
-def convert_bytes_to_readable(size_in_bytes):
+def convert_bytes_to_readable(size_in_bytes, no_symb=None):
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
         if size_in_bytes < 1024.0:
+            if no_symb:
+                return f"{size_in_bytes:.2f}"
             return f"{size_in_bytes:.2f} {unit}"
         size_in_bytes /= 1024.0
 
@@ -298,6 +322,11 @@ def remove_tree(folder_path, show_error=None):
         shutil.rmtree(folder_path)
     except Exception as e:
         pass
+
+def convert_seconds(seconds):
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    return hours, minutes, seconds
 
 # End helper functions
 
@@ -434,13 +463,30 @@ class SettingsTab(ctk.CTkFrame):
         self.checkbox_show_console_tooltip = CTkToolTip(self.checkbox_show_console, message="Toggle SteamCMD console\nPlease don't close the Console If you want to stop press the Stop button")
         self.console_var.set(self.load_settings("console"))
 
+        # Show continuous checkbox
+        self.continuous_var = ctk.BooleanVar()
+        self.continuous_var.trace_add("write", self.enable_save_button)
+        self.checkbox_continuous = ctk.CTkSwitch(left_frame, text="Continuous Download", variable=self.continuous_var)
+        self.checkbox_continuous.grid(row=2, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.checkbox_continuous_tooltip = CTkToolTip(self.checkbox_continuous, message="This will make sure that the download restarts and resumes! until it finishes if steamcmd crashes randomly (it will not redownload from the start)")
+        self.continuous_var.set(self.load_settings("continuous_download"))
+
         # clean on finish checkbox
         self.clean_checkbox_var = ctk.BooleanVar()
         self.clean_checkbox_var.trace_add("write", self.enable_save_button)
         self.clean_checkbox = ctk.CTkSwitch(left_frame, text="Clean on finish", variable=self.clean_checkbox_var)
-        self.clean_checkbox.grid(row=2, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.clean_checkbox.grid(row=3, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.clean_checkbox_tooltip = CTkToolTip(self.clean_checkbox, message="Cleans the map that have been downloaded and installed from steamcmd's steamapps folder ,to save space")
         self.clean_checkbox_var.set(self.load_settings("clean_on_finish", "on"))
+
+        # Show estimated_progress checkbox
+        self.estimated_progress_var = ctk.BooleanVar()
+        self.estimated_progress_var.trace_add("write", self.enable_save_button)
+        self.estimated_progress = ctk.CTkSwitch(left_frame, text="Estimated Progress Bar", variable=self.estimated_progress_var)
+        self.estimated_progress.grid(row=4, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.estimated_progress_var_tooltip = CTkToolTip(self.estimated_progress, message="This will change how to progress bar works by estimating how long the download will take\
+            \nThis is not accurate ,it's better than with it off which is calculating the downloaded folder size which steamcmd dumps the full size rigth mostly")
+        self.estimated_progress_var.set(self.load_settings("estimated_progress", "on"))
 
         # Check for updates button n Launch boiii
         self.check_for_updates = ctk.CTkButton(right_frame, text="Check for updates", command=self.settings_check_for_updates)
@@ -466,7 +512,7 @@ class SettingsTab(ctk.CTkFrame):
 
     def save_settings(self):
         self.save_button.configure(state='disabled')
-        global console, clean_on_finish
+        global console, clean_on_finish, continuous, estimated_progress
         if self.check_updates_checkbox.get():
             save_config("checkforupdtes", "on")
         else:
@@ -486,8 +532,22 @@ class SettingsTab(ctk.CTkFrame):
             save_config("clean_on_finish", "off")
             clean_on_finish = False
 
+        if self.checkbox_continuous.get():
+            save_config("continuous_download", "on")
+            continuous = True
+        else:
+            save_config("continuous_download", "off")
+            continuous = False
+
+        if self.estimated_progress.get():
+            save_config("estimated_progress", "on")
+            estimated_progress = True
+        else:
+            save_config("estimated_progress", "off")
+            estimated_progress = False
+
     def load_settings(self, setting, fallback=None):
-        global console, clean_on_finish
+        global console, clean_on_finish, continuous, estimated_progress
         if setting == "console":
             if check_config(setting, fallback) == "on":
                 console = True
@@ -495,12 +555,28 @@ class SettingsTab(ctk.CTkFrame):
             else:
                 console = False
                 return 0
+
+        if setting == "continuous_download":
+            if check_config(setting, "on") == "on":
+                continuous = True
+                return 1
+            else:
+                continuous = False
+                return 0
+
         if setting == "clean_on_finish":
             if check_config(setting, fallback) == "on":
                 clean_on_finish = True
                 return 1
             else:
                 clean_on_finish = False
+                return 0
+        if setting == "estimated_progress":
+            if check_config(setting, fallback) == "on":
+                estimated_progress = True
+                return 1
+            else:
+                estimated_progress = False
                 return 0
         else:
             if check_config(setting, fallback) == "on":
@@ -539,6 +615,7 @@ class BOIIIWD(ctk.CTk):
         self.title("BOIII Workshop Downloader - Main")
         self.geometry(f"{910}x{560}")
         self.wm_iconbitmap('ryuk.ico')
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)
@@ -595,6 +672,9 @@ class BOIIIWD(ctk.CTk):
 
         self.label_speed = ctk.CTkLabel(master=self.slider_progressbar_frame, text="Network Speed: 0 KB/s")
         self.label_speed.grid(row=1, column=0, padx=20, pady=(0, 10), sticky="w")
+
+        self.elapsed_time = ctk.CTkLabel(master=self.slider_progressbar_frame, text="")
+        self.elapsed_time.grid(row=1, column=1, padx=20, pady=(0, 10), sticky="nsew", columnspan=1)  # Set columnspan to 1
 
         self.label_file_size = ctk.CTkLabel(master=self.slider_progressbar_frame, text="File size: 0KB")
         self.label_file_size.grid(row=1, column=2, padx=(0, 20), pady=(0, 10), sticky="e")
@@ -654,6 +734,7 @@ class BOIIIWD(ctk.CTk):
         self.progress_bar.set(0.0)
         self.hide_settings_widgets()
         self.button_stop.configure(state="disabled")
+        self.is_downloading = False
 
         # sidebar windows bouttons
         self.sidebar_main.configure(command=self.main_button_event, text="Main", fg_color=("#3d3d3d"))
@@ -673,17 +754,21 @@ class BOIIIWD(ctk.CTk):
             self.deiconify()
 
         try:
-            global console
-            if check_config("console") == "on":
-                console = True
-            else:
-                console = False
+            self.settings_tab.load_settings("clean_on_finish", "on")
+            self.settings_tab.load_settings("continuous_download", "on")
+            self.settings_tab.load_settings("console", "off")
+            self.settings_tab.load_settings("estimated_progress", "on")
         except:
             pass
 
         if not check_steamcmd():
             self.show_warning_message()
 
+    def on_closing(self):
+        save_config("DestinationFolder" ,self.edit_destination_folder.get())
+        save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
+        self.stop_download(on_close=True)
+        os._exit(0)
 
     def id_chnaged_handler(self, some=None, other=None ,shit=None):
         self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
@@ -908,154 +993,220 @@ class BOIIIWD(ctk.CTk):
         text.pack()
 
     def download_map(self):
-        global stopped
-        stopped = False
+        if not self.is_downloading:
+            self.is_downloading = True
+            start_down_thread = threading.Thread(target=self.download_thread)
+            start_down_thread.start()
+        else:
+            show_message("Warning", "Already downloading a map.")
 
-        save_config("DestinationFolder" ,self.edit_destination_folder.get())
-        save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
+    def download_thread(self):
+        try:
+            global stopped
+            stopped = False
 
-        if not check_steamcmd():
-            self.show_warning_message()
-            return
+            save_config("DestinationFolder" ,self.edit_destination_folder.get())
+            save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
 
-        steamcmd_path = get_steamcmd_path()
-        steamcmd_exe_path = os.path.join(steamcmd_path, "steamcmd.exe")
-        steamcmd_size = os.path.getsize(steamcmd_exe_path)
-        if steamcmd_size < 3 * 1024 * 1024:
-            if not show_message("Warning", "SteamCMD is not initialized, Press OK to do so!\nProgram may go unresponsive until SteamCMD is finished downloading.",
-                         icon="warning" ,exit_on_close=True):
-                pass
-            else:
-                initialize_steam_thread = threading.Thread(target=lambda: initialize_steam(self))
-                initialize_steam_thread.start()
-            return
+            if not check_steamcmd():
+                self.show_warning_message()
+                return
 
-        workshop_id = self.edit_workshop_id.get().strip()
-        destination_folder = self.edit_destination_folder.get().strip()
-
-        if not workshop_id.isdigit():
-            try:
-                if extract_workshop_id(workshop_id).strip().isdigit():
-                    workshop_id = extract_workshop_id(workshop_id).strip()
+            steamcmd_path = get_steamcmd_path()
+            steamcmd_exe_path = os.path.join(steamcmd_path, "steamcmd.exe")
+            steamcmd_size = os.path.getsize(steamcmd_exe_path)
+            if steamcmd_size < 3 * 1024 * 1024:
+                if not show_message("Warning", "SteamCMD is not initialized, Press OK to do so!\nProgram may go unresponsive until SteamCMD is finished downloading.",
+                            icon="warning" ,exit_on_close=True):
+                    pass
                 else:
+                    initialize_steam_thread = threading.Thread(target=lambda: initialize_steam(self))
+                    initialize_steam_thread.start()
+                return
+
+            workshop_id = self.edit_workshop_id.get().strip()
+            destination_folder = self.edit_destination_folder.get().strip()
+            ws_file_size = get_workshop_file_size(workshop_id)
+
+            if not workshop_id.isdigit():
+                try:
+                    if extract_workshop_id(workshop_id).strip().isdigit():
+                        workshop_id = extract_workshop_id(workshop_id).strip()
+                    else:
+                        show_message("Warning", "Please enter a valid Workshop ID.", icon="warning")
+                        return
+                except:
                     show_message("Warning", "Please enter a valid Workshop ID.", icon="warning")
                     return
-            except:
+
+            file_size = ws_file_size
+
+            if not valid_id(workshop_id):
                 show_message("Warning", "Please enter a valid Workshop ID.", icon="warning")
                 return
 
-        file_size = get_workshop_file_size(workshop_id)
+            if file_size is None:
+                show_message("Error", "Failed to retrieve file size.", icon="cancel")
+                return
 
-        if not valid_id(workshop_id):
-            show_message("Warning", "Please enter a valid Workshop ID.", icon="warning")
-            return
+            if not Path(destination_folder).exists() and not destination_folder:
+                show_message("Error", "Please select a valid destination folder.")
+                return
 
-        if file_size is None:
-            show_message("Error", "Failed to retrieve file size.", icon="cancel")
-            return
+            if not Path(steamcmd_path).exists() and not steamcmd_path.strip():
+                show_message("Error", "Please enter a valid SteamCMD path.")
+                return
 
-        if not Path(destination_folder).exists() and not destination_folder:
-            show_message("Error", "Please select a valid destination folder.")
-            return
-
-        if not Path(steamcmd_path).exists() and not steamcmd_path.strip():
-            show_message("Error", "Please enter a valid SteamCMD path.")
-            return
-
-        self.after(1, lambda mid=workshop_id: self.label_file_size.configure(text=f"File size: {get_workshop_file_size(mid ,raw=True)}"))
-        download_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "downloads", "311210", workshop_id)
-        map_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", workshop_id)
-        if not os.path.exists(download_folder):
-            os.makedirs(download_folder)
-
-        def check_and_update_progress():
-            global stopped
-            previous_net_speed = 0
-
-            while not stopped:
-                try:
-                    current_size = sum(os.path.getsize(os.path.join(download_folder, f)) for f in os.listdir(download_folder))
-                except:
-                    current_size = sum(os.path.getsize(os.path.join(map_folder, f)) for f in os.listdir(map_folder))
-
-                progress = int(current_size / file_size * 100)
-                self.after(1, lambda v=progress / 100.0: self.progress_bar.set(v))
-
-                current_net_speed = psutil.net_io_counters().bytes_recv
-
-                net_speed_bytes = current_net_speed - previous_net_speed
-                previous_net_speed = current_net_speed
-
-                net_speed, speed_unit = convert_speed(net_speed_bytes)
-
-                self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
-                self.after(1, lambda p=progress: self.progress_text.configure(text=f"{p}%"))
-                time.sleep(1)
-
-        command = f"+login anonymous +workshop_download_item 311210 {workshop_id} +quit"
-        steamcmd_thread = threading.Thread(target=lambda: run_steamcmd_command(command, self))
-        steamcmd_thread.start()
-
-        def wait_for_threads():
-            update_ui_thread = threading.Thread(target=check_and_update_progress)
-            update_ui_thread.daemon = True
-            update_ui_thread.start()
-            update_ui_thread.join()
-
-            global stopped
-            stopped = True
-
-            self.label_speed.configure(text="Network Speed: 0 KB/s")
-            self.progress_text.configure(text="0%")
-            self.progress_bar.set(0.0)
-
+            self.after(1, lambda mid=workshop_id: self.label_file_size.configure(text=f"File size: {get_workshop_file_size(mid ,raw=True)}"))
+            download_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "downloads", "311210", workshop_id)
             map_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", workshop_id)
+            if not os.path.exists(download_folder):
+                os.makedirs(download_folder)
 
-            json_file_path = os.path.join(map_folder, "workshop.json")
+            def check_and_update_progress():
+                # delay untill steam boots up and starts downloading (ive a better idea ill implement it later)
+                time.sleep(8)
+                global stopped
+                previous_net_speed = 0
+                est_downloaded_bytes = 0
+                start_time = time.time()
+                file_size = ws_file_size
 
-            if os.path.exists(json_file_path):
-                mod_type, folder_name = extract_json_data(json_file_path)
+                while not stopped:
+                    try:
+                        current_size = sum(os.path.getsize(os.path.join(download_folder, f)) for f in os.listdir(download_folder))
+                    except:
+                        current_size = sum(os.path.getsize(os.path.join(map_folder, f)) for f in os.listdir(map_folder))
 
-                if mod_type == "mod":
-                    mods_folder = os.path.join(destination_folder, "mods")
-                    folder_name_path = os.path.join(mods_folder, folder_name, "zone")
-                elif mod_type == "map":
-                    usermaps_folder = os.path.join(destination_folder, "usermaps")
-                    folder_name_path = os.path.join(usermaps_folder, folder_name, "zone")
-                else:
-                    show_message("Error", "Invalid map type in workshop.json.", icon="cancel")
-                    return
+                    progress = int(current_size / file_size * 100)
 
-                os.makedirs(folder_name_path, exist_ok=True)
+                    if progress > 100:
+                        progress = int(current_size / current_size * 100)
+                        file_size = current_size
+                        self.after(1, lambda p=progress: self.label_file_size.configure(text=f"Wrong size reported\nActual size: ~{convert_bytes_to_readable(current_size)}"))
 
-                try:
-                    shutil.copytree(map_folder, folder_name_path, dirs_exist_ok=True)
-                except Exception as E:
-                    show_message("Error", f"Error copying files: {E}", icon="cancel")
+                    if estimated_progress:
+                        time_elapsed = time.time() - start_time
+                        raw_net_speed = psutil.net_io_counters().bytes_recv
 
-                if clean_on_finish:
-                    remove_tree(map_folder)
-                    remove_tree(download_folder)
+                        current_net_speed_text = raw_net_speed
+                        net_speed_bytes = current_net_speed_text - previous_net_speed
+                        previous_net_speed = current_net_speed_text
 
-                msg = CTkMessagebox(title="Download Complete", message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!", icon="info", option_1="Launch", option_2="Ok")
-                response = msg.get()
-                if response=="Launch":
-                    launch_boiii_func(self.edit_destination_folder.get().strip())
-                if response=="Ok":
-                    pass
+                        current_net_speed = net_speed_bytes
+                        down_cap = 150000000
+                        if current_net_speed >= down_cap:
+                            current_net_speed = 264029
 
-                self.button_download.configure(state="normal")
-                self.button_stop.configure(state="disabled")
+                        est_downloaded_bytes += current_net_speed
 
-        update_wait_thread = threading.Thread(target=wait_for_threads)
-        update_wait_thread.start()
+                        percentage_complete = (est_downloaded_bytes / file_size) * 100
 
-        self.button_download.configure(state="disabled")
-        self.button_stop.configure(state="normal")
+                        progress = min(percentage_complete / 100, 0.99)
 
-    def stop_download(self):
+                        net_speed, speed_unit = convert_speed(net_speed_bytes)
+
+                        elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
+
+                        print(f"raw_net {raw_net_speed}\ncurrent_net_speed: {current_net_speed}\nest_downloaded_bytes {est_downloaded_bytes}\npercentage_complete {percentage_complete}\nprogress {progress}")
+
+                        self.after(1, self.progress_bar.set(progress))
+                        self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
+                        self.after(1, lambda p=percentage_complete: self.progress_text.configure(text=f"{p:.2f}%"))
+                        self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
+
+                        time.sleep(1)
+                    else:
+                        time_elapsed = time.time() - start_time
+                        progress = int(current_size / file_size * 100)
+                        self.after(1, lambda v=progress / 100.0: self.progress_bar.set(v))
+
+                        current_net_speed = psutil.net_io_counters().bytes_recv
+
+                        net_speed_bytes = current_net_speed - previous_net_speed
+                        previous_net_speed = current_net_speed
+
+                        net_speed, speed_unit = convert_speed(net_speed_bytes)
+                        elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
+
+                        self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
+                        self.after(1, lambda p=progress: self.progress_text.configure(text=f"{p}%"))
+                        self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
+                        time.sleep(1)
+
+            command = f"+login anonymous +@sSteamCmdForcePlatformBitness 64 +app_info_update 1 +app_info_print 311210 app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
+            steamcmd_thread = threading.Thread(target=lambda: run_steamcmd_command(command, self, map_folder))
+            steamcmd_thread.start()
+
+            def wait_for_threads():
+                update_ui_thread = threading.Thread(target=check_and_update_progress)
+                update_ui_thread.daemon = True
+                update_ui_thread.start()
+                update_ui_thread.join()
+
+                global stopped
+                stopped = True
+
+                self.label_speed.configure(text="Network Speed: 0 KB/s")
+                self.progress_text.configure(text="0%")
+                self.progress_bar.set(0.0)
+
+                map_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", workshop_id)
+
+                json_file_path = os.path.join(map_folder, "workshop.json")
+
+                if os.path.exists(json_file_path):
+                    mod_type, folder_name = extract_json_data(json_file_path)
+
+                    if mod_type == "mod":
+                        mods_folder = os.path.join(destination_folder, "mods")
+                        folder_name_path = os.path.join(mods_folder, folder_name, "zone")
+                    elif mod_type == "map":
+                        usermaps_folder = os.path.join(destination_folder, "usermaps")
+                        folder_name_path = os.path.join(usermaps_folder, folder_name, "zone")
+                    else:
+                        show_message("Error", "Invalid map type in workshop.json.", icon="cancel")
+                        return
+
+                    os.makedirs(folder_name_path, exist_ok=True)
+
+                    try:
+                        shutil.copytree(map_folder, folder_name_path, dirs_exist_ok=True)
+                    except Exception as E:
+                        show_message("Error", f"Error copying files: {E}", icon="cancel")
+
+                    if clean_on_finish:
+                        remove_tree(map_folder)
+                        remove_tree(download_folder)
+
+                    msg = CTkMessagebox(title="Download Complete", message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!", icon="info", option_1="Launch", option_2="Ok")
+                    response = msg.get()
+                    if response=="Launch":
+                        launch_boiii_func(self.edit_destination_folder.get().strip())
+                    if response=="Ok":
+                        pass
+
+                    self.button_download.configure(state="normal")
+                    self.button_stop.configure(state="disabled")
+
+            update_wait_thread = threading.Thread(target=wait_for_threads)
+            update_wait_thread.start()
+
+            self.button_download.configure(state="disabled")
+            self.button_stop.configure(state="normal")
+
+        finally:
+            self.stop_download
+            self.is_downloading = False
+
+    def stop_download(self, on_close=None):
         global stopped
         stopped = True
+
+        if on_close:
+            subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                       creationflags=subprocess.CREATE_NO_WINDOW)
+            return
 
         subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                        creationflags=subprocess.CREATE_NO_WINDOW)
@@ -1064,6 +1215,7 @@ class BOIIIWD(ctk.CTk):
         self.button_stop.configure(state="disabled")
         self.label_speed.configure(text="Network Speed: 0 KB/s")
         self.progress_text.configure(text="0%")
+        self.elapsed_time.configure(text=f"")
         self.progress_bar.set(0.0)
 
 if __name__ == "__main__":
