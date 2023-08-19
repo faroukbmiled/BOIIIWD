@@ -29,7 +29,7 @@
 . If the download fails when getting big maps its SteamCMD's fault, still working on a workaround <br>
 
 . Known bugs: <br>
-. Rare UI bug => instead of showing a warning message it just does invisible that leads to the whole window becoming unclickable (end the task from task manager) <br>
+. Rare UI bug => instead of showing a warning message, its window goes invisible and leads to the whole ui becoming unclickable (end the task from task manager) <br>
 . Possible logic bugs related to the progress bar , sometimes it carries on progressing when you pressed stop => please raise an issue if this happens often <br>
   
 ### todos:
