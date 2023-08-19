@@ -1417,7 +1417,6 @@ class BOIIIWD(ctk.CTk):
 
             workshop_id = self.edit_workshop_id.get().strip()
             destination_folder = self.edit_destination_folder.get().strip()
-            ws_file_size = get_workshop_file_size(workshop_id)
 
             if not destination_folder or not os.path.exists(destination_folder):
                 show_message("Error", "Please select a valid destination folder.")
@@ -1442,6 +1441,7 @@ class BOIIIWD(ctk.CTk):
                     self.stop_download
                     return
 
+            ws_file_size = get_workshop_file_size(workshop_id)
             file_size = ws_file_size
 
             if not valid_id(workshop_id):
