@@ -1,7 +1,6 @@
 from CTkMessagebox import CTkMessagebox
 from bs4 import BeautifulSoup
 import customtkinter as ctk
-from pathlib import Path
 from CTkToolTip import *
 from PIL import Image
 import configparser
@@ -25,6 +24,7 @@ GITHUB_REPO = "faroukbmiled/BOIIIWD"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 UPDATER_FOLDER = "update"
 CONFIG_FILE_PATH = "config.ini"
+RESOURCES_DIR = os.path.join(os.path.dirname(__file__), 'resources')
 
 # fuck it we ball, ill get rid of globals when i finish everything cant be bothered rn
 global stopped, steampid, console, clean_on_finish, continuous, estimated_progress
@@ -254,10 +254,10 @@ def save_config(name, value):
     with open(CONFIG_FILE_PATH, "w") as config_file:
         config.write(config_file)
 
-def extract_json_data(json_path):
+def extract_json_data(json_path, key):
     with open(json_path, "r") as json_file:
         data = json.load(json_file)
-    return data["Type"], data["FolderName"]
+    return data[key]
 
 def convert_bytes_to_readable(size_in_bytes, no_symb=None):
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
@@ -328,6 +328,14 @@ def convert_seconds(seconds):
     hours, minutes = divmod(minutes, 60)
     return hours, minutes, seconds
 
+def get_folder_size(folder_path):
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(folder_path):
+        for filename in filenames:
+            file_path = os.path.join(dirpath, filename)
+            total_size += os.path.getsize(file_path)
+    return total_size
+
 # End helper functions
 
 class UpdateWindow(ctk.CTkToplevel):
@@ -337,7 +345,7 @@ class UpdateWindow(ctk.CTkToplevel):
         super().__init__(master)
         self.title("BOIIIWD Self-Updater")
         self.geometry("400x150")
-        self.after(250, lambda: self.iconbitmap('ryuk.ico'))
+        self.after(250, lambda: self.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
         self.protocol("WM_DELETE_WINDOW", self.cancel_update)
         self.attributes('-topmost', 'true')
 
@@ -432,21 +440,292 @@ class UpdateWindow(ctk.CTkToplevel):
         self.up_cancelled = True
         self.withdraw()
 
-class LibraryTab(ctk.CTkFrame):
-    def __init__(self, master=None):
-        super().__init__(master)
+class LibraryTab(ctk.CTkScrollableFrame):
+    def __init__(self, master, **kwargs):
 
-        # Left and right frames, use fg_color="transparent"
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
+        super().__init__(master, **kwargs)
+        self.added_items = set()
         self.grid_columnconfigure(0, weight=1)
-        left_frame = ctk.CTkFrame(self)
-        left_frame.grid(row=0, column=0, padx=(20, 20), pady=(20, 0), sticky="nsew")
-        left_frame.grid_columnconfigure(1, weight=1)
-        right_frame = ctk.CTkFrame(self)
-        right_frame.grid(row=0, column=1, padx=(20, 20), pady=(20, 0), sticky="nsew")
-        right_frame.grid_columnconfigure(1, weight=1)
-        self.update_idletasks()
+
+        self.radiobutton_variable = ctk.StringVar()
+        self.label_list = []
+        self.button_list = []
+        self.button_view_list = []
+        self.filter_type = True
+
+    def add_item(self, item, image=None, item_type="map", workshop_id=None, folder=None):
+        label = ctk.CTkLabel(self, text=item, image=image, compound="left", padx=5, anchor="w")
+        button = ctk.CTkButton(self, text="Remove", width=60, height=24)
+        button_view = ctk.CTkButton(self, text="Details", width=60, height=24)
+        button.configure(command=lambda: self.remove_item(item, folder))
+        button_view.configure(command=lambda: self.show_map_info(workshop_id))
+        button_view_tooltip = CTkToolTip(button_view, message="Opens up a window that shows basic details")
+        button_tooltip = CTkToolTip(button, message="Removes the map/mod from your game")
+        label.grid(row=len(self.label_list) + 1, column=0, pady=(0, 10), padx=(5, 10), sticky="w")
+        button.grid(row=len(self.button_list) + 1, column=2, pady=(0, 10), padx=(0, 10))
+        button_view.grid(row=len(self.button_view_list) + 1, column=1, pady=(0, 10), padx=(0, 10))
+        self.label_list.append(label)
+        self.button_list.append(button)
+        self.button_view_list.append(button_view)
+
+    def filter_items(self, event):
+        filter_text = self.filter_entry.get().lower()
+        for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
+            item_text = label.cget("text").lower()
+            if filter_text in item_text:
+                label.grid()
+                button.grid()
+                button_view_list.grid()
+            else:
+                label.grid_remove()
+                button_view_list.grid_remove()
+                button.grid_remove()
+
+    def load_items(self, boiiiFolder):
+        # if you add this under init the whole app shrinks for some reason
+        global boiiiFolderGlobal
+        boiiiFolderGlobal = boiiiFolder
+        self.filter_entry = ctk.CTkEntry(self, placeholder_text="Your search query here, or type in mod or map to see only that")
+        self.filter_entry.bind("<KeyRelease>", self.filter_items)
+        self.filter_entry.grid(row=0, column=0,  padx=(10, 20), pady=(10, 20), sticky="we")
+        filter_refresh_button_image = os.path.join(RESOURCES_DIR, "Refresh_icon.svg.png")
+        self.filter_refresh_button = ctk.CTkButton(self, image=ctk.CTkImage(Image.open(filter_refresh_button_image)), command=self.refresh_items, width=60, height=24,
+                                                   fg_color="transparent", text="")
+        self.filter_refresh_button.grid(row=0, column=1, sticky="e")
+
+        maps_folder = os.path.join(boiiiFolder, "mods")
+        mods_folder = os.path.join(boiiiFolder, "usermaps")
+
+        folders_to_process = [maps_folder, mods_folder]
+
+        for folder_path in folders_to_process:
+            for root, _, _ in os.walk(folder_path):
+                zone_path = os.path.join(root, "zone")
+                if os.path.exists(zone_path):
+                    json_path = os.path.join(zone_path, "workshop.json")
+                    if os.path.exists(json_path):
+                        name = extract_json_data(json_path, "Title").replace(">", "").replace("^", "")
+                        name = name[:24] + "..." if len(name) > 24 else name
+                        item_type = extract_json_data(json_path, "Type")
+                        workshop_id = extract_json_data(json_path, "PublisherID")
+                        size = convert_bytes_to_readable(get_folder_size(root))
+                        text_to_add = f"Name: {name} | Type: {item_type} | ID: {workshop_id} | Size: {size}"
+                        if text_to_add not in self.added_items:
+                            self.added_items.add(text_to_add)
+
+                            if item_type == "mod":
+                                image_path = os.path.join(RESOURCES_DIR, "rtaImage.png")
+                            else:
+                                image_path = os.path.join(RESOURCES_DIR, "103248.png")
+
+                            self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), item_type=item_type, workshop_id=workshop_id, folder=root)
+        if not self.added_items:
+            self.show_no_items_message()
+        else:
+            self.hide_no_items_message()
+
+    def remove_item(self, item, folder):
+        for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
+            if item == label.cget("text"):
+                try:
+                    shutil.rmtree(folder)
+                except Exception as e:
+                    show_message("Error" ,f"Error removing folder '{folder}': {e}", icon="cancel")
+                    return
+                label.destroy()
+                button.destroy()
+                button_view_list.destroy()
+                self.label_list.remove(label)
+                self.button_list.remove(button)
+                self.button_view_list.remove(button_view_list)
+
+    def refresh_items(self):
+        for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
+            label.destroy()
+            button.destroy()
+            button_view_list.destroy()
+        self.label_list.clear()
+        self.button_list.clear()
+        self.button_view_list.clear()
+        self.added_items.clear()
+        self.load_items(boiiiFolderGlobal)
+
+    def view_item(self, workshop_id):
+        url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
+        webbrowser.open(url)
+
+    def show_no_items_message(self):
+        self.no_items_label = ctk.CTkLabel(self, text="", anchor="w")
+        self.no_items_label.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="n")
+        self.no_items_label.configure(text="No items found in the selected folder. \nMake sure you have a mod/map downloaded and or have the right boiii folder selected.")
+
+    def hide_no_items_message(self):
+        try:
+            self.no_items_label.configure(text="")
+        except:
+            pass
+
+    # i know i know ,please make a pull request i cant be bother
+    def show_map_info(self, workshop):
+        for button_view in self.button_view_list:
+            button_view.configure(state="disabled")
+
+        def show_map_thread():
+            workshop_id = workshop
+
+            if not workshop_id.isdigit():
+                try:
+                    if extract_workshop_id(workshop_id).strip().isdigit():
+                        workshop_id = extract_workshop_id(workshop_id).strip()
+                    else:
+                        show_message("Warning", "Not a valid Workshop ID.")
+                except:
+                    show_message("Warning", "Not a valid Workshop ID.")
+                    return
+            try:
+                url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
+                response = requests.get(url)
+                response.raise_for_status()
+                content = response.text
+
+                soup = BeautifulSoup(content, "html.parser")
+
+                try:
+                    map_mod_type = soup.find("div", class_="rightDetailsBlock").text.strip()
+                    map_name = soup.find("div", class_="workshopItemTitle").text.strip()
+                    map_size = map_size = get_workshop_file_size(workshop_id, raw=True)
+                    details_stats_container = soup.find("div", class_="detailsStatsContainerRight")
+                    details_stat_elements = details_stats_container.find_all("div", class_="detailsStatRight")
+                    date_created = details_stat_elements[1].text.strip()
+                    try:
+                        ratings = soup.find('div', class_='numRatings')
+                        ratings_text = ratings.get_text()
+                    except:
+                        ratings = "Not found"
+                        ratings_text= "Not enough ratings"
+                    try:
+                        date_updated = details_stat_elements[2].text.strip()
+                    except:
+                        date_updated = "Not updated"
+                    stars_div = soup.find("div", class_="fileRatingDetails")
+                    starts = stars_div.find("img")["src"]
+                except:
+                    show_message("Warning", "Not a valid Workshop ID\nCouldn't get information.")
+                    for button_view in self.button_view_list:
+                        button_view.configure(state="normal")
+                    return
+
+                try:
+                    preview_image_element = soup.find("img", id="previewImage")
+                    workshop_item_image_url = preview_image_element["src"]
+                except:
+                    try:
+                        preview_image_element = soup.find("img", id="previewImageMain")
+                        workshop_item_image_url = preview_image_element["src"]
+                    except Exception as e:
+                        show_message("Warning", f"Failed to get preview image ,probably wrong link/id if not please open an issue on github.\n{e}")
+                        for button_view in self.button_view_list:
+                            button_view.configure(state="normal")
+                        return
+
+                starts_image_response = requests.get(starts)
+                stars_image = Image.open(io.BytesIO(starts_image_response.content))
+                stars_image_size = stars_image.size
+
+                image_response = requests.get(workshop_item_image_url)
+                image_response.raise_for_status()
+                image = Image.open(io.BytesIO(image_response.content))
+                image_size = image.size
+
+                self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created ,
+                                        date_updated, stars_image, stars_image_size, ratings_text, url)
+
+            except requests.exceptions.RequestException as e:
+                show_message("Error", f"Failed to fetch map information.\nError: {e}", icon="cancel")
+                for button_view in self.button_view_list:
+                    button_view.configure(state="normal")
+                return
+
+        info_thread = threading.Thread(target=show_map_thread)
+        info_thread.start()
+
+    def toplevel_info_window(self, map_name, map_mod_type, map_size, image, image_size,
+                             date_created ,date_updated, stars_image, stars_image_size, ratings_text, url):
+        try:
+            top = ctk.CTkToplevel(self)
+            top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
+            top.title("Map/Mod Information")
+            top.attributes('-topmost', 'true')
+
+            def close_window():
+                top.destroy()
+
+            def view_map_mod():
+                webbrowser.open(url)
+
+            # frames
+            stars_frame = ctk.CTkFrame(top)
+            stars_frame.grid(row=0, column=0, columnspan=2, padx=20, pady=(20, 0), sticky="nsew")
+            stars_frame.columnconfigure(0, weight=0)
+            stars_frame.rowconfigure(0, weight=1)
+
+            image_frame = ctk.CTkFrame(top)
+            image_frame.grid(row=1, column=0, columnspan=2, padx=20, pady=0, sticky="nsew")
+
+            info_frame = ctk.CTkFrame(top)
+            info_frame.grid(row=2, column=0, columnspan=2, padx=20, pady=20, sticky="nsew")
+
+            buttons_frame = ctk.CTkFrame(top)
+            buttons_frame.grid(row=3, column=0, columnspan=2, padx=20, pady=(0, 20), sticky="nsew")
+
+            # fillers
+            name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}")
+            name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+
+            type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}")
+            type_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+
+            size_label = ctk.CTkLabel(info_frame, text=f"Size: {map_size}")
+            size_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+
+            date_created_label = ctk.CTkLabel(info_frame, text=f"Posted: {date_created}")
+            date_created_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+
+            date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
+            date_updated_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+
+            stars_image_label = ctk.CTkLabel(stars_frame)
+            stars_width, stars_height = stars_image_size
+            stars_image_widget = ctk.CTkImage(stars_image, size=(int(stars_width), int(stars_height)))
+            stars_image_label.configure(image=stars_image_widget, text="")
+            stars_image_label.pack(side="left", padx=(10, 20), pady=(10, 10))
+
+            ratings = ctk.CTkLabel(stars_frame)
+            ratings.configure(text=ratings_text)
+            ratings.pack(side="right", padx=(10, 20), pady=(10, 10))
+
+            image_label = ctk.CTkLabel(image_frame)
+            width, height = image_size
+            image_widget = ctk.CTkImage(image, size=(int(width), int(height)))
+            image_label.configure(image=image_widget, text="")
+            image_label.pack(expand=True, fill="both", padx=(10, 20), pady=(10, 10))
+
+            # Buttons
+            close_button = ctk.CTkButton(buttons_frame, text="View", command=view_map_mod)
+            close_button.pack(side="left", padx=(10, 20), pady=(10, 10))
+
+            view_button = ctk.CTkButton(buttons_frame, text="Close", command=close_window)
+            view_button.pack(side="right", padx=(10, 20), pady=(10, 10))
+
+            top.grid_rowconfigure(0, weight=0)
+            top.grid_rowconfigure(1, weight=0)
+            top.grid_rowconfigure(2, weight=1)
+            top.grid_columnconfigure(0, weight=1)
+            top.grid_columnconfigure(1, weight=1)
+
+        finally:
+            for button_view in self.button_view_list:
+                button_view.configure(state="normal")
 
 class SettingsTab(ctk.CTkFrame):
     def __init__(self, master=None):
@@ -630,7 +909,7 @@ class BOIIIWD(ctk.CTk):
         # configure window
         self.title("BOIII Workshop Downloader - Main")
         self.geometry(f"{910}x{560}")
-        self.wm_iconbitmap('ryuk.ico')
+        self.wm_iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico"))
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # configure grid layout (4x4)
@@ -638,10 +917,11 @@ class BOIIIWD(ctk.CTk):
         self.grid_columnconfigure((2, 3), weight=0)
         self.grid_rowconfigure((0, 1, 2), weight=1)
         self.settings_tab = SettingsTab(self)
-        self.library_tab = LibraryTab(self)
+        self.library_tab = LibraryTab(self, corner_radius=3)
 
         # create sidebar frame with widgets
-        self.sidebar_icon = ctk.CTkImage(light_image=Image.open("ryuk.png"), dark_image=Image.open("ryuk.png"), size=(40, 40))
+        ryuks_icon = os.path.join(RESOURCES_DIR, "ryuk.png")
+        self.sidebar_icon = ctk.CTkImage(light_image=Image.open(ryuks_icon), dark_image=Image.open(ryuks_icon), size=(40, 40))
         self.sidebar_frame = ctk.CTkFrame(self, width=140, corner_radius=10)
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, padx=(10, 10), pady=(10, 10), sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(4, weight=1)
@@ -759,7 +1039,7 @@ class BOIIIWD(ctk.CTk):
         self.sidebar_library.configure(text="Library", command=self.library_button_event)
         self.sidebar_queue.configure(state="disabled", text="Queue")
         self.sidebar_settings.configure(command=self.settings_button_event, text="Settings")
-        self.sidebar_library_tooltip = CTkToolTip(self.sidebar_library, message="Beta")
+        self.sidebar_library_tooltip = CTkToolTip(self.sidebar_library, message="Experimental")
         self.sidebar_queue_tooltip = CTkToolTip(self.sidebar_queue, message="Coming soon")
 
         # load ui configs
@@ -803,9 +1083,6 @@ class BOIIIWD(ctk.CTk):
         ctk.set_widget_scaling(new_scaling_float)
         save_config("scaling", str(new_scaling_float))
 
-    def sidebar_button_event(self):
-        print("sidebar_button click")
-
     def hide_main_widgets(self):
         self.optionsframe.grid_forget()
         self.slider_progressbar_frame.grid_forget()
@@ -828,6 +1105,7 @@ class BOIIIWD(ctk.CTk):
 
     def show_library_widgets(self):
         self.title("BOIII Workshop Downloader - Library")
+        self.library_tab.load_items(self.edit_destination_folder.get())
         self.library_tab.grid(row=0, rowspan=3, column=1, padx=(20, 20), pady=(20, 20), sticky="nsew")
 
     def main_button_event(self):
@@ -879,6 +1157,8 @@ class BOIIIWD(ctk.CTk):
             scaling_float = float(new_scaling)*100
             scaling_int = math.trunc(scaling_float)
             self.scaling_optionemenu.set(f"{scaling_int}%")
+            self.edit_steamcmd_path.delete(0, "end")
+            self.edit_steamcmd_path.insert(0, cwd())
             create_default_config()
 
     def open_BOIII_browser(self):
@@ -963,7 +1243,6 @@ class BOIIIWD(ctk.CTk):
                 except:
                     show_message("Warning", "Please enter a valid Workshop ID.")
                     return
-            print(self.button_download._state)
             if self.button_download._state == "normal":
                 self.after(1, lambda mid=workshop_id: self.label_file_size.configure(text=f"File size: {get_workshop_file_size(mid ,raw=True)}"))
 
@@ -1023,6 +1302,7 @@ class BOIIIWD(ctk.CTk):
 
             except requests.exceptions.RequestException as e:
                 show_message("Error", f"Failed to fetch map information.\nError: {e}", icon="cancel")
+                return
 
         info_thread = threading.Thread(target=show_map_thread)
         info_thread.start()
@@ -1030,7 +1310,7 @@ class BOIIIWD(ctk.CTk):
     def toplevel_info_window(self, map_name, map_mod_type, map_size, image, image_size,
                              date_created ,date_updated, stars_image, stars_image_size, ratings_text, url):
         top = ctk.CTkToplevel(self)
-        top.after(210, lambda: top.iconbitmap("ryuk.ico"))
+        top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
         top.title("Map/Mod Information")
         top.attributes('-topmost', 'true')
 
@@ -1136,6 +1416,16 @@ class BOIIIWD(ctk.CTk):
             destination_folder = self.edit_destination_folder.get().strip()
             ws_file_size = get_workshop_file_size(workshop_id)
 
+            if not destination_folder or not os.path.exists(destination_folder):
+                show_message("Error", "Please select a valid destination folder.")
+                self.stop_download
+                return
+
+            if not steamcmd_path or not os.path.exists(steamcmd_path):
+                show_message("Error", "Please enter a valid SteamCMD path.")
+                self.stop_download
+                return
+
             if not workshop_id.isdigit():
                 try:
                     if extract_workshop_id(workshop_id).strip().isdigit():
@@ -1158,16 +1448,6 @@ class BOIIIWD(ctk.CTk):
 
             if file_size is None:
                 show_message("Error", "Failed to retrieve file size.", icon="cancel")
-                self.stop_download
-                return
-
-            if not destination_folder or not os.path.exists(destination_folder):
-                show_message("Error", "Please select a valid destination folder.")
-                self.stop_download
-                return
-
-            if not steamcmd_path or not os.path.exists(steamcmd_path):
-                show_message("Error", "Please enter a valid SteamCMD path.")
                 self.stop_download
                 return
 
@@ -1222,11 +1502,11 @@ class BOIIIWD(ctk.CTk):
 
                         elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
 
-                        print(f"raw_net {raw_net_speed}\ncurrent_net_speed: {current_net_speed}\nest_downloaded_bytes {est_downloaded_bytes}\npercentage_complete {percentage_complete}\nprogress {progress}")
+                        # print(f"raw_net {raw_net_speed}\ncurrent_net_speed: {current_net_speed}\nest_downloaded_bytes {est_downloaded_bytes}\npercentage_complete {percentage_complete}\nprogress {progress}")
 
                         self.after(1, self.progress_bar.set(progress))
                         self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
-                        self.after(1, lambda p=percentage_complete: self.progress_text.configure(text=f"{p:.2f}%"))
+                        self.after(1, lambda p=min(percentage_complete ,99): self.progress_text.configure(text=f"{p:.2f}%"))
                         self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
 
                         time.sleep(1)
@@ -1270,7 +1550,8 @@ class BOIIIWD(ctk.CTk):
                 json_file_path = os.path.join(map_folder, "workshop.json")
 
                 if os.path.exists(json_file_path):
-                    mod_type, folder_name = extract_json_data(json_file_path)
+                    mod_type = extract_json_data(json_file_path, "Type")
+                    folder_name = extract_json_data(json_file_path, "FolderName")
 
                     if mod_type == "mod":
                         mods_folder = os.path.join(destination_folder, "mods")
@@ -1279,7 +1560,7 @@ class BOIIIWD(ctk.CTk):
                         usermaps_folder = os.path.join(destination_folder, "usermaps")
                         folder_name_path = os.path.join(usermaps_folder, folder_name, "zone")
                     else:
-                        show_message("Error", "Invalid map type in workshop.json.", icon="cancel")
+                        show_message("Error", "Invalid workshop type in workshop.json, are you sure this is a map or a mod?.", icon="cancel")
                         self.stop_download
                         return
 
