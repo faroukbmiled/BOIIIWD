@@ -798,6 +798,9 @@ class SettingsTab(ctk.CTkFrame):
         self.save_button = ctk.CTkButton(self, text="Save", command=self.save_settings, state='disabled')
         self.save_button.grid(row=3, column=0, padx=20, pady=(20, 20), sticky="nw")
 
+        #version
+        self.version_info = ctk.CTkLabel(self, text=f"{VERSION}")
+        self.version_info.grid(row=3, column=1, padx=20, pady=(20, 20), sticky="e")
 
     def enable_save_button(self, *args):
         try:
