@@ -7,6 +7,7 @@ import configparser
 import webbrowser
 import subprocess
 import threading
+import datetime
 import requests
 import zipfile
 import shutil
@@ -19,7 +20,7 @@ import io
 import os
 import re
 
-VERSION = "v0.2.0"
+VERSION = "v0.2.1"
 GITHUB_REPO = "faroukbmiled/BOIIIWD"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 UPDATER_FOLDER = "update"
@@ -35,10 +36,35 @@ clean_on_finish = True
 continuous = True
 estimated_progress = True
 
-ctk.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
-ctk.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
-
 # Start Helper Functions
+def cwd():
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    else:
+        return os.path.dirname(os.path.abspath(__file__))
+
+def check_config(name, fallback=None):
+    config = configparser.ConfigParser()
+    config.read(CONFIG_FILE_PATH)
+    if fallback:
+        return config.get("Settings", name, fallback=fallback)
+    return config.get("Settings", name, fallback="on")
+
+def check_custom_theme(theme_name):
+    if os.path.exists(os.path.join(cwd(), theme_name)):
+        return os.path.join(cwd(), theme_name)
+    else:
+        try:
+            return os.path.join(RESOURCES_DIR, theme_name)
+        except:
+            return os.path.join(RESOURCES_DIR, "boiiiwd_theme.json")
+
+ctk.set_appearance_mode(check_config("appearance", "Dark"))  # Modes: "System" (standard), "Dark", "Light"
+try:
+    ctk.set_default_color_theme(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")))
+except:
+    ctk.set_default_color_theme(os.path.join(RESOURCES_DIR, "boiiiwd_theme.json"))
+
 def get_latest_release_version():
     try:
         release_api_url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
@@ -49,7 +75,6 @@ def get_latest_release_version():
     except requests.exceptions.RequestException as e:
         show_message("Warning", f"Error while checking for updates: \n{e}")
         return None
-
 
 def create_update_script(current_exe, new_exe, updater_folder, program_name):
     script_content = f"""
@@ -104,12 +129,6 @@ def check_for_updates_func(window, ignore_up_todate=False):
     except Exception as e:
         show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
 
-def cwd():
-    if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)
-    else:
-        return os.path.dirname(os.path.abspath(__file__))
-
 def extract_workshop_id(link):
     try:
         pattern = r'(?<=id=)(\d+)'
@@ -138,7 +157,10 @@ def initialize_steam(master):
         process = subprocess.Popen([steamcmd_exe_path, "+quit"], creationflags=subprocess.CREATE_NEW_CONSOLE)
         master.attributes('-alpha', 0.0)
         process.wait()
-        show_message("SteamCMD has terminated!", "BOIIIWD is ready for action.", icon="info")
+        if is_steamcmd_initialized():
+            show_message("SteamCMD has terminated!", "BOIIIWD is ready for action.", icon="info")
+        else:
+            show_message("SteamCMD has terminated!!", "SteamCMD isn't initialized yet")
     except:
         show_message("Error!", "An error occurred please check your paths and try again.", icon="cancel")
     master.attributes('-alpha', 1.0)
@@ -239,13 +261,6 @@ def get_steamcmd_path():
     config.read(CONFIG_FILE_PATH)
     return config.get("Settings", "SteamCMDPath", fallback=cwd())
 
-def check_config(name, fallback=None):
-    config = configparser.ConfigParser()
-    config.read(CONFIG_FILE_PATH)
-    if fallback:
-        return config.get("Settings", name, fallback=fallback)
-    return config.get("Settings", name, fallback="on")
-
 def save_config(name, value):
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_PATH)
@@ -330,11 +345,36 @@ def convert_seconds(seconds):
 
 def get_folder_size(folder_path):
     total_size = 0
-    for dirpath, dirnames, filenames in os.walk(folder_path):
-        for filename in filenames:
-            file_path = os.path.join(dirpath, filename)
-            total_size += os.path.getsize(file_path)
+    for path, dirs, files in os.walk(folder_path):
+        for f in files:
+            fp = os.path.join(path, f)
+            total_size += os.stat(fp).st_size
     return total_size
+
+def is_steamcmd_initialized():
+    steamcmd_path = get_steamcmd_path()
+    steamcmd_exe_path = os.path.join(steamcmd_path, "steamcmd.exe")
+    steamcmd_size = os.path.getsize(steamcmd_exe_path)
+    if steamcmd_size < 3 * 1024 * 1024:
+        return False
+    return True
+
+def get_button_state_colors(file_path, state):
+    try:
+        with open(file_path, 'r') as json_file:
+            data = json.load(json_file)
+            if 'BOIIIWD_Globals' in data:
+                boiiiwd_globals = data['BOIIIWD_Globals']
+                if state in boiiiwd_globals:
+                    return boiiiwd_globals[state]
+                else:
+                    return None
+            else:
+                return None
+    except FileNotFoundError:
+        return None
+    except json.JSONDecodeError:
+        return None
 
 # End helper functions
 
@@ -448,6 +488,14 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.grid_columnconfigure(0, weight=1)
 
         self.radiobutton_variable = ctk.StringVar()
+        self.no_items_label = ctk.CTkLabel(self, text="", anchor="w")
+        self.filter_entry = ctk.CTkEntry(self, placeholder_text="Your search query here, or type in mod or map to see only that")
+        self.filter_entry.bind("<KeyRelease>", self.filter_items)
+        self.filter_entry.grid(row=0, column=0,  padx=(10, 20), pady=(10, 20), sticky="we")
+        filter_refresh_button_image = os.path.join(RESOURCES_DIR, "Refresh_icon.svg.png")
+        self.filter_refresh_button = ctk.CTkButton(self, image=ctk.CTkImage(Image.open(filter_refresh_button_image)), command=self.refresh_items, width=20, height=20,
+                                                   fg_color="transparent", text="")
+        self.filter_refresh_button.grid(row=0, column=1, padx=(10, 20), pady=(10, 20), sticky="enw")
         self.label_list = []
         self.button_list = []
         self.button_view_list = []
@@ -455,15 +503,15 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
     def add_item(self, item, image=None, item_type="map", workshop_id=None, folder=None):
         label = ctk.CTkLabel(self, text=item, image=image, compound="left", padx=5, anchor="w")
-        button = ctk.CTkButton(self, text="Remove", width=60, height=24)
-        button_view = ctk.CTkButton(self, text="Details", width=60, height=24)
+        button = ctk.CTkButton(self, text="Remove", width=60, height=24, fg_color="#3d3f42")
+        button_view = ctk.CTkButton(self, text="Details", width=55, height=24, fg_color="#3d3f42")
         button.configure(command=lambda: self.remove_item(item, folder))
         button_view.configure(command=lambda: self.show_map_info(workshop_id))
         button_view_tooltip = CTkToolTip(button_view, message="Opens up a window that shows basic details")
         button_tooltip = CTkToolTip(button, message="Removes the map/mod from your game")
         label.grid(row=len(self.label_list) + 1, column=0, pady=(0, 10), padx=(5, 10), sticky="w")
-        button.grid(row=len(self.button_list) + 1, column=2, pady=(0, 10), padx=(0, 10))
-        button_view.grid(row=len(self.button_view_list) + 1, column=1, pady=(0, 10), padx=(0, 10))
+        button.grid(row=len(self.button_list) + 1, column=1, pady=(0, 10), padx=(50, 10), sticky="e")
+        button_view.grid(row=len(self.button_view_list) + 1, column=1, pady=(0, 10), padx=(10, 75), sticky="w")
         self.label_list.append(label)
         self.button_list.append(button)
         self.button_view_list.append(button_view)
@@ -485,18 +533,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
         # if you add this under init the whole app shrinks for some reason
         global boiiiFolderGlobal
         boiiiFolderGlobal = boiiiFolder
-        self.filter_entry = ctk.CTkEntry(self, placeholder_text="Your search query here, or type in mod or map to see only that")
-        self.filter_entry.bind("<KeyRelease>", self.filter_items)
-        self.filter_entry.grid(row=0, column=0,  padx=(10, 20), pady=(10, 20), sticky="we")
-        filter_refresh_button_image = os.path.join(RESOURCES_DIR, "Refresh_icon.svg.png")
-        self.filter_refresh_button = ctk.CTkButton(self, image=ctk.CTkImage(Image.open(filter_refresh_button_image)), command=self.refresh_items, width=60, height=24,
-                                                   fg_color="transparent", text="")
-        self.filter_refresh_button.grid(row=0, column=1, sticky="e")
-
         maps_folder = os.path.join(boiiiFolder, "mods")
         mods_folder = os.path.join(boiiiFolder, "usermaps")
 
-        folders_to_process = [maps_folder, mods_folder]
+        folders_to_process = [mods_folder, maps_folder]
 
         for folder_path in folders_to_process:
             for root, _, _ in os.walk(folder_path):
@@ -505,18 +545,18 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     json_path = os.path.join(zone_path, "workshop.json")
                     if os.path.exists(json_path):
                         name = extract_json_data(json_path, "Title").replace(">", "").replace("^", "")
-                        name = name[:24] + "..." if len(name) > 24 else name
+                        name = name[:35] + "..." if len(name) > 35 else name
                         item_type = extract_json_data(json_path, "Type")
                         workshop_id = extract_json_data(json_path, "PublisherID")
                         size = convert_bytes_to_readable(get_folder_size(root))
-                        text_to_add = f"Name: {name} | Type: {item_type} | ID: {workshop_id} | Size: {size}"
+                        text_to_add = f"{name} | Type: {item_type} | ID: {workshop_id} | Size: {size}"
                         if text_to_add not in self.added_items:
                             self.added_items.add(text_to_add)
 
                             if item_type == "mod":
-                                image_path = os.path.join(RESOURCES_DIR, "rtaImage.png")
+                                image_path = os.path.join(RESOURCES_DIR, "mod_image.png")
                             else:
-                                image_path = os.path.join(RESOURCES_DIR, "103248.png")
+                                image_path = os.path.join(RESOURCES_DIR, "map_image.png")
 
                             self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), item_type=item_type, workshop_id=workshop_id, folder=root)
         if not self.added_items:
@@ -555,15 +595,12 @@ class LibraryTab(ctk.CTkScrollableFrame):
         webbrowser.open(url)
 
     def show_no_items_message(self):
-        self.no_items_label = ctk.CTkLabel(self, text="", anchor="w")
         self.no_items_label.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="n")
         self.no_items_label.configure(text="No items found in the selected folder. \nMake sure you have a mod/map downloaded and or have the right boiii folder selected.")
 
     def hide_no_items_message(self):
-        try:
-            self.no_items_label.configure(text="")
-        except:
-            pass
+        self.no_items_label.configure(text="")
+        self.no_items_label.forget()
 
     # i know i know ,please make a pull request i cant be bother
     def show_map_info(self, workshop):
@@ -685,7 +722,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
             type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}")
             type_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-            size_label = ctk.CTkLabel(info_frame, text=f"Size: {map_size}")
+            size_label = ctk.CTkLabel(info_frame, text=f"Size (Workshop): {map_size}")
             size_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
             date_created_label = ctk.CTkLabel(info_frame, text=f"Posted: {date_created}")
@@ -794,6 +831,28 @@ class SettingsTab(ctk.CTkFrame):
         self.reset_steamcmd.grid(row=3, column=1, padx=20, pady=(20, 0), sticky="n")
         self.reset_steamcmd_tooltip = CTkToolTip(self.reset_steamcmd, message="This will remove steamapps folder + all the maps that are potentioaly corrupted or not so use at ur own risk (could fix some issues as well)")
 
+        # appearance
+        self.appearance_mode_label = ctk.CTkLabel(right_frame, text="Appearance Mode:", anchor="n")
+        self.appearance_mode_label.grid(row=4, column=1, padx=20, pady=(20, 0))
+        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(right_frame, values=["Light", "Dark", "System"],
+                                                                       command=master.change_appearance_mode_event)
+        self.appearance_mode_optionemenu.grid(row=5, column=1, padx=20, pady=(0, 0))
+        self.scaling_label = ctk.CTkLabel(right_frame, text="UI Scaling:", anchor="n")
+        self.scaling_label.grid(row=6, column=1, padx=20, pady=(10, 0))
+        self.scaling_optionemenu = ctk.CTkOptionMenu(right_frame, values=["80%", "90%", "100%", "110%", "120%"],
+                                                               command=master.change_scaling_event)
+        self.scaling_optionemenu.grid(row=7, column=1, padx=20, pady=(0, 0))
+
+        # self.custom_theme = ctk.CTkButton(right_frame, text="Custom theme", command=self.boiiiwd_custom_theme)
+        # self.custom_theme.grid(row=8, column=1, padx=20, pady=(20, 0), sticky="n")
+
+        self.theme_options_label = ctk.CTkLabel(right_frame, text="Themes:", anchor="n")
+        self.theme_options_label.grid(row=8, column=1, padx=20, pady=(10, 0))
+        self.theme_options = ctk.CTkOptionMenu(right_frame, values=["Default", "Blue", "Grey", "Custom"],
+                                                               command=self.theme_options_func)
+        self.theme_options.grid(row=9, column=1, padx=20, pady=(0, 0))
+        self.theme_options.set(value=self.load_settings("theme", "Default"))
+
         # Save button
         self.save_button = ctk.CTkButton(self, text="Save", command=self.save_settings, state='disabled')
         self.save_button.grid(row=3, column=0, padx=20, pady=(20, 20), sticky="nw")
@@ -801,6 +860,24 @@ class SettingsTab(ctk.CTkFrame):
         #version
         self.version_info = ctk.CTkLabel(self, text=f"{VERSION}")
         self.version_info.grid(row=3, column=1, padx=20, pady=(20, 20), sticky="e")
+
+
+    def theme_options_func(self, option: str):
+        if option == "Default":
+            self.boiiiwd_custom_theme(disable_only=True)
+            save_config("theme", "boiiiwd_theme.json")
+        if option == "Blue":
+            self.boiiiwd_custom_theme(disable_only=True)
+            save_config("theme", "boiiiwd_blue.json")
+        if option == "Grey":
+            self.boiiiwd_custom_theme(disable_only=True)
+            save_config("theme", "boiiiwd_grey.json")
+        if option == "Custom":
+            self.boiiiwd_custom_theme()
+            save_config("theme", "boiiiwd_theme.json")
+
+        if not option == "Custom":
+            show_message("Restart to take effect!", f"{option} theme has been set ,please restart to take effect", icon="info")
 
     def enable_save_button(self, *args):
         try:
@@ -876,11 +953,39 @@ class SettingsTab(ctk.CTkFrame):
             else:
                 estimated_progress = False
                 return 0
+
+        if setting == "theme":
+            if os.path.exists(os.path.join(cwd(), "boiiiwd_theme.json")):
+                return "Custom"
+            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_theme.json":
+                return "Default"
+            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_grey.json":
+                return "Grey"
+            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_blue.json":
+                return "Blue"
         else:
             if check_config(setting, fallback) == "on":
                 return 1
             else:
                 return 0
+
+    def boiiiwd_custom_theme(self, disable_only=None):
+        file_to_rename = os.path.join(cwd(), "boiiiwd_theme.json")
+        if os.path.exists(file_to_rename):
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+            new_name = f"boiiiwd_theme_{timestamp}.json"
+            os.rename(file_to_rename, os.path.join(cwd(), new_name))
+
+            if not disable_only:
+                show_message("Preset file renamed", "Custom preset disabled, file has been renmaed\n* Restart the app to take effect", icon="info")
+        else:
+            if disable_only:
+                return
+            try:
+                shutil.copy(os.path.join(RESOURCES_DIR, check_config("theme", "boiiiwd_theme.json")), os.path.join(cwd(), "boiiiwd_theme.json"))
+            except:
+                shutil.copy(os.path.join(RESOURCES_DIR, "boiiiwd_theme.json"), os.path.join(cwd(), "boiiiwd_theme.json"))
+            show_message("Preset file created", "You can now edit boiiiwd_theme.json in the current directory to your liking\n* Edits will apply next time you open boiiiwd\n* Program will always take boiiiwd_theme.json as the first theme option if found\n* Click on this button again to disable your custom theme or just rename boiiiwd_theme.json", icon="info")
 
     def settings_check_for_updates(self):
         check_for_updates_func(self, ignore_up_todate=False)
@@ -911,7 +1016,17 @@ class BOIIIWD(ctk.CTk):
 
         # configure window
         self.title("BOIII Workshop Downloader - Main")
-        self.geometry(f"{910}x{560}")
+
+        try:
+            geometry_file = os.path.join(cwd(), "boiiiwd_dont_touch.conf")
+            if os.path.isfile(geometry_file):
+                with open(geometry_file, "r") as conf:
+                    self.geometry(conf.read())
+            else:
+                self.geometry(f"{910}x{560}")
+        except:
+            self.geometry(f"{910}x{560}")
+
         self.wm_iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico"))
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -923,14 +1038,15 @@ class BOIIIWD(ctk.CTk):
         self.library_tab = LibraryTab(self, corner_radius=3)
 
         # create sidebar frame with widgets
+        font = "Comic Sans MS"
         ryuks_icon = os.path.join(RESOURCES_DIR, "ryuk.png")
         self.sidebar_icon = ctk.CTkImage(light_image=Image.open(ryuks_icon), dark_image=Image.open(ryuks_icon), size=(40, 40))
-        self.sidebar_frame = ctk.CTkFrame(self, width=140, corner_radius=10)
-        self.sidebar_frame.grid(row=0, column=0, rowspan=4, padx=(10, 10), pady=(10, 10), sticky="nsew")
+        self.sidebar_frame = ctk.CTkFrame(self, width=100, corner_radius=10)
+        self.sidebar_frame.grid(row=0, column=0, rowspan=3, padx=(10, 20), pady=(10, 10), sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(4, weight=1)
         self.logo_label = ctk.CTkLabel(self.sidebar_frame, text='',image=self.sidebar_icon)
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
-        self.txt_label = ctk.CTkLabel(self.sidebar_frame, text="- Sidebar -")
+        self.txt_label = ctk.CTkLabel(self.sidebar_frame, text="- Sidebar -", font=(font, 17))
         self.txt_label.grid(row=1, column=0, padx=20, pady=(20, 10))
         self.sidebar_main = ctk.CTkButton(self.sidebar_frame)
         self.sidebar_main.grid(row=2, column=0, padx=20, pady=10)
@@ -939,25 +1055,17 @@ class BOIIIWD(ctk.CTk):
         self.sidebar_queue = ctk.CTkButton(self.sidebar_frame)
         self.sidebar_queue.grid(row=4, column=0, padx=20, pady=10, sticky="n")
         self.sidebar_settings = ctk.CTkButton(self.sidebar_frame)
-        self.sidebar_settings.grid(row=5, column=0, padx=20, pady=10)
-        self.appearance_mode_label = ctk.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
-        self.appearance_mode_label.grid(row=6, column=0, padx=20, pady=(10, 0))
-        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.sidebar_frame, values=["Light", "Dark", "System"],
-                                                                       command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=7, column=0, padx=20, pady=(10, 10))
-        self.scaling_label = ctk.CTkLabel(self.sidebar_frame, text="UI Scaling:", anchor="w")
-        self.scaling_label.grid(row=8, column=0, padx=20, pady=(10, 0))
-        self.scaling_optionemenu = ctk.CTkOptionMenu(self.sidebar_frame, values=["80%", "90%", "100%", "110%", "120%"],
-                                                               command=self.change_scaling_event)
-        self.scaling_optionemenu.grid(row=9, column=0, padx=20, pady=(10, 20))
+        self.sidebar_settings.grid(row=5, column=0, padx=20, pady=10, sticky="n")
 
         # create optionsframe
         self.optionsframe = ctk.CTkFrame(self)
-        self.optionsframe.grid(row=0, column=1, padx=(20, 20), pady=(20, 0), sticky="nsew")
+        self.optionsframe.grid(row=0, column=1, rowspan=2, padx=(0, 20), pady=(20, 0), sticky="nsew")
+        self.txt_main = ctk.CTkLabel(self.optionsframe, text="💎 BOIIIWD 💎", font=(font, 20))
+        self.txt_main.grid(row=0, column=1, columnspan=5, padx=0, pady=(20, 20), sticky="n")
 
         # create slider and progressbar frame
         self.slider_progressbar_frame = ctk.CTkFrame(self)
-        self.slider_progressbar_frame.grid(row=1, column=1, padx=(20, 20), pady=(20, 0), sticky="nsew")
+        self.slider_progressbar_frame.grid(row=2, column=1, rowspan=1, padx=(0, 20), pady=(20, 20), sticky="nsew")
 
         self.slider_progressbar_frame.columnconfigure(0, weight=0)
         self.slider_progressbar_frame.columnconfigure(1, weight=1)
@@ -995,55 +1103,66 @@ class BOIIIWD(ctk.CTk):
         self.optionsframe.columnconfigure(1, weight=1)
         self.optionsframe.columnconfigure(2, weight=1)
         self.optionsframe.columnconfigure(3, weight=1)
+        self.optionsframe.rowconfigure(1, weight=1)
+        self.optionsframe.rowconfigure(2, weight=1)
+        self.optionsframe.rowconfigure(3, weight=1)
+        self.optionsframe.rowconfigure(4, weight=1)
 
         self.label_workshop_id = ctk.CTkLabel(master=self.optionsframe, text="Enter the Workshop ID or Link of the map/mod you want to download:\n")
-        self.label_workshop_id.grid(row=0, column=1, padx=20, pady=(30, 0), columnspan=4, sticky="w")
+        self.label_workshop_id.grid(row=1, column=1, padx=20, pady=(10, 0), columnspan=4, sticky="ws")
 
         self.check_if_changed = ctk.StringVar()
         self.check_if_changed.trace_add("write", self.id_chnaged_handler)
         self.edit_workshop_id = ctk.CTkEntry(master=self.optionsframe, textvariable=self.check_if_changed)
-        self.edit_workshop_id.grid(row=1, column=1, padx=20, pady=(0, 10), columnspan=4, sticky="ew")
+        self.edit_workshop_id.grid(row=2, column=1, padx=20, pady=(0, 10), columnspan=4, sticky="ewn")
 
         self.button_browse = ctk.CTkButton(master=self.optionsframe, text="Workshop", command=self.open_browser, width=10)
-        self.button_browse.grid(row=1, column=5, padx=(0, 20), pady=(0, 10), sticky="e")
+        self.button_browse.grid(row=2, column=5, padx=(0, 20), pady=(0, 10), sticky="en")
         self.button_browse_tooltip = CTkToolTip(self.button_browse, message="Will open steam workshop for boiii in your browser")
 
         self.info_button = ctk.CTkButton(master=self.optionsframe, text="Details", command=self.show_map_info, width=10)
-        self.info_button.grid(row=1, column=5, padx=(0, 20), pady=(0, 10), sticky="w")
+        self.info_button.grid(row=2, column=5, padx=(0, 20), pady=(0, 10), sticky="wn")
 
         self.label_destination_folder = ctk.CTkLabel(master=self.optionsframe, text="Enter Your BOIII folder:")
-        self.label_destination_folder.grid(row=3, column=1, padx=20, pady=(0, 10), columnspan=4, sticky="w")
+        self.label_destination_folder.grid(row=3, column=1, padx=20, pady=(0, 0), columnspan=4, sticky="ws")
 
         self.edit_destination_folder = ctk.CTkEntry(master=self.optionsframe, placeholder_text="Your BOIII Instalation folder")
-        self.edit_destination_folder.grid(row=4, column=1, padx=20, pady=(0, 10), columnspan=4, sticky="ew")
+        self.edit_destination_folder.grid(row=4, column=1, padx=20, pady=(0, 25), columnspan=4, sticky="ewn")
 
         self.button_BOIII_browse = ctk.CTkButton(master=self.optionsframe, text="Select", command=self.open_BOIII_browser)
-        self.button_BOIII_browse.grid(row=4, column=5, padx=(0, 20), pady=(0, 10), sticky="ew")
+        self.button_BOIII_browse.grid(row=4, column=5, padx=(0, 20), pady=(0, 10), sticky="ewn")
 
         self.label_steamcmd_path = ctk.CTkLabel(master=self.optionsframe, text="Enter SteamCMD path:")
-        self.label_steamcmd_path.grid(row=5, column=1, padx=20, pady=(20, 0), columnspan=3, sticky="w")
+        self.label_steamcmd_path.grid(row=5, column=1, padx=20, pady=(0, 0), columnspan=3, sticky="wn")
 
         self.edit_steamcmd_path = ctk.CTkEntry(master=self.optionsframe, placeholder_text="Enter your SteamCMD path")
-        self.edit_steamcmd_path.grid(row=6, column=1, padx=20, pady=(0, 10), columnspan=4, sticky="ew")
+        self.edit_steamcmd_path.grid(row=6, column=1, padx=20, pady=(0, 30), columnspan=4, sticky="ewn")
 
         self.button_steamcmd_browse = ctk.CTkButton(master=self.optionsframe, text="Select", command=self.open_steamcmd_path_browser)
-        self.button_steamcmd_browse.grid(row=6, column=5, padx=(0, 20), pady=(0, 10), sticky="ew")
+        self.button_steamcmd_browse.grid(row=6, column=5, padx=(0, 20), pady=(0, 30), sticky="ewn")
 
         # set default values
-        self.appearance_mode_optionemenu.set("Dark")
-        self.scaling_optionemenu.set("100%")
+        self.active_color = get_button_state_colors(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")), "button_active_state_color")
+        self.normal_color = get_button_state_colors(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")), "button_normal_state_color")
+        self.progress_color = get_button_state_colors(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")), "progress_bar_fill_color")
+        self.settings_tab.appearance_mode_optionemenu.set("Dark")
+        self.settings_tab.scaling_optionemenu.set("100%")
         self.progress_bar.set(0.0)
+        self.progress_bar.configure(progress_color=self.progress_color)
         self.hide_settings_widgets()
         self.button_stop.configure(state="disabled")
         self.is_downloading = False
 
         # sidebar windows bouttons
-        self.sidebar_main.configure(command=self.main_button_event, text="Main", fg_color=("#3d3d3d"))
-        self.sidebar_library.configure(text="Library", command=self.library_button_event)
-        self.sidebar_queue.configure(state="disabled", text="Queue")
-        self.sidebar_settings.configure(command=self.settings_button_event, text="Settings")
+        self.sidebar_main.configure(command=self.main_button_event, text="Main ⬇️", fg_color=(self.active_color), state="active")
+        self.sidebar_library.configure(text="Library 📙", command=self.library_button_event)
+        self.sidebar_queue.configure(state="disabled", text="Queue 🚧")
+        sidebar_settings_button_image = os.path.join(RESOURCES_DIR, "sett10.png")
+        self.sidebar_settings.configure(command=self.settings_button_event, text="", image=ctk.CTkImage(Image.open(sidebar_settings_button_image), size=(int(35), int(35))), fg_color="transparent", width=45, height=45)
+        self.sidebar_settings_tooltip = CTkToolTip(self.sidebar_settings, message="Settings")
         self.sidebar_library_tooltip = CTkToolTip(self.sidebar_library, message="Experimental")
         self.sidebar_queue_tooltip = CTkToolTip(self.sidebar_queue, message="Coming soon")
+        self.bind("<Configure>", self.save_window_size)
 
         # load ui configs
         self.load_configs()
@@ -1065,6 +1184,10 @@ class BOIIIWD(ctk.CTk):
         if not check_steamcmd():
             self.show_warning_message()
 
+    def save_window_size(self ,event):
+        with open("boiiiwd_dont_touch.conf", "w") as conf:
+            conf.write(self.geometry())
+
     def on_closing(self):
         save_config("DestinationFolder" ,self.edit_destination_folder.get())
         save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
@@ -1078,8 +1201,8 @@ class BOIIIWD(ctk.CTk):
         check_for_updates_func(self, ignore_up_todate=False)
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
-        ctk.set_appearance_mode(new_appearance_mode)
-        save_config("appearance", new_appearance_mode)
+            ctk.set_appearance_mode(new_appearance_mode)
+            save_config("appearance", new_appearance_mode)
 
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
@@ -1092,45 +1215,45 @@ class BOIIIWD(ctk.CTk):
 
     def show_main_widgets(self):
         self.title("BOIII Workshop Downloader - Main")
-        self.optionsframe.grid(row=0, column=1, padx=(20, 20), pady=(20, 0), sticky="nsew")
-        self.slider_progressbar_frame.grid(row=1, column=1, padx=(20, 20), pady=(20, 0), sticky="nsew")
+        self.slider_progressbar_frame.grid(row=2, column=1, rowspan=1, padx=(0, 20), pady=(20, 20), sticky="nsew")
+        self.optionsframe.grid(row=0, column=1, rowspan=2, padx=(0, 20), pady=(20, 0), sticky="nsew")
 
     def hide_settings_widgets(self):
         self.settings_tab.grid_forget()
 
     def show_settings_widgets(self):
         self.title("BOIII Workshop Downloader - Settings")
-        self.settings_tab.grid(row=0, rowspan=3, column=1, padx=(20, 20), pady=(20, 20), sticky="nsew")
+        self.settings_tab.grid(row=0, rowspan=3, column=1, padx=(0, 20), pady=(20, 20), sticky="nsew")
         self.settings_tab.load_on_switch_screen()
 
     def hide_library_widgets(self):
-        self.library_tab.grid_forget()
+        self.library_tab.grid_remove()
 
     def show_library_widgets(self):
         self.title("BOIII Workshop Downloader - Library")
         self.library_tab.load_items(self.edit_destination_folder.get())
-        self.library_tab.grid(row=0, rowspan=3, column=1, padx=(20, 20), pady=(20, 20), sticky="nsew")
+        self.library_tab.grid(row=0, rowspan=3, column=1, padx=(0, 20), pady=(20, 20), sticky="nsew")
 
     def main_button_event(self):
-        self.sidebar_main.configure(state="active", fg_color=("#3d3d3d"))
-        self.sidebar_settings.configure(state="normal", fg_color=("#1f538d"))
-        self.sidebar_library.configure(state="normal", fg_color=("#1f538d"))
+        self.sidebar_main.configure(state="active", fg_color=(self.active_color))
+        self.sidebar_settings.configure(state="normal", fg_color="transparent")
+        self.sidebar_library.configure(state="normal", fg_color=(self.normal_color))
         self.hide_settings_widgets()
         self.hide_library_widgets()
         self.show_main_widgets()
 
     def settings_button_event(self):
-        self.sidebar_main.configure(state="normal", fg_color=("#1f538d"))
-        self.sidebar_library.configure(state="normal", fg_color=("#1f538d"))
-        self.sidebar_settings.configure(state="active", fg_color=("#3d3d3d"))
+        self.sidebar_main.configure(state="normal", fg_color=(self.normal_color))
+        self.sidebar_library.configure(state="normal", fg_color=(self.normal_color))
+        self.sidebar_settings.configure(state="active", fg_color=(self.active_color))
         self.hide_main_widgets()
         self.hide_library_widgets()
         self.show_settings_widgets()
 
     def library_button_event(self):
-        self.sidebar_main.configure(state="normal", fg_color=("#1f538d"))
-        self.sidebar_settings.configure(state="normal", fg_color=("#1f538d"))
-        self.sidebar_library.configure(state="active", fg_color=("#3d3d3d"))
+        self.sidebar_main.configure(state="normal", fg_color=(self.normal_color))
+        self.sidebar_settings.configure(state="normal", fg_color="transparent")
+        self.sidebar_library.configure(state="active", fg_color=(self.active_color))
         self.hide_main_widgets()
         self.hide_settings_widgets()
         self.show_library_widgets()
@@ -1147,19 +1270,19 @@ class BOIIIWD(ctk.CTk):
             self.edit_steamcmd_path.insert(0, steamcmd_path)
             ctk.set_appearance_mode(new_appearance_mode)
             ctk.set_widget_scaling(float(new_scaling))
-            self.appearance_mode_optionemenu.set(new_appearance_mode)
+            self.settings_tab.appearance_mode_optionemenu.set(new_appearance_mode)
             scaling_float = float(new_scaling)*100
             scaling_int = math.trunc(scaling_float)
-            self.scaling_optionemenu.set(f"{scaling_int}%")
+            self.settings_tab.scaling_optionemenu.set(f"{scaling_int}%")
         else:
             new_appearance_mode = check_config("appearance", "Dark")
             new_scaling = check_config("scaling", 1.0)
             ctk.set_appearance_mode(new_appearance_mode)
             ctk.set_widget_scaling(float(new_scaling))
-            self.appearance_mode_optionemenu.set(new_appearance_mode)
+            self.settings_tab.appearance_mode_optionemenu.set(new_appearance_mode)
             scaling_float = float(new_scaling)*100
             scaling_int = math.trunc(scaling_float)
-            self.scaling_optionemenu.set(f"{scaling_int}%")
+            self.settings_tab.scaling_optionemenu.set(f"{scaling_int}%")
             self.edit_steamcmd_path.delete(0, "end")
             self.edit_steamcmd_path.insert(0, cwd())
             create_default_config()
@@ -1234,7 +1357,7 @@ class BOIIIWD(ctk.CTk):
             workshop_id = self.edit_workshop_id.get().strip()
 
             if not workshop_id:
-                show_message("Warning", "Please enter a Workshop ID first.")
+                show_message("Warning", "Please enter a Workshop ID/Link first.")
                 return
 
             if not workshop_id.isdigit():
@@ -1242,9 +1365,9 @@ class BOIIIWD(ctk.CTk):
                     if extract_workshop_id(workshop_id).strip().isdigit():
                         workshop_id = extract_workshop_id(workshop_id).strip()
                     else:
-                        show_message("Warning", "Please enter a valid Workshop ID.")
+                        show_message("Warning", "Please enter a valid Workshop ID/Link.")
                 except:
-                    show_message("Warning", "Please enter a valid Workshop ID.")
+                    show_message("Warning", "Please enter a valid Workshop ID/Link.")
                     return
             if self.button_download._state == "normal":
                 self.after(1, lambda mid=workshop_id: self.label_file_size.configure(text=f"File size: {get_workshop_file_size(mid ,raw=True)}"))
@@ -1277,7 +1400,7 @@ class BOIIIWD(ctk.CTk):
                     stars_div = soup.find("div", class_="fileRatingDetails")
                     starts = stars_div.find("img")["src"]
                 except:
-                    show_message("Warning", "Please enter a valid Workshop ID\nCouldn't get information.")
+                    show_message("Warning", "Please enter a valid Workshop ID/Link\nCouldn't get information.")
                     return
 
                 try:
@@ -1404,9 +1527,8 @@ class BOIIIWD(ctk.CTk):
                 return
 
             steamcmd_path = get_steamcmd_path()
-            steamcmd_exe_path = os.path.join(steamcmd_path, "steamcmd.exe")
-            steamcmd_size = os.path.getsize(steamcmd_exe_path)
-            if steamcmd_size < 3 * 1024 * 1024:
+
+            if not is_steamcmd_initialized():
                 if not show_message("Warning", "SteamCMD is not initialized, Press OK to do so!\nProgram may go unresponsive until SteamCMD is finished downloading.",
                             icon="warning" ,exit_on_close=True):
                     pass
@@ -1433,11 +1555,11 @@ class BOIIIWD(ctk.CTk):
                     if extract_workshop_id(workshop_id).strip().isdigit():
                         workshop_id = extract_workshop_id(workshop_id).strip()
                     else:
-                        show_message("Warning", "Please enter a valid Workshop ID.", icon="warning")
+                        show_message("Warning", "Please enter a valid Workshop ID/Link.", icon="warning")
                         self.stop_download
                         return
                 except:
-                    show_message("Warning", "Please enter a valid Workshop ID.", icon="warning")
+                    show_message("Warning", "Please enter a valid Workshop ID/Link.", icon="warning")
                     self.stop_download
                     return
 
@@ -1445,7 +1567,7 @@ class BOIIIWD(ctk.CTk):
             file_size = ws_file_size
 
             if not valid_id(workshop_id):
-                show_message("Warning", "Please enter a valid Workshop ID.", icon="warning")
+                show_message("Warning", "Please enter a valid Workshop ID/Link.", icon="warning")
                 self.stop_download
                 return
 
