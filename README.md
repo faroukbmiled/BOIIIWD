@@ -1,10 +1,9 @@
 # BOIIIWD
 - A GUI Steam Workshop downloader meant for BO3 ([boiii client](https://github.com/Ezz-lol/boiii-free)) built using CustomTkinter <br>
-
 <p float="left">
-  <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/5197f0d8-9bf9-4dbb-bef7-748e7d7aaad2" width="800" />
-  <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/c3b5e658-bc59-4757-becd-a09ce5a4035e" width="800" /> 
-  <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/710ab04c-d289-43db-9dc7-4801b074a701" width="800" />
+  <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/bd7e1bc3-bdb2-4096-8e33-5041bb9eb2d9" width="800" />
+  <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/4ea5b4d4-e810-47b0-8fdb-5a68a2b117f2" width="800" /> 
+  <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/383b0ebf-385c-415f-a9d8-e8a7195c69d7" width="800" />
 </p>
 
 ## Usage (exe):
@@ -39,3 +38,5 @@
 - [ ] add a queue window that you can slap in a bunch of items to download sequentially and or simultaneously
 - [ ] add an option to login with your account => delayed (do we really need it?)
 
+### Themes:
+- If you choose "custom" theme a file called boiiiwd_theme.json will be created in the current folder (where the exe at) , Don't add anything or edit any keyes just modify the colours, If you mess up something you can just rename the file and it'll go back to the default theme (you can always press custom again and the file will be created again, based on which theme you choose before)
