@@ -429,7 +429,8 @@ class UpdateWindow(ctk.CTkToplevel):
         self.label_size = ctk.CTkLabel(self, text="Size: 0")
         self.label_size.grid(row=0, column=1, padx=30, pady=(10, 0), sticky="e")
 
-        self.progress_bar = ctk.CTkProgressBar(self, mode="determinate", height=20, corner_radius=7)
+        self.progress_color = get_button_state_colors(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")), "progress_bar_fill_color")
+        self.progress_bar = ctk.CTkProgressBar(self, mode="determinate", height=20, corner_radius=7, progress_color=self.progress_color)
         self.progress_bar.grid(row=1, column=0, columnspan=4, padx=30, pady=10, sticky="ew")
         self.progress_bar.set(0)
 
