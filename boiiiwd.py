@@ -20,7 +20,7 @@ import io
 import os
 import re
 
-VERSION = "v0.2.1"
+VERSION = "v0.2.2"
 GITHUB_REPO = "faroukbmiled/BOIIIWD"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 UPDATER_FOLDER = "update"
@@ -28,13 +28,18 @@ CONFIG_FILE_PATH = "config.ini"
 RESOURCES_DIR = os.path.join(os.path.dirname(__file__), 'resources')
 
 # fuck it we ball, ill get rid of globals when i finish everything cant be bothered rn
-global stopped, steampid, console, clean_on_finish, continuous, estimated_progress
+global stopped, steampid, console, clean_on_finish, continuous, estimated_progress, steam_fail_counter, \
+    steam_fail_counter_toggle, steam_fail_number, steamcmd_reset
 steampid = None
 stopped = False
 console = False
 clean_on_finish = True
 continuous = True
 estimated_progress = True
+steam_fail_counter_toggle = True
+steam_fail_counter = 0
+steam_fail_number = 10
+steamcmd_reset = False
 
 # Start Helper Functions
 def cwd():
@@ -50,6 +55,14 @@ def check_config(name, fallback=None):
         return config.get("Settings", name, fallback=fallback)
     return config.get("Settings", name, fallback="on")
 
+def save_config(name, value):
+    config = configparser.ConfigParser()
+    config.read(CONFIG_FILE_PATH)
+    if name and value:
+        config.set("Settings", name, value)
+    with open(CONFIG_FILE_PATH, "w") as config_file:
+        config.write(config_file)
+
 def check_custom_theme(theme_name):
     if os.path.exists(os.path.join(cwd(), theme_name)):
         return os.path.join(cwd(), theme_name)
@@ -63,6 +76,7 @@ ctk.set_appearance_mode(check_config("appearance", "Dark"))  # Modes: "System" (
 try:
     ctk.set_default_color_theme(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")))
 except:
+    save_config("theme", "boiiiwd_theme.json")
     ctk.set_default_color_theme(os.path.join(RESOURCES_DIR, "boiiiwd_theme.json"))
 
 def get_latest_release_version():
@@ -204,7 +218,7 @@ def create_default_config():
         config.write(config_file)
 
 def run_steamcmd_command(command, self, map_folder):
-    global steampid, stopped
+    global steampid, stopped, steam_fail_counter, steam_fail_number, steamcmd_reset
     steamcmd_path = get_steamcmd_path()
     show_console = subprocess.CREATE_NO_WINDOW
     if console:
@@ -228,6 +242,18 @@ def run_steamcmd_command(command, self, map_folder):
                 return process.returncode
 
             process.communicate()
+            steam_fail_counter = steam_fail_counter + 1
+            if steam_fail_counter_toggle:
+                # print(steam_fail_counter)
+                try:
+                    if steam_fail_counter >= int(steam_fail_number):
+                        reset_steamcmd(no_warn=True)
+                        steamcmd_reset = True
+                        steam_fail_counter = 0
+                except:
+                    if steam_fail_counter >= 10:
+                        reset_steamcmd(no_warn=True)
+                        steam_fail_counter = 0
     else:
         process = subprocess.Popen(
             [steamcmd_path + "\steamcmd.exe"] + command.split(),
@@ -260,14 +286,6 @@ def get_steamcmd_path():
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_PATH)
     return config.get("Settings", "SteamCMDPath", fallback=cwd())
-
-def save_config(name, value):
-    config = configparser.ConfigParser()
-    config.read(CONFIG_FILE_PATH)
-    if name and value:
-        config.set("Settings", name, value)
-    with open(CONFIG_FILE_PATH, "w") as config_file:
-        config.write(config_file)
 
 def extract_json_data(json_path, key):
     with open(json_path, "r") as json_file:
@@ -375,6 +393,17 @@ def get_button_state_colors(file_path, state):
         return None
     except json.JSONDecodeError:
         return None
+
+def reset_steamcmd(no_warn=None):
+    steamcmd_path = get_steamcmd_path()
+    steamcmd_steamapps = os.path.join(steamcmd_path, "steamapps")
+    if os.path.exists(steamcmd_steamapps):
+        remove_tree(steamcmd_steamapps, show_error=True)
+        if not no_warn:
+            show_message("Success!", "SteamCMD has been reset successfully!", icon="info")
+    else:
+        if not no_warn:
+            show_message("Warning!", "steamapps folder was not found, maybe already removed?", icon="warning")
 
 # End helper functions
 
@@ -820,6 +849,16 @@ class SettingsTab(ctk.CTkFrame):
             \nThis is not accurate ,it's better than with it off which is calculating the downloaded folder size which steamcmd dumps the full size rigth mostly")
         self.estimated_progress_var.set(self.load_settings("estimated_progress", "on"))
 
+        # Resetr steam on many fails
+        self.reset_steamcmd_on_fail_var = ctk.IntVar()
+        self.reset_steamcmd_on_fail_var.trace_add("write", self.enable_save_button)
+        self.reset_steamcmd_on_fail_text = ctk.CTkLabel(left_frame, text=f"Reset steamcmd on % fails: (n of fails)", anchor="w")
+        self.reset_steamcmd_on_fail_text.grid(row=5, column=1, padx=20, pady=(10, 0), sticky="nw")
+        self.reset_steamcmd_on_fail = ctk.CTkOptionMenu(left_frame, values=["10", "15", "20", "Disable"], variable=self.reset_steamcmd_on_fail_var)
+        self.reset_steamcmd_on_fail.grid(row=6, column=1, padx=20, pady=(0, 0), sticky="nw")
+        self.reset_steamcmd_on_fail_tooltip = CTkToolTip(self.reset_steamcmd_on_fail, message="This actually fixes steamcmd when its crashing way too much")
+        self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "10"))
+
         # Check for updates button n Launch boiii
         self.check_for_updates = ctk.CTkButton(right_frame, text="Check for updates", command=self.settings_check_for_updates)
         self.check_for_updates.grid(row=1, column=1, padx=20, pady=(20, 0), sticky="n")
@@ -887,7 +926,7 @@ class SettingsTab(ctk.CTkFrame):
 
     def save_settings(self):
         self.save_button.configure(state='disabled')
-        global console, clean_on_finish, continuous, estimated_progress
+        global console, clean_on_finish, continuous, estimated_progress, steam_fail_number, steam_fail_counter_toggle
         if self.check_updates_checkbox.get():
             save_config("checkforupdtes", "on")
         else:
@@ -921,8 +960,17 @@ class SettingsTab(ctk.CTkFrame):
             save_config("estimated_progress", "off")
             estimated_progress = False
 
+        if self.reset_steamcmd_on_fail.get():
+            value = self.reset_steamcmd_on_fail.get()
+            if value == "Disable":
+                steam_fail_counter_toggle = False
+            else:
+                steam_fail_counter_toggle = True
+                steam_fail_number = int(value)
+            save_config("reset_on_fail", value)
+
     def load_settings(self, setting, fallback=None):
-        global console, clean_on_finish, continuous, estimated_progress
+        global console, clean_on_finish, continuous, estimated_progress, steam_fail_counter_toggle, steam_fail_number
         if setting == "console":
             if check_config(setting, fallback) == "on":
                 console = True
@@ -953,6 +1001,19 @@ class SettingsTab(ctk.CTkFrame):
             else:
                 estimated_progress = False
                 return 0
+
+        if setting == "reset_on_fail":
+            option = check_config(setting, fallback)
+            if option == "Disable":
+                steam_fail_counter_toggle = False
+                return "Disable"
+            else:
+                try:
+                    steam_fail_number = int(option)
+                    return option
+                except:
+                    steam_fail_number = 10
+                    return "10"
 
         if setting == "theme":
             if os.path.exists(os.path.join(cwd(), "boiiiwd_theme.json")):
@@ -993,6 +1054,10 @@ class SettingsTab(ctk.CTkFrame):
     def load_on_switch_screen(self):
         self.check_updates_var.set(self.load_settings("checkforupdtes"))
         self.console_var.set(self.load_settings("console"))
+        self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "10"))
+        self.estimated_progress_var.set(self.load_settings("estimated_progress", "on"))
+        self.clean_checkbox_var.set(self.load_settings("clean_on_finish", "on"))
+        self.continuous_var.set(self.load_settings("continuous_download"))
 
         # keep last cuz of trace_add()
         self.save_button.configure(state='disabled')
@@ -1001,13 +1066,7 @@ class SettingsTab(ctk.CTkFrame):
         launch_boiii_func(check_config("destinationfolder"))
 
     def settings_reset_steamcmd(self):
-        steamcmd_path = get_steamcmd_path()
-        steamcmd_steamapps = os.path.join(steamcmd_path, "steamapps")
-        if os.path.exists(steamcmd_steamapps):
-            remove_tree(steamcmd_steamapps, show_error=True)
-            show_message("Success!", "SteamCMD has been reset successfully!", icon="info")
-        else:
-            show_message("Warning!", "steamapps folder was not found, maybe already removed?", icon="warning")
+        reset_steamcmd()
 
 class BOIIIWD(ctk.CTk):
     def __init__(self):
@@ -1178,13 +1237,14 @@ class BOIIIWD(ctk.CTk):
             self.settings_tab.load_settings("continuous_download", "on")
             self.settings_tab.load_settings("console", "off")
             self.settings_tab.load_settings("estimated_progress", "on")
+            self.settings_tab.load_settings("reset_on_fail", "10")
         except:
             pass
 
         if not check_steamcmd():
             self.show_warning_message()
 
-    def save_window_size(self ,event):
+    def save_window_size(self, event):
         with open("boiiiwd_dont_touch.conf", "w") as conf:
             conf.write(self.geometry())
 
@@ -1512,7 +1572,7 @@ class BOIIIWD(ctk.CTk):
             start_down_thread = threading.Thread(target=self.download_thread)
             start_down_thread.start()
         else:
-            show_message("Warning", "Already downloading a map.")
+            show_message("Warning", "Already pressed, Please wait.")
 
     def download_thread(self):
         try:
@@ -1585,17 +1645,25 @@ class BOIIIWD(ctk.CTk):
             def check_and_update_progress():
                 # delay untill steam boots up and starts downloading (ive a better idea ill implement it later)
                 time.sleep(8)
-                global stopped
+                global stopped, steamcmd_reset
                 previous_net_speed = 0
                 est_downloaded_bytes = 0
                 start_time = time.time()
                 file_size = ws_file_size
 
                 while not stopped:
+                    if steamcmd_reset:
+                        steamcmd_reset = False
+                        previous_net_speed = 0
+                        est_downloaded_bytes = 0
+
                     try:
                         current_size = sum(os.path.getsize(os.path.join(download_folder, f)) for f in os.listdir(download_folder))
                     except:
-                        current_size = sum(os.path.getsize(os.path.join(map_folder, f)) for f in os.listdir(map_folder))
+                        try:
+                            current_size = sum(os.path.getsize(os.path.join(map_folder, f)) for f in os.listdir(map_folder))
+                        except:
+                            continue
 
                     progress = int(current_size / file_size * 100)
 
