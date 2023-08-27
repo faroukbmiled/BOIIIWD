@@ -1,9 +1,9 @@
 # BOIIIWD
-- A GUI Steam Workshop downloader meant for BO3 ([boiii client](https://github.com/Ezz-lol/boiii-free)) built using CustomTkinter <br>
+- A GUI Steam Workshop downloader for BO3 ([boiii client](https://github.com/Ezz-lol/boiii-free)) built using CustomTkinter <br>
 <p float="left">
   <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/bd7e1bc3-bdb2-4096-8e33-5041bb9eb2d9" width="800" />
   <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/4ea5b4d4-e810-47b0-8fdb-5a68a2b117f2" width="800" /> 
-  <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/383b0ebf-385c-415f-a9d8-e8a7195c69d7" width="800" />
+  <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/81998b24-2eb2-4bcf-bccb-9b4639c00a40" width="800" />
 </p>
 
 ## Usage (exe):
