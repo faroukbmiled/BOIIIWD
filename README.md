@@ -24,7 +24,7 @@
 
 ## Queue tab (beta)
 
-- added Queue tab which has a text field that you can slap in workshop ids/links in 2 formats for example:<br>
+- added Queue tab which has a text field that you can slap in workshop ids/links in 2 formats, for example:<br>
 
 
 ```3010399939,2976006537,2118338989,2113146805```  or <br>
