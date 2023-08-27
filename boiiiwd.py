@@ -430,7 +430,8 @@ def get_item_name(id):
 
         try:
             map_name = soup.find("div", class_="workshopItemTitle").text.strip()
-            return map_name
+            name = map_name[:32] + "..." if len(map_name) > 32 else map_name
+            return name
         except:
             return True
     except:
@@ -1852,7 +1853,7 @@ class BOIIIWD(ctk.CTk):
                             file_size = current_size
                             self.total_queue_size += file_size
                             self.after(1, self.status_text.configure(
-                                text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | Current Item: {workshop_id} | Name: {item_name} | Downloading {current_number}/{total_items}"))
+                                text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | ID: {workshop_id} | {item_name} | Downloading {current_number}/{total_items}"))
                             self.after(1, lambda p=progress: self.label_file_size.configure(text=f"Wrong size reported\nFile size: ~{convert_bytes_to_readable(current_size)}"))
 
                         if estimated_progress:
@@ -1880,7 +1881,7 @@ class BOIIIWD(ctk.CTk):
 
                             # print(f"raw_net {raw_net_speed}\ncurrent_net_speed: {current_net_speed}\nest_downloaded_bytes {est_downloaded_bytes}\npercentage_complete {percentage_complete}\nprogress {progress}")
                             self.after(1, self.status_text.configure(
-                                text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | Current Item: {workshop_id} | Name: {item_name} | Downloading {current_number}/{total_items}"))
+                                text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | ID: {workshop_id} | {item_name} | Downloading {current_number}/{total_items}"))
                             self.after(1, self.progress_bar.set(progress))
                             self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
                             self.after(1, lambda p=min(percentage_complete ,99): self.progress_text.configure(text=f"{p:.2f}%"))
@@ -1904,7 +1905,7 @@ class BOIIIWD(ctk.CTk):
                             elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
 
                             self.after(1, self.status_text.configure(
-                                text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | Current Item: {workshop_id} | Name: {item_name} | Downloading {current_number}/{total_items}"))
+                                text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | ID: {workshop_id} | {item_name} | Downloading {current_number}/{total_items}"))
                             self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
                             self.after(1, lambda p=progress: self.progress_text.configure(text=f"{p}%"))
                             if show_fails:
