@@ -20,7 +20,7 @@ import io
 import os
 import re
 
-VERSION = "v0.2.2"
+VERSION = "v0.2.3"
 GITHUB_REPO = "faroukbmiled/BOIIIWD"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 UPDATER_FOLDER = "update"
@@ -29,17 +29,18 @@ RESOURCES_DIR = os.path.join(os.path.dirname(__file__), 'resources')
 
 # fuck it we ball, ill get rid of globals when i finish everything cant be bothered rn
 global stopped, steampid, console, clean_on_finish, continuous, estimated_progress, steam_fail_counter, \
-    steam_fail_counter_toggle, steam_fail_number, steamcmd_reset
+    steam_fail_counter_toggle, steam_fail_number, steamcmd_reset, show_fails
 steampid = None
 stopped = False
 console = False
 clean_on_finish = True
 continuous = True
 estimated_progress = True
-steam_fail_counter_toggle = True
+steam_fail_counter_toggle = False
 steam_fail_counter = 0
 steam_fail_number = 10
 steamcmd_reset = False
+show_fails = True
 
 # Start Helper Functions
 def cwd():
@@ -224,6 +225,19 @@ def run_steamcmd_command(command, self, map_folder):
     if console:
         show_console = subprocess.CREATE_NEW_CONSOLE
 
+    if os.path.exists(map_folder):
+        try:
+            try:
+                os.remove(map_folder)
+            except:
+                timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+                os.rename(map_folder, os.path.join(map_folder, os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", f"couldntremove_{timestamp}")))
+        except Exception as e:
+            stopped = True
+            self.queue_stop_button = True
+            show_message("Error", f"Couldn't remove {map_folder}, please do so manually\n{e}", icon="cancel")
+            return
+
     if continuous:
         while not os.path.exists(map_folder) and not stopped:
             process = subprocess.Popen(
@@ -264,7 +278,6 @@ def run_steamcmd_command(command, self, map_folder):
             universal_newlines=True,
             creationflags=show_console
         )
-
 
         steampid = process.pid
 
@@ -404,6 +417,23 @@ def reset_steamcmd(no_warn=None):
     else:
         if not no_warn:
             show_message("Warning!", "steamapps folder was not found, maybe already removed?", icon="warning")
+
+def get_item_name(id):
+    try:
+        url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={id}"
+        response = requests.get(url)
+        response.raise_for_status()
+        content = response.text
+
+        soup = BeautifulSoup(content, "html.parser")
+
+        try:
+            map_name = soup.find("div", class_="workshopItemTitle").text.strip()
+            return map_name
+        except:
+            return True
+    except:
+        return False
 
 # End helper functions
 
@@ -850,15 +880,23 @@ class SettingsTab(ctk.CTkFrame):
             \nThis is not accurate ,it's better than with it off which is calculating the downloaded folder size which steamcmd dumps the full size rigth mostly")
         self.estimated_progress_var.set(self.load_settings("estimated_progress", "on"))
 
+        # Show estimated_progress checkbox
+        self.show_fails_var = ctk.BooleanVar()
+        self.show_fails_var.trace_add("write", self.enable_save_button)
+        self.show_fails = ctk.CTkSwitch(left_frame, text="Show fails (on top of progress bar):", variable=self.show_fails_var)
+        self.show_fails.grid(row=5, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.show_fails_tooltip = CTkToolTip(self.show_fails, message="Display how many times steamcmd has failed/crashed\nIf the number is getting high quickly then try pressing Reset SteamCMD and try again, otherwise its fine")
+        self.estimated_progress_var.set(self.load_settings("show_fails", "on"))
+
         # Resetr steam on many fails
         self.reset_steamcmd_on_fail_var = ctk.IntVar()
         self.reset_steamcmd_on_fail_var.trace_add("write", self.enable_save_button)
         self.reset_steamcmd_on_fail_text = ctk.CTkLabel(left_frame, text=f"Reset steamcmd on % fails: (n of fails)", anchor="w")
-        self.reset_steamcmd_on_fail_text.grid(row=5, column=1, padx=20, pady=(10, 0), sticky="nw")
-        self.reset_steamcmd_on_fail = ctk.CTkOptionMenu(left_frame, values=["10", "15", "20", "Disable"], variable=self.reset_steamcmd_on_fail_var)
-        self.reset_steamcmd_on_fail.grid(row=6, column=1, padx=20, pady=(0, 0), sticky="nw")
+        self.reset_steamcmd_on_fail_text.grid(row=6, column=1, padx=20, pady=(10, 0), sticky="nw")
+        self.reset_steamcmd_on_fail = ctk.CTkOptionMenu(left_frame, values=["20", "30", "40", "Custom", "Disable"], variable=self.reset_steamcmd_on_fail_var, command=self.reset_steamcmd_on_fail_func)
+        self.reset_steamcmd_on_fail.grid(row=7, column=1, padx=20, pady=(0, 0), sticky="nw")
         self.reset_steamcmd_on_fail_tooltip = CTkToolTip(self.reset_steamcmd_on_fail, message="This actually fixes steamcmd when its crashing way too much")
-        self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "10"))
+        self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "Disable"))
 
         # Check for updates button n Launch boiii
         self.check_for_updates = ctk.CTkButton(right_frame, text="Check for updates", command=self.settings_check_for_updates)
@@ -901,7 +939,16 @@ class SettingsTab(ctk.CTkFrame):
         self.version_info = ctk.CTkLabel(self, text=f"{VERSION}")
         self.version_info.grid(row=3, column=1, padx=20, pady=(20, 20), sticky="e")
 
-
+    def reset_steamcmd_on_fail_func(self, option: str):
+        if option == "Custom":
+            try:
+                save_config("reset_on_fail", self.reset_steamcmd_on_fail.get())
+                if show_message("config.ini" ,"change reset_on_fail value to whatever you want", exit_on_close=True):
+                    os.system(f"notepad {os.path.join(cwd(), 'config.ini')}")
+            except:
+                show_message("Couldn't open config.ini" ,"you can do so by yourself and change reset_on_fail value to whatever you want")
+        else:
+            pass
     def theme_options_func(self, option: str):
         if option == "Default":
             self.boiiiwd_custom_theme(disable_only=True)
@@ -927,7 +974,7 @@ class SettingsTab(ctk.CTkFrame):
 
     def save_settings(self):
         self.save_button.configure(state='disabled')
-        global console, clean_on_finish, continuous, estimated_progress, steam_fail_number, steam_fail_counter_toggle
+        global console, clean_on_finish, continuous, estimated_progress, steam_fail_number, steam_fail_counter_toggle, show_fails
         if self.check_updates_checkbox.get():
             save_config("checkforupdtes", "on")
         else:
@@ -961,6 +1008,13 @@ class SettingsTab(ctk.CTkFrame):
             save_config("estimated_progress", "off")
             estimated_progress = False
 
+        if self.show_fails.get():
+            save_config("show_fails", "on")
+            show_fails = True
+        else:
+            save_config("show_fails", "off")
+            show_fails = False
+
         if self.reset_steamcmd_on_fail.get():
             value = self.reset_steamcmd_on_fail.get()
             if value == "Disable":
@@ -971,7 +1025,7 @@ class SettingsTab(ctk.CTkFrame):
             save_config("reset_on_fail", value)
 
     def load_settings(self, setting, fallback=None):
-        global console, clean_on_finish, continuous, estimated_progress, steam_fail_counter_toggle, steam_fail_number
+        global console, clean_on_finish, continuous, estimated_progress, steam_fail_counter_toggle, steam_fail_number, show_fails
         if setting == "console":
             if check_config(setting, fallback) == "on":
                 console = True
@@ -1005,7 +1059,7 @@ class SettingsTab(ctk.CTkFrame):
 
         if setting == "reset_on_fail":
             option = check_config(setting, fallback)
-            if option == "Disable":
+            if option == "Disable" or option == "Custom":
                 steam_fail_counter_toggle = False
                 return "Disable"
             else:
@@ -1013,8 +1067,20 @@ class SettingsTab(ctk.CTkFrame):
                     steam_fail_number = int(option)
                     return option
                 except:
-                    steam_fail_number = 10
-                    return "10"
+                    if steam_fail_counter_toggle:
+                        steam_fail_number = 10
+                        return "10"
+                    else:
+                        steam_fail_number = 10
+                        return "Disable"
+
+        if setting == "show_fails":
+            if check_config(setting, fallback) == "on":
+                show_fails = True
+                return 1
+            else:
+                show_fails = False
+                return 0
 
         if setting == "theme":
             if os.path.exists(os.path.join(cwd(), "boiiiwd_theme.json")):
@@ -1055,10 +1121,11 @@ class SettingsTab(ctk.CTkFrame):
     def load_on_switch_screen(self):
         self.check_updates_var.set(self.load_settings("checkforupdtes"))
         self.console_var.set(self.load_settings("console"))
-        self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "10"))
+        self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "Disable"))
         self.estimated_progress_var.set(self.load_settings("estimated_progress", "on"))
         self.clean_checkbox_var.set(self.load_settings("clean_on_finish", "on"))
         self.continuous_var.set(self.load_settings("continuous_download"))
+        self.show_fails_var.set(self.load_settings("show_fails", "on"))
 
         # keep last cuz of trace_add()
         self.save_button.configure(state='disabled')
@@ -1090,6 +1157,31 @@ class BOIIIWD(ctk.CTk):
         self.wm_iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico"))
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
+        # Qeue frame/tab, keep here or app will start shrinked eveytime
+        self.qeueuframe = ctk.CTkFrame(self)
+        self.qeueuframe.columnconfigure(1, weight=1)
+        self.qeueuframe.columnconfigure(2, weight=1)
+        self.qeueuframe.columnconfigure(3, weight=1)
+        self.qeueuframe.rowconfigure(1, weight=1)
+        self.qeueuframe.rowconfigure(2, weight=1)
+        self.qeueuframe.rowconfigure(3, weight=1)
+        self.qeueuframe.rowconfigure(4, weight=1)
+
+        self.workshop_queue_label = ctk.CTkLabel(self.qeueuframe, text="Workshop IDs/Links -> press help to see examples:")
+        self.workshop_queue_label.grid(row=0, column=0, padx=(20, 20), pady=(20, 20), sticky="wns")
+
+        self.help_button = ctk.CTkButton(master=self.qeueuframe, text="help", command=self.help_queue_text_func, width=10, height=10, fg_color="#585858")
+        self.help_button.grid(row=0, column=1, padx=(0, 20), pady=(20, 20), sticky="wns")
+        self.help_button_tooltip = CTkToolTip(self.help_button, message="This only works if the text area is empty (press twice if you had something in it)")
+
+        self.queuetextarea = ctk.CTkTextbox(master=self.qeueuframe, font=("", 15))
+        self.queuetextarea.grid(row=1, column=0, columnspan=2,rowspan=2, padx=(20, 20), pady=(0, 20), sticky="nwse")
+
+        self.status_text = ctk.CTkLabel(self.qeueuframe, text="Status: Not Downloading")
+        self.status_text.grid(row=3, column=0, padx=(20, 20), pady=(0, 20), sticky="ws")
+
+        self.qeueuframe.grid_remove()
+
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure((2, 3), weight=0)
@@ -1110,10 +1202,10 @@ class BOIIIWD(ctk.CTk):
         self.txt_label.grid(row=1, column=0, padx=20, pady=(20, 10))
         self.sidebar_main = ctk.CTkButton(self.sidebar_frame)
         self.sidebar_main.grid(row=2, column=0, padx=20, pady=10)
-        self.sidebar_library = ctk.CTkButton(self.sidebar_frame)
-        self.sidebar_library.grid(row=3, column=0, padx=20, pady=10)
         self.sidebar_queue = ctk.CTkButton(self.sidebar_frame)
-        self.sidebar_queue.grid(row=4, column=0, padx=20, pady=10, sticky="n")
+        self.sidebar_queue.grid(row=3, column=0, padx=20, pady=10)
+        self.sidebar_library = ctk.CTkButton(self.sidebar_frame)
+        self.sidebar_library.grid(row=4, column=0, padx=20, pady=10, sticky="n")
         self.sidebar_settings = ctk.CTkButton(self.sidebar_frame)
         self.sidebar_settings.grid(row=5, column=0, padx=20, pady=10, sticky="n")
 
@@ -1157,7 +1249,7 @@ class BOIIIWD(ctk.CTk):
         self.button_download.grid(row=4, column=0, padx=20, pady=(5, 20), columnspan=2, sticky="ew")
 
         self.button_stop = ctk.CTkButton(master=self.slider_progressbar_frame, text="Stop", command=self.stop_download)
-        self.button_stop.grid(row=4, column=2, padx=(0, 20), pady=(5, 20), columnspan=1, sticky="ew")
+        self.button_stop.grid(row=4, column=2, padx=(0, 20), pady=(5, 20), columnspan=1, sticky="w")
 
         # options frame
         self.optionsframe.columnconfigure(1, weight=1)
@@ -1201,6 +1293,7 @@ class BOIIIWD(ctk.CTk):
         self.button_steamcmd_browse = ctk.CTkButton(master=self.optionsframe, text="Select", command=self.open_steamcmd_path_browser)
         self.button_steamcmd_browse.grid(row=6, column=5, padx=(0, 20), pady=(0, 30), sticky="ewn")
 
+
         # set default values
         self.active_color = get_button_state_colors(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")), "button_active_state_color")
         self.normal_color = get_button_state_colors(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")), "button_normal_state_color")
@@ -1211,17 +1304,19 @@ class BOIIIWD(ctk.CTk):
         self.progress_bar.configure(progress_color=self.progress_color)
         self.hide_settings_widgets()
         self.button_stop.configure(state="disabled")
-        self.is_downloading = False
+        self.is_pressed = False
+        self.queue_enabled = False
+        self.queue_stop_button = False
 
         # sidebar windows bouttons
         self.sidebar_main.configure(command=self.main_button_event, text="Main ⬇️", fg_color=(self.active_color), state="active")
         self.sidebar_library.configure(text="Library 📙", command=self.library_button_event)
-        self.sidebar_queue.configure(state="disabled", text="Queue 🚧")
+        self.sidebar_queue.configure(text="Queue 🚧", command=self.queue_button_event)
         sidebar_settings_button_image = os.path.join(RESOURCES_DIR, "sett10.png")
         self.sidebar_settings.configure(command=self.settings_button_event, text="", image=ctk.CTkImage(Image.open(sidebar_settings_button_image), size=(int(35), int(35))), fg_color="transparent", width=45, height=45)
         self.sidebar_settings_tooltip = CTkToolTip(self.sidebar_settings, message="Settings")
         self.sidebar_library_tooltip = CTkToolTip(self.sidebar_library, message="Experimental")
-        self.sidebar_queue_tooltip = CTkToolTip(self.sidebar_queue, message="Coming soon")
+        self.sidebar_queue_tooltip = CTkToolTip(self.sidebar_queue, message="Experimental")
         self.bind("<Configure>", self.save_window_size)
 
         # load ui configs
@@ -1238,7 +1333,8 @@ class BOIIIWD(ctk.CTk):
             self.settings_tab.load_settings("continuous_download", "on")
             self.settings_tab.load_settings("console", "off")
             self.settings_tab.load_settings("estimated_progress", "on")
-            self.settings_tab.load_settings("reset_on_fail", "10")
+            self.settings_tab.load_settings("reset_on_fail", "Disable")
+            self.settings_tab.load_settings("show_fails", "on")
         except:
             pass
 
@@ -1295,29 +1391,55 @@ class BOIIIWD(ctk.CTk):
         self.library_tab.load_items(self.edit_destination_folder.get())
         self.library_tab.grid(row=0, rowspan=3, column=1, padx=(0, 20), pady=(20, 20), sticky="nsew")
 
+    def show_queue_widgets(self):
+        self.title("BOIII Workshop Downloader - Queue")
+        self.optionsframe.grid_forget()
+        self.queue_enabled = True
+        self.slider_progressbar_frame.grid(row=2, column=1, rowspan=1, padx=(0, 20), pady=(20, 20), sticky="nsew")
+        self.qeueuframe.grid(row=0, column=1, rowspan=2, padx=(0, 20), pady=(20, 0), sticky="nsew")
+
+    def hide_queue_widgets(self):
+        self.queue_enabled = False
+        self.qeueuframe.grid_forget()
+
     def main_button_event(self):
         self.sidebar_main.configure(state="active", fg_color=(self.active_color))
         self.sidebar_settings.configure(state="normal", fg_color="transparent")
         self.sidebar_library.configure(state="normal", fg_color=(self.normal_color))
+        self.sidebar_queue.configure(state="normal", fg_color=(self.normal_color))
         self.hide_settings_widgets()
         self.hide_library_widgets()
+        self.hide_queue_widgets()
         self.show_main_widgets()
 
     def settings_button_event(self):
         self.sidebar_main.configure(state="normal", fg_color=(self.normal_color))
         self.sidebar_library.configure(state="normal", fg_color=(self.normal_color))
+        self.sidebar_queue.configure(state="normal", fg_color=(self.normal_color))
         self.sidebar_settings.configure(state="active", fg_color=(self.active_color))
         self.hide_main_widgets()
         self.hide_library_widgets()
+        self.hide_queue_widgets()
         self.show_settings_widgets()
 
     def library_button_event(self):
         self.sidebar_main.configure(state="normal", fg_color=(self.normal_color))
         self.sidebar_settings.configure(state="normal", fg_color="transparent")
+        self.sidebar_queue.configure(state="normal", fg_color=(self.normal_color))
         self.sidebar_library.configure(state="active", fg_color=(self.active_color))
         self.hide_main_widgets()
         self.hide_settings_widgets()
+        self.hide_queue_widgets()
         self.show_library_widgets()
+
+    def queue_button_event(self):
+        self.sidebar_main.configure(state="normal", fg_color=(self.normal_color))
+        self.sidebar_settings.configure(state="normal", fg_color="transparent")
+        self.sidebar_library.configure(state="normal", fg_color=(self.normal_color))
+        self.sidebar_queue.configure(state="active", fg_color=(self.active_color))
+        self.hide_settings_widgets()
+        self.hide_library_widgets()
+        self.show_queue_widgets()
 
     def load_configs(self):
         if os.path.exists(CONFIG_FILE_PATH):
@@ -1347,6 +1469,17 @@ class BOIIIWD(ctk.CTk):
             self.edit_steamcmd_path.delete(0, "end")
             self.edit_steamcmd_path.insert(0, cwd())
             create_default_config()
+
+    def help_queue_text_func(self):
+        if any(char.isalpha() for char in self.queuetextarea.get("1.0", "end")):
+            self.workshop_queue_label.configure(text="Workshop IDs/Links => press help to see examples:")
+            self.queuetextarea.configure(state="normal")
+            self.queuetextarea.delete(1.0, "end")
+            self.queuetextarea.insert(1.0, "")
+        else:
+            self.workshop_queue_label.configure(text="Workshop IDs/Links => press help again to remove examples:")
+            self.queuetextarea.insert(1.0, "3010399939,2976006537,2118338989,...\nor:\n3010399939\n2976006537\n2113146805\n...")
+            self.queuetextarea.configure(state="disabled")
 
     def open_BOIII_browser(self):
         selected_folder = ctk.filedialog.askdirectory(title="Select BOIII Folder")
@@ -1568,12 +1701,285 @@ class BOIIIWD(ctk.CTk):
         top.grid_columnconfigure(1, weight=1)
 
     def download_map(self):
-        if not self.is_downloading:
-            self.is_downloading = True
-            start_down_thread = threading.Thread(target=self.download_thread)
-            start_down_thread.start()
+        if not self.is_pressed:
+            self.is_pressed = True
+            if self.queue_enabled:
+                start_down_thread = threading.Thread(target=self.queue_download_thread)
+                start_down_thread.start()
+            else:
+                start_down_thread = threading.Thread(target=self.download_thread)
+                start_down_thread.start()
         else:
             show_message("Warning", "Already pressed, Please wait.")
+
+    def queue_download_thread(self):
+        global stopped
+        stopped = False
+        self.queue_stop_button = False
+        try:
+            save_config("DestinationFolder" ,self.edit_destination_folder.get())
+            save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
+
+            if not check_steamcmd():
+                self.show_warning_message()
+                return
+
+            steamcmd_path = get_steamcmd_path()
+
+            if not is_steamcmd_initialized():
+                if not show_message("Warning", "SteamCMD is not initialized, Press OK to do so!\nProgram may go unresponsive until SteamCMD is finished downloading.",
+                            icon="warning" ,exit_on_close=True):
+                    pass
+                else:
+                    initialize_steam_thread = threading.Thread(target=lambda: initialize_steam(self))
+                    initialize_steam_thread.start()
+                return
+
+            text = self.queuetextarea.get("1.0", "end")
+            items = []
+            if "," in text:
+                items = [n.strip() for n in text.split(",")]
+            else:
+                items = [n.strip() for n in text.split("\n") if n.strip()]
+
+            if not items:
+                show_message("Warning", "Please enter valid Workshop IDs/Links.", icon="warning")
+                self.stop_download
+                return
+
+            destination_folder = self.edit_destination_folder.get().strip()
+
+            if not destination_folder or not os.path.exists(destination_folder):
+                show_message("Error", "Please select a valid destination folder => in the main tab!.")
+                self.stop_download
+                return
+
+            if not steamcmd_path or not os.path.exists(steamcmd_path):
+                show_message("Error", "Please enter a valid SteamCMD path => in the main tab!.")
+                self.stop_download
+                return
+
+            self.total_queue_size = 0
+            for item in items:
+                item.strip()
+                workshop_id = item
+                if not workshop_id.isdigit():
+                    try:
+                        if extract_workshop_id(workshop_id).strip().isdigit():
+                            workshop_id = extract_workshop_id(workshop_id).strip()
+                        else:
+                            show_message("Warning", "Please enter valid Workshop IDs/Links.", icon="warning")
+                            self.stop_download
+                            return
+                    except:
+                        show_message("Warning", "Please enter valid Workshop IDs/Links.", icon="warning")
+                        self.stop_download
+                        return
+                if not valid_id(workshop_id):
+                    show_message("Warning", "Please enter valid Workshop IDs/Links.", icon="warning")
+                    self.stop_download
+                    return
+
+                ws_file_size = get_workshop_file_size(workshop_id)
+                file_size = ws_file_size
+                self.total_queue_size += ws_file_size
+
+                if file_size is None:
+                    show_message("Error", "Failed to retrieve file size.", icon="cancel")
+                    self.stop_download
+                    return
+
+            self.after(1, self.status_text.configure(text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)}"))
+            start_time = time.time()
+            for index, item in enumerate(items):
+                if self.queue_stop_button:
+                    self.stop_download
+                    break
+                item.strip()
+                stopped = False
+                workshop_id = item
+                if not workshop_id.isdigit():
+                    try:
+                        if extract_workshop_id(workshop_id).strip().isdigit():
+                            workshop_id = extract_workshop_id(workshop_id).strip()
+                        else:
+                            show_message("Warning", "Please enter valid Workshop IDs/Links.", icon="warning")
+                            self.stop_download
+                            return
+                    except:
+                        show_message("Warning", "Please enter valid Workshop IDs/Links.", icon="warning")
+                        self.stop_download
+                        return
+                ws_file_size = get_workshop_file_size(workshop_id)
+                file_size = ws_file_size
+                self.after(1, lambda mid=workshop_id: self.label_file_size.configure(text=f"File size: {get_workshop_file_size(mid ,raw=True)}"))
+                download_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "downloads", "311210", workshop_id)
+                map_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", workshop_id)
+                if not os.path.exists(download_folder):
+                    os.makedirs(download_folder)
+
+                def check_and_update_progress():
+                    # delay untill steam boots up and starts downloading (ive a better idea ill implement it later)
+                    time.sleep(8)
+                    global stopped, steamcmd_reset
+                    previous_net_speed = 0
+                    est_downloaded_bytes = 0
+                    file_size = ws_file_size
+                    item_name = get_item_name(workshop_id) if get_item_name(workshop_id) else "Error getting name"
+
+                    while not stopped:
+                        if steamcmd_reset:
+                            steamcmd_reset = False
+                            previous_net_speed = 0
+                            est_downloaded_bytes = 0
+
+                        try:
+                            current_size = sum(os.path.getsize(os.path.join(download_folder, f)) for f in os.listdir(download_folder))
+                        except:
+                            try:
+                                current_size = sum(os.path.getsize(os.path.join(map_folder, f)) for f in os.listdir(map_folder))
+                            except:
+                                continue
+
+                        progress = int(current_size / file_size * 100)
+
+                        if progress > 100:
+                            progress = int(current_size / current_size * 100)
+                            self.total_queue_size -= file_size
+                            file_size = current_size
+                            self.total_queue_size += file_size
+                            self.after(1, self.status_text.configure(text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | Current Item: {workshop_id} | Name: {item_name}"))
+                            self.after(1, lambda p=progress: self.label_file_size.configure(text=f"Wrong size reported\nFile size: ~{convert_bytes_to_readable(current_size)}"))
+
+                        if estimated_progress:
+                            time_elapsed = time.time() - start_time
+                            raw_net_speed = psutil.net_io_counters().bytes_recv
+
+                            current_net_speed_text = raw_net_speed
+                            net_speed_bytes = current_net_speed_text - previous_net_speed
+                            previous_net_speed = current_net_speed_text
+
+                            current_net_speed = net_speed_bytes
+                            down_cap = 150000000
+                            if current_net_speed >= down_cap:
+                                current_net_speed = 10
+
+                            est_downloaded_bytes += current_net_speed
+
+                            percentage_complete = (est_downloaded_bytes / file_size) * 100
+
+                            progress = min(percentage_complete / 100, 0.99)
+
+                            net_speed, speed_unit = convert_speed(net_speed_bytes)
+
+                            elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
+
+                            # print(f"raw_net {raw_net_speed}\ncurrent_net_speed: {current_net_speed}\nest_downloaded_bytes {est_downloaded_bytes}\npercentage_complete {percentage_complete}\nprogress {progress}")
+                            self.after(1, self.status_text.configure(text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | Current Item: {workshop_id} | Name: {item_name}"))
+                            self.after(1, self.progress_bar.set(progress))
+                            self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
+                            self.after(1, lambda p=min(percentage_complete ,99): self.progress_text.configure(text=f"{p:.2f}%"))
+                            if show_fails:
+                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {steam_fail_counter}"))
+                            else:
+                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
+
+                            time.sleep(1)
+                        else:
+                            time_elapsed = time.time() - start_time
+                            progress = int(current_size / file_size * 100)
+                            self.after(1, lambda v=progress / 100.0: self.progress_bar.set(v))
+
+                            current_net_speed = psutil.net_io_counters().bytes_recv
+
+                            net_speed_bytes = current_net_speed - previous_net_speed
+                            previous_net_speed = current_net_speed
+
+                            net_speed, speed_unit = convert_speed(net_speed_bytes)
+                            elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
+
+                            self.after(1, self.status_text.configure(text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | Current Item: {workshop_id} | Name: {item_name}"))
+                            self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
+                            self.after(1, lambda p=progress: self.progress_text.configure(text=f"{p}%"))
+                            if show_fails:
+                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {steam_fail_counter}"))
+                            else:
+                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
+                            time.sleep(1)
+
+                command = f"+login anonymous +@sSteamCmdForcePlatformBitness 64 +app_info_update 1 +app_info_print 311210 app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
+                steamcmd_thread = threading.Thread(target=lambda: run_steamcmd_command(command, self, map_folder))
+                steamcmd_thread.start()
+
+                def wait_for_threads():
+                    update_ui_thread = threading.Thread(target=check_and_update_progress)
+                    update_ui_thread.daemon = True
+                    update_ui_thread.start()
+                    update_ui_thread.join()
+
+                    self.label_speed.configure(text="Network Speed: 0 KB/s")
+                    self.progress_text.configure(text="0%")
+                    self.progress_bar.set(0.0)
+
+                    map_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", workshop_id)
+
+                    json_file_path = os.path.join(map_folder, "workshop.json")
+
+                    if os.path.exists(json_file_path):
+                        mod_type = extract_json_data(json_file_path, "Type")
+                        folder_name = extract_json_data(json_file_path, "FolderName")
+
+                        if mod_type == "mod":
+                            mods_folder = os.path.join(destination_folder, "mods")
+                            folder_name_path = os.path.join(mods_folder, folder_name, "zone")
+                        elif mod_type == "map":
+                            usermaps_folder = os.path.join(destination_folder, "usermaps")
+                            folder_name_path = os.path.join(usermaps_folder, folder_name, "zone")
+                        else:
+                            show_message("Error", "Invalid workshop type in workshop.json, are you sure this is a map or a mod?.", icon="cancel")
+                            self.stop_download
+                            return
+
+                        os.makedirs(folder_name_path, exist_ok=True)
+
+                        try:
+                            shutil.copytree(map_folder, folder_name_path, dirs_exist_ok=True)
+                        except Exception as E:
+                            show_message("Error", f"Error copying files: {E}", icon="cancel")
+
+                        if clean_on_finish:
+                            remove_tree(map_folder)
+                            remove_tree(download_folder)
+
+                        if index == len(items) - 1:
+                            msg = CTkMessagebox(title="Downloads Complete", message=f"All files were downloaded\nYou can run the game now!", icon="info", option_1="Launch", option_2="Ok")
+                            response = msg.get()
+                            if response=="Launch":
+                                launch_boiii_func(self.edit_destination_folder.get().strip())
+                            if response=="Ok":
+                                pass
+
+                self.button_download.configure(state="disabled")
+                self.button_stop.configure(state="normal")
+                update_wait_thread = threading.Thread(target=wait_for_threads)
+                update_wait_thread.start()
+                steamcmd_thread.join()
+                update_wait_thread.join()
+
+                if index == len(items) - 1:
+                    self.button_download.configure(state="normal")
+                    self.button_stop.configure(state="disabled")
+                    self.after(1, self.status_text.configure(text=f"Status: Done"))
+                    self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
+                    stopped = True
+                    self.stop_download
+                    return
+        finally:
+            global steam_fail_counter
+            steam_fail_counter = 0
+            self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
+            self.stop_download
+            self.is_pressed = False
 
     def download_thread(self):
         try:
@@ -1599,6 +2005,7 @@ class BOIIIWD(ctk.CTk):
                 return
 
             workshop_id = self.edit_workshop_id.get().strip()
+
             destination_folder = self.edit_destination_folder.get().strip()
 
             if not destination_folder or not os.path.exists(destination_folder):
@@ -1701,7 +2108,10 @@ class BOIIIWD(ctk.CTk):
                         self.after(1, self.progress_bar.set(progress))
                         self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
                         self.after(1, lambda p=min(percentage_complete ,99): self.progress_text.configure(text=f"{p:.2f}%"))
-                        self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
+                        if show_fails:
+                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {steam_fail_counter}"))
+                        else:
+                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
 
                         time.sleep(1)
                     else:
@@ -1719,7 +2129,10 @@ class BOIIIWD(ctk.CTk):
 
                         self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
                         self.after(1, lambda p=progress: self.progress_text.configure(text=f"{p}%"))
-                        self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
+                        if show_fails:
+                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {steam_fail_counter}"))
+                        else:
+                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
                         time.sleep(1)
 
             command = f"+login anonymous +@sSteamCmdForcePlatformBitness 64 +app_info_update 1 +app_info_print 311210 app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
@@ -1786,12 +2199,18 @@ class BOIIIWD(ctk.CTk):
             self.button_stop.configure(state="normal")
 
         finally:
+            global steam_fail_counter
+            steam_fail_counter = 0
             self.stop_download
-            self.is_downloading = False
+            self.is_pressed = False
 
     def stop_download(self, on_close=None):
-        global stopped
+        global stopped, steam_fail_counter
         stopped = True
+        self.queue_stop_button = True
+        steam_fail_counter = 0
+        self.is_pressed = False
+        self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
 
         if on_close:
             subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -1801,6 +2220,7 @@ class BOIIIWD(ctk.CTk):
         subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                        creationflags=subprocess.CREATE_NO_WINDOW)
 
+        self.status_text.configure(text=f"Status: Not Downloading")
         self.button_download.configure(state="normal")
         self.button_stop.configure(state="disabled")
         self.label_speed.configure(text="Network Speed: 0 KB/s")
