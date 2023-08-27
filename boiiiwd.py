@@ -218,7 +218,7 @@ def create_default_config():
     with open(CONFIG_FILE_PATH, "w") as config_file:
         config.write(config_file)
 
-def run_steamcmd_command(command, self, map_folder):
+def run_steamcmd_command(command, self, map_folder, queue=None):
     global steampid, stopped, steam_fail_counter, steam_fail_number, steamcmd_reset
     steamcmd_path = get_steamcmd_path()
     show_console = subprocess.CREATE_NO_WINDOW
@@ -290,8 +290,9 @@ def run_steamcmd_command(command, self, map_folder):
             show_message("SteamCMD has terminated", "SteamCMD has been terminated\nAnd failed to download the map/mod, try again or enable continuous download in settings")
 
     stopped = True
-    self.button_download.configure(state="normal")
-    self.button_stop.configure(state="disabled")
+    if not queue:
+        self.button_download.configure(state="normal")
+        self.button_stop.configure(state="disabled")
 
     return process.returncode
 
@@ -1792,6 +1793,8 @@ class BOIIIWD(ctk.CTk):
             self.after(1, self.status_text.configure(text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)}"))
             start_time = time.time()
             for index, item in enumerate(items):
+                current_number = index + 1
+                total_items = len(items)
                 if self.queue_stop_button:
                     self.stop_download
                     break
@@ -1848,7 +1851,8 @@ class BOIIIWD(ctk.CTk):
                             self.total_queue_size -= file_size
                             file_size = current_size
                             self.total_queue_size += file_size
-                            self.after(1, self.status_text.configure(text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | Current Item: {workshop_id} | Name: {item_name}"))
+                            self.after(1, self.status_text.configure(
+                                text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | Current Item: {workshop_id} | Name: {item_name} | Downloading {current_number}/{total_items}"))
                             self.after(1, lambda p=progress: self.label_file_size.configure(text=f"Wrong size reported\nFile size: ~{convert_bytes_to_readable(current_size)}"))
 
                         if estimated_progress:
@@ -1875,7 +1879,8 @@ class BOIIIWD(ctk.CTk):
                             elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
 
                             # print(f"raw_net {raw_net_speed}\ncurrent_net_speed: {current_net_speed}\nest_downloaded_bytes {est_downloaded_bytes}\npercentage_complete {percentage_complete}\nprogress {progress}")
-                            self.after(1, self.status_text.configure(text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | Current Item: {workshop_id} | Name: {item_name}"))
+                            self.after(1, self.status_text.configure(
+                                text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | Current Item: {workshop_id} | Name: {item_name} | Downloading {current_number}/{total_items}"))
                             self.after(1, self.progress_bar.set(progress))
                             self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
                             self.after(1, lambda p=min(percentage_complete ,99): self.progress_text.configure(text=f"{p:.2f}%"))
@@ -1898,7 +1903,8 @@ class BOIIIWD(ctk.CTk):
                             net_speed, speed_unit = convert_speed(net_speed_bytes)
                             elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
 
-                            self.after(1, self.status_text.configure(text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | Current Item: {workshop_id} | Name: {item_name}"))
+                            self.after(1, self.status_text.configure(
+                                text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | Current Item: {workshop_id} | Name: {item_name} | Downloading {current_number}/{total_items}"))
                             self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
                             self.after(1, lambda p=progress: self.progress_text.configure(text=f"{p}%"))
                             if show_fails:
@@ -1908,7 +1914,7 @@ class BOIIIWD(ctk.CTk):
                             time.sleep(1)
 
                 command = f"+login anonymous +@sSteamCmdForcePlatformBitness 64 +app_info_update 1 +app_info_print 311210 app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
-                steamcmd_thread = threading.Thread(target=lambda: run_steamcmd_command(command, self, map_folder))
+                steamcmd_thread = threading.Thread(target=lambda: run_steamcmd_command(command, self, map_folder, queue=True))
                 steamcmd_thread.start()
 
                 def wait_for_threads():
