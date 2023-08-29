@@ -20,27 +20,12 @@ import io
 import os
 import re
 
-VERSION = "v0.2.3"
+VERSION = "v0.2.4"
 GITHUB_REPO = "faroukbmiled/BOIIIWD"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 UPDATER_FOLDER = "update"
 CONFIG_FILE_PATH = "config.ini"
 RESOURCES_DIR = os.path.join(os.path.dirname(__file__), 'resources')
-
-# fuck it we ball, ill get rid of globals when i finish everything cant be bothered rn
-global stopped, steampid, console, clean_on_finish, continuous, estimated_progress, steam_fail_counter, \
-    steam_fail_counter_toggle, steam_fail_number, steamcmd_reset, show_fails
-steampid = None
-stopped = False
-console = False
-clean_on_finish = True
-continuous = True
-estimated_progress = True
-steam_fail_counter_toggle = False
-steam_fail_counter = 0
-steam_fail_number = 10
-steamcmd_reset = False
-show_fails = True
 
 # Start Helper Functions
 def cwd():
@@ -73,6 +58,7 @@ def check_custom_theme(theme_name):
         except:
             return os.path.join(RESOURCES_DIR, "boiiiwd_theme.json")
 
+# theme initialization
 ctk.set_appearance_mode(check_config("appearance", "Dark"))  # Modes: "System" (standard), "Dark", "Light"
 try:
     ctk.set_default_color_theme(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")))
@@ -218,84 +204,6 @@ def create_default_config():
     with open(CONFIG_FILE_PATH, "w") as config_file:
         config.write(config_file)
 
-def run_steamcmd_command(command, self, map_folder, queue=None):
-    global steampid, stopped, steam_fail_counter, steam_fail_number, steamcmd_reset
-    steamcmd_path = get_steamcmd_path()
-    show_console = subprocess.CREATE_NO_WINDOW
-    if console:
-        show_console = subprocess.CREATE_NEW_CONSOLE
-
-    if os.path.exists(map_folder):
-        try:
-            try:
-                os.remove(map_folder)
-            except:
-                timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-                os.rename(map_folder, os.path.join(map_folder, os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", f"couldntremove_{timestamp}")))
-        except Exception as e:
-            stopped = True
-            self.queue_stop_button = True
-            show_message("Error", f"Couldn't remove {map_folder}, please do so manually\n{e}", icon="cancel")
-            return
-
-    if continuous:
-        while not os.path.exists(map_folder) and not stopped:
-            process = subprocess.Popen(
-                [steamcmd_path + "\steamcmd.exe"] + command.split(),
-                stdout=None if console else subprocess.PIPE,
-                stderr=None if console else subprocess.PIPE,
-                text=True,
-                bufsize=1,
-                universal_newlines=True,
-                creationflags=show_console
-            )
-
-            steampid = process.pid
-
-            if process.poll() is not None:
-                return process.returncode
-
-            process.communicate()
-            steam_fail_counter = steam_fail_counter + 1
-            if steam_fail_counter_toggle:
-                # print(steam_fail_counter)
-                try:
-                    if steam_fail_counter >= int(steam_fail_number):
-                        reset_steamcmd(no_warn=True)
-                        steamcmd_reset = True
-                        steam_fail_counter = 0
-                except:
-                    if steam_fail_counter >= 10:
-                        reset_steamcmd(no_warn=True)
-                        steam_fail_counter = 0
-    else:
-        process = subprocess.Popen(
-            [steamcmd_path + "\steamcmd.exe"] + command.split(),
-            stdout=None if console else subprocess.PIPE,
-            stderr=None if console else subprocess.PIPE,
-            text=True,
-            bufsize=1,
-            universal_newlines=True,
-            creationflags=show_console
-        )
-
-        steampid = process.pid
-
-        if process.poll() is not None:
-            return process.returncode
-
-        process.communicate()
-
-        if not os.path.exists(map_folder):
-            show_message("SteamCMD has terminated", "SteamCMD has been terminated\nAnd failed to download the map/mod, try again or enable continuous download in settings")
-
-    stopped = True
-    if not queue:
-        self.button_download.configure(state="normal")
-        self.button_stop.configure(state="disabled")
-
-    return process.returncode
-
 def get_steamcmd_path():
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_PATH)
@@ -353,9 +261,15 @@ def show_message(title, message, icon="warning", exit_on_close=False):
         msg = CTkMessagebox(title=title, message=message, icon=icon)
 
 def launch_boiii_func(path):
+    procname = "boiii.exe"
     try:
-        boiii_path = os.path.join(path, "boiii.exe")
-        subprocess.Popen([boiii_path], cwd=path)
+        if procname in (p.name() for p in psutil.process_iter()):
+            for proc in psutil.process_iter():
+                if proc.name() == procname:
+                    proc.kill()
+        boiii_path = os.path.join(path, procname)
+        subprocess.Popen([boiii_path ,"-launch"] , cwd=path)
+        show_message("Please wait!", "The game has launched in the background it will open up in a sec!", icon="info")
     except Exception as e:
         show_message("Error: Failed to launch BOIII", f"Failed to launch boiii.exe\nMake sure to put in your correct boiii path\n{e}")
 
@@ -639,6 +553,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 button_view_list.destroy()
                 self.label_list.remove(label)
                 self.button_list.remove(button)
+                self.added_items.remove(label.cget("text"))
                 self.button_view_list.remove(button_view_list)
 
     def refresh_items(self):
@@ -829,6 +744,18 @@ class LibraryTab(ctk.CTkScrollableFrame):
 class SettingsTab(ctk.CTkFrame):
     def __init__(self, master=None):
         super().__init__(master)
+        # settings default bools
+        self.skip_already_installed = True
+        self.stopped = False
+        self.console = False
+        self.clean_on_finish = True
+        self.continuous = True
+        self.estimated_progress = True
+        self.steam_fail_counter_toggle = False
+        self.steam_fail_counter = 0
+        self.steam_fail_number = 10
+        self.steamcmd_reset = False
+        self.show_fails = True
 
         # Left and right frames, use fg_color="transparent"
         self.grid_rowconfigure(0, weight=1)
@@ -876,27 +803,35 @@ class SettingsTab(ctk.CTkFrame):
         # Show estimated_progress checkbox
         self.estimated_progress_var = ctk.BooleanVar()
         self.estimated_progress_var.trace_add("write", self.enable_save_button)
-        self.estimated_progress = ctk.CTkSwitch(left_frame, text="Estimated Progress Bar", variable=self.estimated_progress_var)
-        self.estimated_progress.grid(row=4, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.estimated_progress_var_tooltip = CTkToolTip(self.estimated_progress, message="This will change how to progress bar works by estimating how long the download will take\
+        self.estimated_progress_cb = ctk.CTkSwitch(left_frame, text="Estimated Progress Bar", variable=self.estimated_progress_var)
+        self.estimated_progress_cb.grid(row=4, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.estimated_progress_var_tooltip = CTkToolTip(self.estimated_progress_cb, message="This will change how to progress bar works by estimating how long the download will take\
             \nThis is not accurate ,it's better than with it off which is calculating the downloaded folder size which steamcmd dumps the full size rigth mostly")
         self.estimated_progress_var.set(self.load_settings("estimated_progress", "on"))
 
-        # Show estimated_progress checkbox
+        # Show show fails checkbox
         self.show_fails_var = ctk.BooleanVar()
         self.show_fails_var.trace_add("write", self.enable_save_button)
-        self.show_fails = ctk.CTkSwitch(left_frame, text="Show fails (on top of progress bar):", variable=self.show_fails_var)
-        self.show_fails.grid(row=5, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.show_fails_tooltip = CTkToolTip(self.show_fails, message="Display how many times steamcmd has failed/crashed\nIf the number is getting high quickly then try pressing Reset SteamCMD and try again, otherwise its fine")
+        self.show_fails_cb = ctk.CTkSwitch(left_frame, text="Show fails (on top of progress bar):", variable=self.show_fails_var)
+        self.show_fails_cb.grid(row=5, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.show_fails_tooltip = CTkToolTip(self.show_fails_cb, message="Display how many times steamcmd has failed/crashed\nIf the number is getting high quickly then try pressing Reset SteamCMD and try again, otherwise its fine")
         self.estimated_progress_var.set(self.load_settings("show_fails", "on"))
+
+        # Show skip_already_installed maps checkbox
+        self.skip_already_installed_var = ctk.BooleanVar()
+        self.skip_already_installed_var.trace_add("write", self.enable_save_button)
+        self.skip_already_installed_ch = ctk.CTkSwitch(left_frame, text="Skip already installed maps:", variable=self.skip_already_installed_var)
+        self.skip_already_installed_ch.grid(row=6, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.skip_already_installed_ch_tooltip = CTkToolTip(self.skip_already_installed_ch, message="If on it will not download installed maps,\nthis can miss sometimes if you remove maps manually and not from library tab while the app is running")
+        self.skip_already_installed_var.set(self.load_settings("skip_already_installed", "on"))
 
         # Resetr steam on many fails
         self.reset_steamcmd_on_fail_var = ctk.IntVar()
         self.reset_steamcmd_on_fail_var.trace_add("write", self.enable_save_button)
         self.reset_steamcmd_on_fail_text = ctk.CTkLabel(left_frame, text=f"Reset steamcmd on % fails: (n of fails)", anchor="w")
-        self.reset_steamcmd_on_fail_text.grid(row=6, column=1, padx=20, pady=(10, 0), sticky="nw")
+        self.reset_steamcmd_on_fail_text.grid(row=7, column=1, padx=20, pady=(10, 0), sticky="nw")
         self.reset_steamcmd_on_fail = ctk.CTkOptionMenu(left_frame, values=["20", "30", "40", "Custom", "Disable"], variable=self.reset_steamcmd_on_fail_var, command=self.reset_steamcmd_on_fail_func)
-        self.reset_steamcmd_on_fail.grid(row=7, column=1, padx=20, pady=(0, 0), sticky="nw")
+        self.reset_steamcmd_on_fail.grid(row=8, column=1, padx=20, pady=(0, 0), sticky="nw")
         self.reset_steamcmd_on_fail_tooltip = CTkToolTip(self.reset_steamcmd_on_fail, message="This actually fixes steamcmd when its crashing way too much")
         self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "Disable"))
 
@@ -976,7 +911,6 @@ class SettingsTab(ctk.CTkFrame):
 
     def save_settings(self):
         self.save_button.configure(state='disabled')
-        global console, clean_on_finish, continuous, estimated_progress, steam_fail_number, steam_fail_counter_toggle, show_fails
         if self.check_updates_checkbox.get():
             save_config("checkforupdtes", "on")
         else:
@@ -984,104 +918,118 @@ class SettingsTab(ctk.CTkFrame):
 
         if self.checkbox_show_console.get():
             save_config("console", "on")
-            console = True
+            self.console = True
         else:
             save_config("console", "off")
-            console = False
+            self.console = False
+
+        if self.skip_already_installed_ch.get():
+            save_config("skip_already_installed", "on")
+            self.skip_already_installed = True
+        else:
+            save_config("skip_already_installed", "off")
+            self.skip_already_installed = False
 
         if self.clean_checkbox.get():
             save_config("clean_on_finish", "on")
-            clean_on_finish = True
+            self.clean_on_finish = True
         else:
             save_config("clean_on_finish", "off")
-            clean_on_finish = False
+            self.clean_on_finish = False
 
         if self.checkbox_continuous.get():
             save_config("continuous_download", "on")
-            continuous = True
+            self.continuous = True
         else:
             save_config("continuous_download", "off")
-            continuous = False
+            self.continuous = False
 
-        if self.estimated_progress.get():
+        if self.estimated_progress_cb.get():
             save_config("estimated_progress", "on")
-            estimated_progress = True
+            self.estimated_progress = True
         else:
             save_config("estimated_progress", "off")
-            estimated_progress = False
+            self.estimated_progress = False
 
-        if self.show_fails.get():
+        if self.show_fails_cb.get():
             save_config("show_fails", "on")
-            show_fails = True
+            self.show_fails = True
         else:
             save_config("show_fails", "off")
-            show_fails = False
+            self.show_fails = False
 
         if self.reset_steamcmd_on_fail.get():
             value = self.reset_steamcmd_on_fail.get()
             if value == "Disable":
-                steam_fail_counter_toggle = False
+                self.steam_fail_counter_toggle = False
             else:
-                steam_fail_counter_toggle = True
-                steam_fail_number = int(value)
+                self.steam_fail_counter_toggle = True
+                self.steam_fail_number = int(value)
             save_config("reset_on_fail", value)
 
     def load_settings(self, setting, fallback=None):
-        global console, clean_on_finish, continuous, estimated_progress, steam_fail_counter_toggle, steam_fail_number, show_fails
         if setting == "console":
             if check_config(setting, fallback) == "on":
-                console = True
+                self.console = True
                 return 1
             else:
-                console = False
+                self.console = False
                 return 0
 
         if setting == "continuous_download":
             if check_config(setting, "on") == "on":
-                continuous = True
+                self.continuous = True
                 return 1
             else:
-                continuous = False
+                self.continuous = False
                 return 0
 
         if setting == "clean_on_finish":
             if check_config(setting, fallback) == "on":
-                clean_on_finish = True
+                self.clean_on_finish = True
                 return 1
             else:
-                clean_on_finish = False
+                self.clean_on_finish = False
                 return 0
         if setting == "estimated_progress":
             if check_config(setting, fallback) == "on":
-                estimated_progress = True
+                self.estimated_progress = True
                 return 1
             else:
-                estimated_progress = False
+                self.estimated_progress = False
                 return 0
 
         if setting == "reset_on_fail":
             option = check_config(setting, fallback)
             if option == "Disable" or option == "Custom":
-                steam_fail_counter_toggle = False
+                self.steam_fail_counter_toggle = False
                 return "Disable"
             else:
                 try:
-                    steam_fail_number = int(option)
+                    self.steam_fail_number = int(option)
                     return option
                 except:
-                    if steam_fail_counter_toggle:
-                        steam_fail_number = 10
+                    if self.steam_fail_counter_toggle:
+                        self.steam_fail_number = 10
                         return "10"
                     else:
-                        steam_fail_number = 10
+                        self.steam_fail_number = 10
                         return "Disable"
 
         if setting == "show_fails":
             if check_config(setting, fallback) == "on":
-                show_fails = True
+                self.show_fails = True
                 return 1
             else:
-                show_fails = False
+                self.show_fails = False
+                return 0
+
+        if setting == "skip_already_installed":
+            if check_config(setting, fallback) == "on":
+                self.skip_already_installed = True
+                return 1
+            else:
+                self.skip_already_installed = False
                 return 0
 
         if setting == "theme":
@@ -1098,6 +1046,8 @@ class SettingsTab(ctk.CTkFrame):
                 return 1
             else:
                 return 0
+
+
 
     def boiiiwd_custom_theme(self, disable_only=None):
         file_to_rename = os.path.join(cwd(), "boiiiwd_theme.json")
@@ -1128,6 +1078,7 @@ class SettingsTab(ctk.CTkFrame):
         self.clean_checkbox_var.set(self.load_settings("clean_on_finish", "on"))
         self.continuous_var.set(self.load_settings("continuous_download"))
         self.show_fails_var.set(self.load_settings("show_fails", "on"))
+        self.skip_already_installed_var.set(self.load_settings("skip_already_installed", "on"))
 
         # keep last cuz of trace_add()
         self.save_button.configure(state='disabled')
@@ -1309,6 +1260,7 @@ class BOIIIWD(ctk.CTk):
         self.is_pressed = False
         self.queue_enabled = False
         self.queue_stop_button = False
+        self.is_downloading = False
 
         # sidebar windows bouttons
         self.sidebar_main.configure(command=self.main_button_event, text="Main ⬇️", fg_color=(self.active_color), state="active")
@@ -1337,6 +1289,7 @@ class BOIIIWD(ctk.CTk):
             self.settings_tab.load_settings("estimated_progress", "on")
             self.settings_tab.load_settings("reset_on_fail", "Disable")
             self.settings_tab.load_settings("show_fails", "on")
+            self.settings_tab.load_settings("skip_already_installed", "on")
         except:
             pass
 
@@ -1473,7 +1426,7 @@ class BOIIIWD(ctk.CTk):
             create_default_config()
 
     def help_queue_text_func(self):
-        if any(char.isalpha() for char in self.queuetextarea.get("1.0", "end")):
+        if any(char.strip() for char in self.queuetextarea.get("1.0", "end")):
             self.workshop_queue_label.configure(text="Workshop IDs/Links => press help to see examples:")
             self.queuetextarea.configure(state="normal")
             self.queuetextarea.delete(1.0, "end")
@@ -1702,9 +1655,148 @@ class BOIIIWD(ctk.CTk):
         top.grid_columnconfigure(0, weight=1)
         top.grid_columnconfigure(1, weight=1)
 
+    def check_steamcmd_stdout(self, log_file_path, target_item_id):
+        temp_file_path = log_file_path + '.temp'
+        shutil.copy2(log_file_path, temp_file_path)
+
+        try:
+            with open(temp_file_path, 'r') as log_file:
+                log_file.seek(0, os.SEEK_END)
+                file_size = log_file.tell()
+
+                position = file_size
+                lines_found = 0
+
+                while lines_found < 7 and position > 0:
+                    position -= 1
+                    log_file.seek(position, os.SEEK_SET)
+
+                    char = log_file.read(1)
+
+                    if char == '\n':
+                        lines_found += 1
+
+                lines = log_file.readlines()[-7:]
+
+                for line in reversed(lines):
+                    line = line.lower().strip()
+                    if f"download item {target_item_id.strip()}" in line:
+                        return True
+
+            return False
+        finally:
+            os.remove(temp_file_path)
+
+    # the real deal
+    def run_steamcmd_command(self, command, map_folder, wsid, queue=None):
+        steamcmd_path = get_steamcmd_path()
+        stdout = os.path.join(steamcmd_path, "logs", "workshop_log.txt")
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        try:
+            with open(stdout, 'w') as file:
+                file.write('')
+        except:
+            os.rename(stdout, os.path.join(map_folder, os.path.join(stdout, f"workshop_log_couldntremove_{timestamp}.txt")))
+
+        show_console = subprocess.CREATE_NO_WINDOW
+        if self.settings_tab.console:
+            show_console = subprocess.CREATE_NEW_CONSOLE
+
+        if os.path.exists(map_folder):
+            try:
+                try:
+                    os.remove(map_folder)
+                except:
+                    os.rename(map_folder, os.path.join(map_folder, os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", f"couldntremove_{timestamp}")))
+            except Exception as e:
+                self.settings_tab.stopped = True
+                self.queue_stop_button = True
+                show_message("Error", f"Couldn't remove {map_folder}, please do so manually\n{e}", icon="cancel")
+                self.stop_download
+                return
+
+        if self.settings_tab.continuous:
+            while not os.path.exists(map_folder) and not self.settings_tab.stopped:
+                process = subprocess.Popen(
+                    [steamcmd_path + "\steamcmd.exe"] + command.split(),
+                    stdout=None if self.settings_tab.console else subprocess.PIPE,
+                    stderr=None if self.settings_tab.console else subprocess.PIPE,
+                    text=True,
+                    bufsize=1,
+                    universal_newlines=True,
+                    creationflags=show_console
+                )
+
+                #wait for process
+                while True:
+                    if not self.is_downloading:
+                        if self.check_steamcmd_stdout(stdout, wsid):
+                            self.is_downloading = True
+                    if process.poll() != None:
+                        break
+                    time.sleep(1)
+
+                # print("Broken freeeee!")
+                self.is_downloading = False
+                try:
+                    with open(stdout, 'w') as file:
+                        file.write('')
+                except:
+                    os.rename(stdout, os.path.join(map_folder, os.path.join(stdout, f"workshop_log_couldntremove_{timestamp}.txt")))
+
+                self.settings_tab.steam_fail_counter = self.settings_tab.steam_fail_counter + 1
+                if self.settings_tab.steam_fail_counter_toggle:
+                    try:
+                        if self.settings_tab.steam_fail_counter >= int(self.settings_tab.steam_fail_number):
+                            reset_steamcmd(no_warn=True)
+                            self.settings_tab.steamcmd_reset = True
+                            self.settings_tab.steam_fail_counter = 0
+                    except:
+                        if self.settings_tab.steam_fail_counter >= 10:
+                            reset_steamcmd(no_warn=True)
+                            self.settings_tab.steam_fail_counter = 0
+        else:
+            process = subprocess.Popen(
+                [steamcmd_path + "\steamcmd.exe"] + command.split(),
+                stdout=None if self.settings_tab.console else subprocess.PIPE,
+                stderr=None if self.settings_tab.console else subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+                creationflags=show_console
+            )
+
+            while True:
+                if not self.is_downloading:
+                    if self.find_download_event(stdout, wsid):
+                        self.is_downloading = True
+                if process.poll() != None:
+                    break
+                time.sleep(1)
+
+            # print("Broken freeeee!")
+            self.is_downloading = False
+            try:
+                with open(stdout, 'w') as file:
+                    file.write('')
+            except:
+                os.rename(stdout, os.path.join(map_folder, os.path.join(stdout, f"workshop_log_couldntremove_{timestamp}.txt")))
+
+            if not os.path.exists(map_folder):
+                show_message("SteamCMD has terminated", "SteamCMD has been terminated\nAnd failed to download the map/mod, try again or enable continuous download in settings")
+
+        self.settings_tab.stopped = True
+        if not queue:
+            self.button_download.configure(state="normal")
+            self.button_stop.configure(state="disabled")
+
+        return process.returncode
+
     def download_map(self):
+        self.is_downloading = False
         if not self.is_pressed:
             self.is_pressed = True
+            self.library_tab.load_items(self.edit_destination_folder.get())
             if self.queue_enabled:
                 start_down_thread = threading.Thread(target=self.queue_download_thread)
                 start_down_thread.start()
@@ -1715,8 +1807,7 @@ class BOIIIWD(ctk.CTk):
             show_message("Warning", "Already pressed, Please wait.")
 
     def queue_download_thread(self):
-        global stopped
-        stopped = False
+        self.stopped = False
         self.queue_stop_button = False
         try:
             save_config("DestinationFolder" ,self.edit_destination_folder.get())
@@ -1762,6 +1853,7 @@ class BOIIIWD(ctk.CTk):
                 return
 
             self.total_queue_size = 0
+            self.already_installed = []
             for item in items:
                 item.strip()
                 workshop_id = item
@@ -1791,16 +1883,32 @@ class BOIIIWD(ctk.CTk):
                     self.stop_download
                     return
 
+                if any(workshop_id in item for item in self.library_tab.added_items):
+                    self.already_installed.append(workshop_id)
+
+            if self.already_installed:
+                item_ids = ", ".join(self.already_installed)
+                if self.settings_tab.skip_already_installed:
+                    for item in self.already_installed:
+                        if item in items:
+                            items.remove(item)
+                    show_message("Heads up!, map/s skipped => skip is on in settings", f"These item IDs may already be installed and are skipped:\n{item_ids}", icon="info")
+                    if not any(isinstance(item, int) for item in items):
+                        self.stop_download
+                        return
+                show_message("Heads up! map/s not skipped => skip is off in settings", f"These item IDs may already be installed:\n{item_ids}", icon="info")
+
             self.after(1, self.status_text.configure(text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)}"))
             start_time = time.time()
             for index, item in enumerate(items):
+                self.settings_tab.steam_fail_counter = 0
                 current_number = index + 1
                 total_items = len(items)
                 if self.queue_stop_button:
                     self.stop_download
                     break
                 item.strip()
-                stopped = False
+                self.settings_tab.stopped = False
                 workshop_id = item
                 if not workshop_id.isdigit():
                     try:
@@ -1823,17 +1931,14 @@ class BOIIIWD(ctk.CTk):
                     os.makedirs(download_folder)
 
                 def check_and_update_progress():
-                    # delay untill steam boots up and starts downloading (ive a better idea ill implement it later)
-                    time.sleep(8)
-                    global stopped, steamcmd_reset
                     previous_net_speed = 0
                     est_downloaded_bytes = 0
                     file_size = ws_file_size
                     item_name = get_item_name(workshop_id) if get_item_name(workshop_id) else "Error getting name"
 
-                    while not stopped:
-                        if steamcmd_reset:
-                            steamcmd_reset = False
+                    while not self.settings_tab.stopped:
+                        if self.settings_tab.steamcmd_reset:
+                            self.settings_tab.steamcmd_reset = False
                             previous_net_speed = 0
                             est_downloaded_bytes = 0
 
@@ -1856,7 +1961,19 @@ class BOIIIWD(ctk.CTk):
                                 text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | ID: {workshop_id} | {item_name} | Downloading {current_number}/{total_items}"))
                             self.after(1, lambda p=progress: self.label_file_size.configure(text=f"Wrong size reported\nFile size: ~{convert_bytes_to_readable(current_size)}"))
 
-                        if estimated_progress:
+                        while not self.is_downloading:
+                            self.after(1, self.label_speed.configure(text=f"Network Speed: 0 KB/s"))
+                            time_elapsed = time.time() - start_time
+                            elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
+                            if self.settings_tab.show_fails:
+                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.settings_tab.steam_fail_counter}"))
+                            else:
+                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
+                            time.sleep(1)
+                            if self.is_downloading:
+                                break
+
+                        if self.settings_tab.estimated_progress:
                             time_elapsed = time.time() - start_time
                             raw_net_speed = psutil.net_io_counters().bytes_recv
 
@@ -1885,8 +2002,8 @@ class BOIIIWD(ctk.CTk):
                             self.after(1, self.progress_bar.set(progress))
                             self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
                             self.after(1, lambda p=min(percentage_complete ,99): self.progress_text.configure(text=f"{p:.2f}%"))
-                            if show_fails:
-                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {steam_fail_counter}"))
+                            if self.settings_tab.show_fails:
+                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.settings_tab.steam_fail_counter}"))
                             else:
                                 self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
 
@@ -1908,14 +2025,14 @@ class BOIIIWD(ctk.CTk):
                                 text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | ID: {workshop_id} | {item_name} | Downloading {current_number}/{total_items}"))
                             self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
                             self.after(1, lambda p=progress: self.progress_text.configure(text=f"{p}%"))
-                            if show_fails:
-                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {steam_fail_counter}"))
+                            if self.settings_tab.show_fails:
+                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.settings_tab.steam_fail_counter}"))
                             else:
                                 self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
                             time.sleep(1)
 
-                command = f"+login anonymous +@sSteamCmdForcePlatformBitness 64 +app_info_update 1 +app_info_print 311210 app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
-                steamcmd_thread = threading.Thread(target=lambda: run_steamcmd_command(command, self, map_folder, queue=True))
+                command = f"+login anonymous app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
+                steamcmd_thread = threading.Thread(target=lambda: self.run_steamcmd_command(command, map_folder, workshop_id, queue=True))
                 steamcmd_thread.start()
 
                 def wait_for_threads():
@@ -1954,12 +2071,12 @@ class BOIIIWD(ctk.CTk):
                         except Exception as E:
                             show_message("Error", f"Error copying files: {E}", icon="cancel")
 
-                        if clean_on_finish:
+                        if self.settings_tab.clean_on_finish:
                             remove_tree(map_folder)
                             remove_tree(download_folder)
 
                         if index == len(items) - 1:
-                            msg = CTkMessagebox(title="Downloads Complete", message=f"All files were downloaded\nYou can run the game now!", icon="info", option_1="Launch", option_2="Ok")
+                            msg = CTkMessagebox(title="Downloads Complete", message=f"All files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)", icon="info", option_1="Launch", option_2="Ok")
                             response = msg.get()
                             if response=="Launch":
                                 launch_boiii_func(self.edit_destination_folder.get().strip())
@@ -1978,20 +2095,18 @@ class BOIIIWD(ctk.CTk):
                     self.button_stop.configure(state="disabled")
                     self.after(1, self.status_text.configure(text=f"Status: Done"))
                     self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
-                    stopped = True
+                    self.settings_tab.stopped = True
                     self.stop_download
                     return
         finally:
-            global steam_fail_counter
-            steam_fail_counter = 0
+            self.settings_tab.steam_fail_counter = 0
             self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
             self.stop_download
             self.is_pressed = False
 
     def download_thread(self):
         try:
-            global stopped
-            stopped = False
+            self.settings_tab.stopped = False
 
             save_config("DestinationFolder" ,self.edit_destination_folder.get())
             save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
@@ -2051,6 +2166,13 @@ class BOIIIWD(ctk.CTk):
                 self.stop_download
                 return
 
+            if any(workshop_id in item for item in self.library_tab.added_items):
+                if self.settings_tab.skip_already_installed:
+                    show_message("Heads up!, map skipped => Skip is on in settings", f"This item may already be installed, Stopping: {workshop_id}", icon="info")
+                    self.stop_download
+                    return
+                show_message("Heads up! map not skipped => Skip is off in settings", f"This item may already be installed: {workshop_id}", icon="info")
+
             self.after(1, lambda mid=workshop_id: self.label_file_size.configure(text=f"File size: {get_workshop_file_size(mid ,raw=True)}"))
             download_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "downloads", "311210", workshop_id)
             map_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", workshop_id)
@@ -2058,17 +2180,14 @@ class BOIIIWD(ctk.CTk):
                 os.makedirs(download_folder)
 
             def check_and_update_progress():
-                # delay untill steam boots up and starts downloading (ive a better idea ill implement it later)
-                time.sleep(8)
-                global stopped, steamcmd_reset
                 previous_net_speed = 0
                 est_downloaded_bytes = 0
                 start_time = time.time()
                 file_size = ws_file_size
 
-                while not stopped:
-                    if steamcmd_reset:
-                        steamcmd_reset = False
+                while not self.settings_tab.stopped:
+                    if self.settings_tab.steamcmd_reset:
+                        self.settings_tab.steamcmd_reset = False
                         previous_net_speed = 0
                         est_downloaded_bytes = 0
 
@@ -2087,7 +2206,19 @@ class BOIIIWD(ctk.CTk):
                         file_size = current_size
                         self.after(1, lambda p=progress: self.label_file_size.configure(text=f"Wrong size reported\nActual size: ~{convert_bytes_to_readable(current_size)}"))
 
-                    if estimated_progress:
+                    while not self.is_downloading:
+                        self.after(1, self.label_speed.configure(text=f"Network Speed: 0 KB/s"))
+                        time_elapsed = time.time() - start_time
+                        elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
+                        if self.settings_tab.show_fails:
+                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.settings_tab.steam_fail_counter}"))
+                        else:
+                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
+                        time.sleep(1)
+                        if self.is_downloading:
+                            break
+
+                    if self.settings_tab.estimated_progress:
                         time_elapsed = time.time() - start_time
                         raw_net_speed = psutil.net_io_counters().bytes_recv
 
@@ -2115,8 +2246,8 @@ class BOIIIWD(ctk.CTk):
                         self.after(1, self.progress_bar.set(progress))
                         self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
                         self.after(1, lambda p=min(percentage_complete ,99): self.progress_text.configure(text=f"{p:.2f}%"))
-                        if show_fails:
-                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {steam_fail_counter}"))
+                        if self.settings_tab.show_fails:
+                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.settings_tab.steam_fail_counter}"))
                         else:
                             self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
 
@@ -2136,14 +2267,14 @@ class BOIIIWD(ctk.CTk):
 
                         self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
                         self.after(1, lambda p=progress: self.progress_text.configure(text=f"{p}%"))
-                        if show_fails:
-                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {steam_fail_counter}"))
+                        if self.settings_tab.show_fails:
+                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.settings_tab.steam_fail_counter}"))
                         else:
                             self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
                         time.sleep(1)
 
-            command = f"+login anonymous +@sSteamCmdForcePlatformBitness 64 +app_info_update 1 +app_info_print 311210 app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
-            steamcmd_thread = threading.Thread(target=lambda: run_steamcmd_command(command, self, map_folder))
+            command = f"+login anonymous app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
+            steamcmd_thread = threading.Thread(target=lambda: self.run_steamcmd_command(command, map_folder, workshop_id))
             steamcmd_thread.start()
 
             def wait_for_threads():
@@ -2152,8 +2283,7 @@ class BOIIIWD(ctk.CTk):
                 update_ui_thread.start()
                 update_ui_thread.join()
 
-                global stopped
-                stopped = True
+                self.settings_tab.stopped = True
 
                 self.label_speed.configure(text="Network Speed: 0 KB/s")
                 self.progress_text.configure(text="0%")
@@ -2185,11 +2315,11 @@ class BOIIIWD(ctk.CTk):
                     except Exception as E:
                         show_message("Error", f"Error copying files: {E}", icon="cancel")
 
-                    if clean_on_finish:
+                    if self.settings_tab.clean_on_finish:
                         remove_tree(map_folder)
                         remove_tree(download_folder)
 
-                    msg = CTkMessagebox(title="Download Complete", message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!", icon="info", option_1="Launch", option_2="Ok")
+                    msg = CTkMessagebox(title="Download Complete", message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)", icon="info", option_1="Launch", option_2="Ok")
                     response = msg.get()
                     if response=="Launch":
                         launch_boiii_func(self.edit_destination_folder.get().strip())
@@ -2206,17 +2336,16 @@ class BOIIIWD(ctk.CTk):
             self.button_stop.configure(state="normal")
 
         finally:
-            global steam_fail_counter
-            steam_fail_counter = 0
+            self.settings_tab.steam_fail_counter = 0
             self.stop_download
             self.is_pressed = False
 
     def stop_download(self, on_close=None):
-        global stopped, steam_fail_counter
-        stopped = True
+        self.settings_tab.stopped = True
         self.queue_stop_button = True
-        steam_fail_counter = 0
+        self.settings_tab.steam_fail_counter = 0
         self.is_pressed = False
+        self.is_downloading = False
         self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
 
         if on_close:
