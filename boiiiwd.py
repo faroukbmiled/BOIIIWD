@@ -751,9 +751,9 @@ class SettingsTab(ctk.CTkFrame):
         self.clean_on_finish = True
         self.continuous = True
         self.estimated_progress = True
-        self.steam_fail_counter_toggle = False
+        self.steam_fail_counter_toggle = True
         self.steam_fail_counter = 0
-        self.steam_fail_number = 10
+        self.steam_fail_number = 20
         self.steamcmd_reset = False
         self.show_fails = True
 
@@ -833,7 +833,7 @@ class SettingsTab(ctk.CTkFrame):
         self.reset_steamcmd_on_fail = ctk.CTkOptionMenu(left_frame, values=["20", "30", "40", "Custom", "Disable"], variable=self.reset_steamcmd_on_fail_var, command=self.reset_steamcmd_on_fail_func)
         self.reset_steamcmd_on_fail.grid(row=8, column=1, padx=20, pady=(0, 0), sticky="nw")
         self.reset_steamcmd_on_fail_tooltip = CTkToolTip(self.reset_steamcmd_on_fail, message="This actually fixes steamcmd when its crashing way too much")
-        self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "Disable"))
+        self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "20"))
 
         # Check for updates button n Launch boiii
         self.check_for_updates = ctk.CTkButton(right_frame, text="Check for updates", command=self.settings_check_for_updates)
@@ -879,7 +879,7 @@ class SettingsTab(ctk.CTkFrame):
     def reset_steamcmd_on_fail_func(self, option: str):
         if option == "Custom":
             try:
-                save_config("reset_on_fail", self.reset_steamcmd_on_fail.get())
+                save_config("reset_on_fail", "20")
                 if show_message("config.ini" ,"change reset_on_fail value to whatever you want", exit_on_close=True):
                     os.system(f"notepad {os.path.join(cwd(), 'config.ini')}")
             except:
@@ -1007,14 +1007,12 @@ class SettingsTab(ctk.CTkFrame):
             else:
                 try:
                     self.steam_fail_number = int(option)
+                    self.steam_fail_counter_toggle = True
                     return option
                 except:
-                    if self.steam_fail_counter_toggle:
-                        self.steam_fail_number = 10
-                        return "10"
-                    else:
-                        self.steam_fail_number = 10
-                        return "Disable"
+                    self.steam_fail_counter_toggle = True
+                    self.steam_fail_number = 20
+                    return "20"
 
         if setting == "show_fails":
             if check_config(setting, fallback) == "on":
@@ -1047,8 +1045,6 @@ class SettingsTab(ctk.CTkFrame):
             else:
                 return 0
 
-
-
     def boiiiwd_custom_theme(self, disable_only=None):
         file_to_rename = os.path.join(cwd(), "boiiiwd_theme.json")
         if os.path.exists(file_to_rename):
@@ -1073,7 +1069,7 @@ class SettingsTab(ctk.CTkFrame):
     def load_on_switch_screen(self):
         self.check_updates_var.set(self.load_settings("checkforupdtes"))
         self.console_var.set(self.load_settings("console"))
-        self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "Disable"))
+        self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "20"))
         self.estimated_progress_var.set(self.load_settings("estimated_progress", "on"))
         self.clean_checkbox_var.set(self.load_settings("clean_on_finish", "on"))
         self.continuous_var.set(self.load_settings("continuous_download"))
@@ -1261,6 +1257,7 @@ class BOIIIWD(ctk.CTk):
         self.queue_enabled = False
         self.queue_stop_button = False
         self.is_downloading = False
+        self.fail_threshold = 0
 
         # sidebar windows bouttons
         self.sidebar_main.configure(command=self.main_button_event, text="Main ⬇️", fg_color=(self.active_color), state="active")
@@ -1287,7 +1284,7 @@ class BOIIIWD(ctk.CTk):
             self.settings_tab.load_settings("continuous_download", "on")
             self.settings_tab.load_settings("console", "off")
             self.settings_tab.load_settings("estimated_progress", "on")
-            self.settings_tab.load_settings("reset_on_fail", "Disable")
+            self.settings_tab.load_settings("reset_on_fail", "20")
             self.settings_tab.load_settings("show_fails", "on")
             self.settings_tab.load_settings("skip_already_installed", "on")
         except:
@@ -1692,6 +1689,7 @@ class BOIIIWD(ctk.CTk):
         steamcmd_path = get_steamcmd_path()
         stdout = os.path.join(steamcmd_path, "logs", "workshop_log.txt")
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+
         try:
             with open(stdout, 'w') as file:
                 file.write('')
@@ -1716,6 +1714,7 @@ class BOIIIWD(ctk.CTk):
                 return
 
         if self.settings_tab.continuous:
+            start_time = 0
             while not os.path.exists(map_folder) and not self.settings_tab.stopped:
                 process = subprocess.Popen(
                     [steamcmd_path + "\steamcmd.exe"] + command.split(),
@@ -1732,6 +1731,8 @@ class BOIIIWD(ctk.CTk):
                     if not self.is_downloading:
                         if self.check_steamcmd_stdout(stdout, wsid):
                             self.is_downloading = True
+                            start_time = time.time()
+                    elapsed_time = time.time() - start_time
                     if process.poll() != None:
                         break
                     time.sleep(1)
@@ -1744,17 +1745,23 @@ class BOIIIWD(ctk.CTk):
                 except:
                     os.rename(stdout, os.path.join(map_folder, os.path.join(stdout, f"workshop_log_couldntremove_{timestamp}.txt")))
 
-                self.settings_tab.steam_fail_counter = self.settings_tab.steam_fail_counter + 1
+                if not self.settings_tab.stopped:
+                    self.settings_tab.steam_fail_counter = self.settings_tab.steam_fail_counter + 1
+                    if elapsed_time < 20 and elapsed_time > 0 and not os.path.exists(map_folder):
+                        self.fail_threshold = self.fail_threshold + 1
+
                 if self.settings_tab.steam_fail_counter_toggle:
                     try:
-                        if self.settings_tab.steam_fail_counter >= int(self.settings_tab.steam_fail_number):
+                        if self.fail_threshold >= int(self.settings_tab.steam_fail_number):
                             reset_steamcmd(no_warn=True)
                             self.settings_tab.steamcmd_reset = True
                             self.settings_tab.steam_fail_counter = 0
+                            self.fail_threshold = 0
                     except:
-                        if self.settings_tab.steam_fail_counter >= 10:
+                        if self.fail_threshold >= 25:
                             reset_steamcmd(no_warn=True)
                             self.settings_tab.steam_fail_counter = 0
+                            self.fail_threshold = 0
         else:
             process = subprocess.Popen(
                 [steamcmd_path + "\steamcmd.exe"] + command.split(),
@@ -1794,6 +1801,7 @@ class BOIIIWD(ctk.CTk):
 
     def download_map(self):
         self.is_downloading = False
+        self.fail_threshold = 0
         if not self.is_pressed:
             self.is_pressed = True
             self.library_tab.load_items(self.edit_destination_folder.get())
@@ -1855,6 +1863,7 @@ class BOIIIWD(ctk.CTk):
             self.total_queue_size = 0
             self.already_installed = []
             for item in items:
+                self.fail_threshold = 0
                 item.strip()
                 workshop_id = item
                 if not workshop_id.isdigit():
@@ -1961,7 +1970,7 @@ class BOIIIWD(ctk.CTk):
                                 text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | ID: {workshop_id} | {item_name} | Downloading {current_number}/{total_items}"))
                             self.after(1, lambda p=progress: self.label_file_size.configure(text=f"Wrong size reported\nFile size: ~{convert_bytes_to_readable(current_size)}"))
 
-                        while not self.is_downloading:
+                        while not self.is_downloading and not self.settings_tab.stopped:
                             self.after(1, self.label_speed.configure(text=f"Network Speed: 0 KB/s"))
                             time_elapsed = time.time() - start_time
                             elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
@@ -2093,7 +2102,7 @@ class BOIIIWD(ctk.CTk):
                 if index == len(items) - 1:
                     self.button_download.configure(state="normal")
                     self.button_stop.configure(state="disabled")
-                    self.after(1, self.status_text.configure(text=f"Status: Done"))
+                    self.after(1, self.status_text.configure(text=f"Status: Done!"))
                     self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
                     self.settings_tab.stopped = True
                     self.stop_download
@@ -2206,7 +2215,7 @@ class BOIIIWD(ctk.CTk):
                         file_size = current_size
                         self.after(1, lambda p=progress: self.label_file_size.configure(text=f"Wrong size reported\nActual size: ~{convert_bytes_to_readable(current_size)}"))
 
-                    while not self.is_downloading:
+                    while not self.is_downloading and not self.settings_tab.stopped:
                         self.after(1, self.label_speed.configure(text=f"Network Speed: 0 KB/s"))
                         time_elapsed = time.time() - start_time
                         elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
@@ -2356,7 +2365,7 @@ class BOIIIWD(ctk.CTk):
         subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                        creationflags=subprocess.CREATE_NO_WINDOW)
 
-        self.status_text.configure(text=f"Status: Not Downloading")
+        self.after(2, self.status_text.configure(text=f"Status: Not Downloading"))
         self.button_download.configure(state="normal")
         self.button_stop.configure(state="disabled")
         self.label_speed.configure(text="Network Speed: 0 KB/s")
