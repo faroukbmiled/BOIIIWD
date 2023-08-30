@@ -465,7 +465,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
         self.radiobutton_variable = ctk.StringVar()
         self.no_items_label = ctk.CTkLabel(self, text="", anchor="w")
-        self.filter_entry = ctk.CTkEntry(self, placeholder_text="Your search query here, or type in mod or map to see only that")
+        self.filter_entry = ctk.CTkEntry(self, placeholder_text="Your search query here, or type in mod or map to only see that")
         self.filter_entry.bind("<KeyRelease>", self.filter_items)
         self.filter_entry.grid(row=0, column=0,  padx=(10, 20), pady=(10, 20), sticky="we")
         filter_refresh_button_image = os.path.join(RESOURCES_DIR, "Refresh_icon.svg.png")
@@ -521,11 +521,16 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     json_path = os.path.join(zone_path, "workshop.json")
                     if os.path.exists(json_path):
                         name = extract_json_data(json_path, "Title").replace(">", "").replace("^", "")
-                        name = name[:35] + "..." if len(name) > 35 else name
+                        name = name[:45] + "..." if len(name) > 45 else name
                         item_type = extract_json_data(json_path, "Type")
                         workshop_id = extract_json_data(json_path, "PublisherID")
+                        folder_name = extract_json_data(json_path, "FolderName")
                         size = convert_bytes_to_readable(get_folder_size(root))
-                        text_to_add = f"{name} | Type: {item_type} | ID: {workshop_id} | Size: {size}"
+                        text_to_add = f"{name} | Type: {item_type.capitalize()}"
+                        mode_type = "ZM" if item_type == "map" and folder_name.startswith("zm") else "MP" if folder_name.startswith("mp") and item_type == "map" else None
+                        if mode_type:
+                            text_to_add += f" | Mode: {mode_type}"
+                        text_to_add += f" | ID: {workshop_id} | Size: {size}"
                         if text_to_add not in self.added_items:
                             self.added_items.add(text_to_add)
 
@@ -1730,8 +1735,8 @@ class BOIIIWD(ctk.CTk):
                 while True:
                     if not self.is_downloading:
                         if self.check_steamcmd_stdout(stdout, wsid):
-                            self.is_downloading = True
                             start_time = time.time()
+                            self.is_downloading = True
                     elapsed_time = time.time() - start_time
                     if process.poll() != None:
                         break
@@ -1775,7 +1780,7 @@ class BOIIIWD(ctk.CTk):
 
             while True:
                 if not self.is_downloading:
-                    if self.find_download_event(stdout, wsid):
+                    if self.check_steamcmd_stdout(stdout, wsid):
                         self.is_downloading = True
                 if process.poll() != None:
                     break
