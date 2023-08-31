@@ -1,10 +1,18 @@
 # BOIIIWD
 - A GUI Steam Workshop downloader for BO3 ([boiii client](https://github.com/Ezz-lol/boiii-free)) built using CustomTkinter <br>
-<p float="left">
-  <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/bd7e1bc3-bdb2-4096-8e33-5041bb9eb2d9" width="800" />
-  <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/4ea5b4d4-e810-47b0-8fdb-5a68a2b117f2" width="800" /> 
-  <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/81998b24-2eb2-4bcf-bccb-9b4639c00a40" width="800" />
-</p>
+
+<div style="display: flex; justify-content: space-between;">
+  <!-- Left Side -->
+  <div style="flex: 1; margin-right: 5px;">
+    <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/0aa8295f-ba07-4778-8140-200021df4ba9" width="400" />
+    <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/b4f27fe1-88f2-4158-b7ba-c8aec57b9968" width="400" />
+  </div>
+  <!-- Right Side -->
+  <div style="flex: 1; margin-left: 5px;">
+    <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/781df268-0ce7-4872-aaef-cce9f1af9e72" width="400" />
+    <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/d54f59b3-1e9f-4042-914a-51afcd6f4c18" width="400" />
+  </div>
+</div>
 
 ## Usage (exe):
 - Run [BOIIIWD.exe](https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip) and use it (it'll ask you to download steamcmd within the app if not found)
