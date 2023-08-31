@@ -2141,7 +2141,7 @@ class BOIIIWD(ctk.CTk):
                             usermaps_folder = os.path.join(destination_folder, "usermaps")
                             folder_name_path = os.path.join(usermaps_folder, folder_name, "zone")
                         else:
-                            show_message("Error", "Invalid workshop type in workshop.json, are you sure this is a map or a mod?., skipping...", icon="cancel")
+                            show_message("Error", f"Invalid workshop type in workshop.json, are you sure this is a map or a mod?., skipping {workshop_id}...", icon="cancel")
                             return
 
                         os.makedirs(folder_name_path, exist_ok=True)
