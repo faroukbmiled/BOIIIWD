@@ -792,7 +792,7 @@ class SettingsTab(ctk.CTkFrame):
         self.estimated_progress = True
         self.steam_fail_counter_toggle = True
         self.steam_fail_counter = 0
-        self.steam_fail_number = 20
+        self.steam_fail_number = 10
         self.steamcmd_reset = False
         self.show_fails = True
 
@@ -869,10 +869,10 @@ class SettingsTab(ctk.CTkFrame):
         self.reset_steamcmd_on_fail_var.trace_add("write", self.enable_save_button)
         self.reset_steamcmd_on_fail_text = ctk.CTkLabel(left_frame, text=f"Reset steamcmd on % fails: (n of fails)", anchor="w")
         self.reset_steamcmd_on_fail_text.grid(row=7, column=1, padx=20, pady=(10, 0), sticky="nw")
-        self.reset_steamcmd_on_fail = ctk.CTkOptionMenu(left_frame, values=["20", "30", "40", "Custom", "Disable"], variable=self.reset_steamcmd_on_fail_var, command=self.reset_steamcmd_on_fail_func)
+        self.reset_steamcmd_on_fail = ctk.CTkOptionMenu(left_frame, values=["5", "10", "20", "30", "40", "Custom", "Disable"], variable=self.reset_steamcmd_on_fail_var, command=self.reset_steamcmd_on_fail_func)
         self.reset_steamcmd_on_fail.grid(row=8, column=1, padx=20, pady=(0, 0), sticky="nw")
         self.reset_steamcmd_on_fail_tooltip = CTkToolTip(self.reset_steamcmd_on_fail, message="This actually fixes steamcmd when its crashing way too much")
-        self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "20"))
+        self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "10"))
 
         # Check for updates button n Launch boiii
         self.check_for_updates = ctk.CTkButton(right_frame, text="Check for updates", command=self.settings_check_for_updates)
@@ -918,7 +918,7 @@ class SettingsTab(ctk.CTkFrame):
     def reset_steamcmd_on_fail_func(self, option: str):
         if option == "Custom":
             try:
-                save_config("reset_on_fail", "20")
+                save_config("reset_on_fail", "10")
                 if show_message("config.ini" ,"change reset_on_fail value to whatever you want", exit_on_close=True):
                     os.system(f"notepad {os.path.join(cwd(), 'config.ini')}")
             except:
@@ -1050,8 +1050,8 @@ class SettingsTab(ctk.CTkFrame):
                     return option
                 except:
                     self.steam_fail_counter_toggle = True
-                    self.steam_fail_number = 20
-                    return "20"
+                    self.steam_fail_number = 10
+                    return "10"
 
         if setting == "show_fails":
             if check_config(setting, fallback) == "on":
@@ -1108,7 +1108,7 @@ class SettingsTab(ctk.CTkFrame):
     def load_on_switch_screen(self):
         self.check_updates_var.set(self.load_settings("checkforupdtes"))
         self.console_var.set(self.load_settings("console"))
-        self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "20"))
+        self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "10"))
         self.estimated_progress_var.set(self.load_settings("estimated_progress", "on"))
         self.clean_checkbox_var.set(self.load_settings("clean_on_finish", "on"))
         self.continuous_var.set(self.load_settings("continuous_download"))
@@ -1348,7 +1348,7 @@ class BOIIIWD(ctk.CTk):
             self.settings_tab.load_settings("continuous_download", "on")
             self.settings_tab.load_settings("console", "off")
             self.settings_tab.load_settings("estimated_progress", "on")
-            self.settings_tab.load_settings("reset_on_fail", "20")
+            self.settings_tab.load_settings("reset_on_fail", "10")
             self.settings_tab.load_settings("show_fails", "on")
             self.settings_tab.load_settings("skip_already_installed", "on")
         except:
