@@ -107,8 +107,10 @@ def check_for_updates_func(window, ignore_up_todate=False):
     try:
         latest_version = get_latest_release_version()
         current_version = VERSION
+        int_latest_version = int(latest_version.replace("v", "").replace(".", ""))
+        int_current_version = int(current_version.replace("v", "").replace(".", ""))
 
-        if latest_version and latest_version != current_version:
+        if latest_version and int_latest_version > int_current_version:
             msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1))
 
             result = msg_box.get()
@@ -123,11 +125,20 @@ def check_for_updates_func(window, ignore_up_todate=False):
             if result == "No":
                 return
 
-        elif latest_version == current_version:
+        elif int_latest_version < int_current_version:
+            if ignore_up_todate:
+                return
+            msg_box = CTkMessagebox(title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="Ok")
+            result = msg_box.get()
+        elif int_latest_version == int_current_version:
             if ignore_up_todate:
                 return
             msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok")
             result = msg_box.get()
+
+        else:
+            show_message("Error!", "An error occured while checking for updates!\nCheck your internet and try again")
+
     except Exception as e:
         show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
 
@@ -2130,8 +2141,7 @@ class BOIIIWD(ctk.CTk):
                             usermaps_folder = os.path.join(destination_folder, "usermaps")
                             folder_name_path = os.path.join(usermaps_folder, folder_name, "zone")
                         else:
-                            show_message("Error", "Invalid workshop type in workshop.json, are you sure this is a map or a mod?.", icon="cancel")
-                            self.stop_download
+                            show_message("Error", "Invalid workshop type in workshop.json, are you sure this is a map or a mod?., skipping...", icon="cancel")
                             return
 
                         os.makedirs(folder_name_path, exist_ok=True)
