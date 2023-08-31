@@ -1,4 +1,5 @@
 from CTkMessagebox import CTkMessagebox
+from tkinter import Menu, END, Event
 from bs4 import BeautifulSoup
 import customtkinter as ctk
 from CTkToolTip import *
@@ -20,7 +21,7 @@ import io
 import os
 import re
 
-VERSION = "v0.2.4"
+VERSION = "v0.2.5"
 GITHUB_REPO = "faroukbmiled/BOIIIWD"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 UPDATER_FOLDER = "update"
@@ -352,7 +353,6 @@ def get_item_name(id):
         return False
 
 # End helper functions
-
 class UpdateWindow(ctk.CTkToplevel):
     def __init__(self, master, update_url):
         global master_win
@@ -360,7 +360,8 @@ class UpdateWindow(ctk.CTkToplevel):
         super().__init__(master)
         self.title("BOIIIWD Self-Updater")
         self.geometry("400x150")
-        self.after(250, lambda: self.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
+        if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
+            self.after(250, lambda: self.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
         self.protocol("WM_DELETE_WINDOW", self.cancel_update)
         self.attributes('-topmost', 'true')
 
@@ -472,10 +473,31 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.filter_refresh_button = ctk.CTkButton(self, image=ctk.CTkImage(Image.open(filter_refresh_button_image)), command=self.refresh_items, width=20, height=20,
                                                    fg_color="transparent", text="")
         self.filter_refresh_button.grid(row=0, column=1, padx=(10, 20), pady=(10, 20), sticky="enw")
+        lib_filter_menu = Menu(self.filter_entry, tearoff=False, background='#565b5e', fg='white', borderwidth=0, bd=0)
+        paste_event = Event()
+        paste_event.x = 0
+        paste_event.y = 0
+        lib_filter_menu.add_command(label="Paste", command=lambda: self.paste_update_filter(paste_event))
+        lib_filter_menu.add_command(label="Copy", command=lambda: self.clipboard_copy(self.filter_entry))
+        self.filter_entry.bind("<Button-3>", lambda event: self.do_popup(event, frame=lib_filter_menu))
         self.label_list = []
         self.button_list = []
         self.button_view_list = []
         self.filter_type = True
+
+    def do_popup(self, event, frame):
+        try:
+            frame.tk_popup(event.x_root, event.y_root)
+        finally:
+            frame.grab_release()
+
+    def clipboard_copy(self, text):
+        text.clipboard_clear()
+        text.clipboard_append(text.get())
+
+    def paste_update_filter(self, event):
+        self.filter_entry.insert(END, self.clipboard_get())
+        self.filter_items(event)
 
     def add_item(self, item, image=None, item_type="map", workshop_id=None, folder=None):
         label = ctk.CTkLabel(self, text=item, image=image, compound="left", padx=5, anchor="w")
@@ -672,7 +694,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
                              date_created ,date_updated, stars_image, stars_image_size, ratings_text, url):
         try:
             top = ctk.CTkToplevel(self)
-            top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
+            if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
+                top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
             top.title("Map/Mod Information")
             top.attributes('-topmost', 'true')
 
@@ -1108,7 +1131,8 @@ class BOIIIWD(ctk.CTk):
         except:
             self.geometry(f"{910}x{560}")
 
-        self.wm_iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico"))
+        if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
+            self.wm_iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico"))
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # Qeue frame/tab, keep here or app will start shrinked eveytime
@@ -1145,8 +1169,11 @@ class BOIIIWD(ctk.CTk):
 
         # create sidebar frame with widgets
         font = "Comic Sans MS"
-        ryuks_icon = os.path.join(RESOURCES_DIR, "ryuk.png")
-        self.sidebar_icon = ctk.CTkImage(light_image=Image.open(ryuks_icon), dark_image=Image.open(ryuks_icon), size=(40, 40))
+        if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.png")):
+            ryuks_icon = os.path.join(RESOURCES_DIR, "ryuk.png")
+            self.sidebar_icon = ctk.CTkImage(light_image=Image.open(ryuks_icon), dark_image=Image.open(ryuks_icon), size=(40, 40))
+        else:
+            self.sidebar_icon = None
         self.sidebar_frame = ctk.CTkFrame(self, width=100, corner_radius=10)
         self.sidebar_frame.grid(row=0, column=0, rowspan=3, padx=(10, 20), pady=(10, 10), sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(4, weight=1)
@@ -1275,6 +1302,27 @@ class BOIIIWD(ctk.CTk):
         self.sidebar_queue_tooltip = CTkToolTip(self.sidebar_queue, message="Experimental")
         self.bind("<Configure>", self.save_window_size)
 
+        # context_menus
+        edit_workshop_menu = Menu(self.edit_workshop_id, tearoff=False, background='#565b5e', fg='white', borderwidth=0, bd=0)
+        edit_workshop_menu.add_command(label="Paste", command=lambda: self.edit_workshop_id.insert(END, self.clipboard_get()))
+        edit_workshop_menu.add_command(label="Copy", command=lambda: self.clipboard_copy(self.edit_workshop_id))
+        self.edit_workshop_id.bind("<Button-3>", lambda event: self.do_popup(event, frame=edit_workshop_menu))
+
+        edit_destination_folder_menu = Menu(self.edit_destination_folder, tearoff=False, background='#565b5e', fg='white', borderwidth=0, bd=0)
+        edit_destination_folder_menu.add_command(label="Paste", command=lambda: self.edit_destination_folder.insert(END, self.clipboard_get()))
+        edit_destination_folder_menu.add_command(label="Copy", command=lambda: self.clipboard_copy(self.edit_destination_folder))
+        self.edit_destination_folder.bind("<Button-3>", lambda event: self.do_popup(event, frame=edit_destination_folder_menu))
+
+        edit_steamcmd_path_menu = Menu(self.edit_steamcmd_path, tearoff=False, background='#565b5e', fg='white', borderwidth=0, bd=0)
+        edit_steamcmd_path_menu.add_command(label="Paste", command=lambda: self.edit_steamcmd_path.insert(END, self.clipboard_get()))
+        edit_steamcmd_path_menu.add_command(label="Copy", command=lambda: self.clipboard_copy(self.edit_steamcmd_path))
+        self.edit_steamcmd_path.bind("<Button-3>", lambda event: self.do_popup(event, frame=edit_steamcmd_path_menu))
+
+        queue_text_area_menu = Menu(self.queuetextarea, tearoff=False, background='#565b5e', fg='white', borderwidth=0, bd=0)
+        queue_text_area_menu.add_command(label="Paste", command=lambda: self.queuetextarea.insert(END, self.clipboard_get()))
+        queue_text_area_menu.add_command(label="Copy", command=lambda: self.clipboard_copy(self.queuetextarea))
+        self.queuetextarea.bind("<Button-3>", lambda event: self.do_popup(event, frame=queue_text_area_menu))
+
         # load ui configs
         self.load_configs()
 
@@ -1297,6 +1345,14 @@ class BOIIIWD(ctk.CTk):
 
         if not check_steamcmd():
             self.show_warning_message()
+
+    def do_popup(self, event, frame):
+        try: frame.tk_popup(event.x_root, event.y_root)
+        finally: frame.grab_release()
+
+    def clipboard_copy(self, text):
+        text.clipboard_clear()
+        text.clipboard_append(text.get())
 
     def save_window_size(self, event):
         with open("boiiiwd_dont_touch.conf", "w") as conf:
@@ -1976,7 +2032,7 @@ class BOIIIWD(ctk.CTk):
                             self.after(1, lambda p=progress: self.label_file_size.configure(text=f"Wrong size reported\nFile size: ~{convert_bytes_to_readable(current_size)}"))
 
                         while not self.is_downloading and not self.settings_tab.stopped:
-                            self.after(1, self.label_speed.configure(text=f"Network Speed: 0 KB/s"))
+                            self.after(1, self.label_speed.configure(text=f"Waiting for steamcmd..."))
                             time_elapsed = time.time() - start_time
                             elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
                             if self.settings_tab.show_fails:
@@ -2081,7 +2137,7 @@ class BOIIIWD(ctk.CTk):
                         os.makedirs(folder_name_path, exist_ok=True)
 
                         try:
-                            shutil.copytree(map_folder, folder_name_path, dirs_exist_ok=True)
+                            self.copy_with_progress(map_folder, folder_name_path)
                         except Exception as E:
                             show_message("Error", f"Error copying files: {E}", icon="cancel")
 
@@ -2117,6 +2173,7 @@ class BOIIIWD(ctk.CTk):
             self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
             self.stop_download
             self.is_pressed = False
+
 
     def download_thread(self):
         try:
@@ -2221,7 +2278,7 @@ class BOIIIWD(ctk.CTk):
                         self.after(1, lambda p=progress: self.label_file_size.configure(text=f"Wrong size reported\nActual size: ~{convert_bytes_to_readable(current_size)}"))
 
                     while not self.is_downloading and not self.settings_tab.stopped:
-                        self.after(1, self.label_speed.configure(text=f"Network Speed: 0 KB/s"))
+                        self.after(1, self.label_speed.configure(text=f"Waiting for steamcmd..."))
                         time_elapsed = time.time() - start_time
                         elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
                         if self.settings_tab.show_fails:
@@ -2325,7 +2382,7 @@ class BOIIIWD(ctk.CTk):
                     os.makedirs(folder_name_path, exist_ok=True)
 
                     try:
-                        shutil.copytree(map_folder, folder_name_path, dirs_exist_ok=True)
+                        self.copy_with_progress(map_folder, folder_name_path)
                     except Exception as E:
                         show_message("Error", f"Error copying files: {E}", icon="cancel")
 
@@ -2353,6 +2410,28 @@ class BOIIIWD(ctk.CTk):
             self.settings_tab.steam_fail_counter = 0
             self.stop_download
             self.is_pressed = False
+
+    def copy_with_progress(self, src, dst):
+        try:
+            total_files = sum([len(files) for root, dirs, files in os.walk(src)])
+            progress = 0
+
+            def copy_progress(src, dst):
+                nonlocal progress
+                shutil.copy2(src, dst)
+                progress += 1
+                self.progress_text.configure(text=f"Copying files: {progress}/{total_files}")
+                value = (progress / total_files) * 100
+                valuep = value / 100
+                self.progress_bar.set(valuep)
+
+            try:
+                shutil.copytree(src, dst, dirs_exist_ok=True, copy_function=copy_progress)
+            except Exception as E:
+                show_message("Error", f"Error copying files: {E}", icon="cancel")
+        finally:
+            self.progress_text.configure(text="0%")
+            self.progress_bar.set(0.0)
 
     def stop_download(self, on_close=None):
         self.settings_tab.stopped = True
