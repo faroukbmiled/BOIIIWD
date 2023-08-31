@@ -1,5 +1,5 @@
-from src import boiiiwd_class
+from src import main
 
 if __name__ == "__main__":
-    app = boiiiwd_class.BOIIIWD()
+    app = main.BOIIIWD()
     app.mainloop()
