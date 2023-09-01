@@ -1,6 +1,6 @@
 from src.imports import *
 
-# Start Helper Functions
+# Start helper functions
 def cwd():
     if getattr(sys, 'frozen', False):
         return os.path.dirname(sys.executable)
@@ -203,7 +203,7 @@ def show_message(title, message, icon="warning", exit_on_close=False):
         else:
             return False
     else:
-        msg = CTkMessagebox(title=title, message=message, icon=icon)
+        CTkMessagebox(title=title, message=message, icon=icon)
 
 def launch_boiii_func(path):
     procname = "boiii.exe"
@@ -295,5 +295,4 @@ def get_item_name(id):
             return True
     except:
         return False
-
 # End helper functions

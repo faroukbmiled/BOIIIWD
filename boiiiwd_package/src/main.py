@@ -82,8 +82,7 @@ class BOIIIWD(ctk.CTk):
         self.workshop_queue_label.grid(row=0, column=0, padx=(20, 20), pady=(20, 20), sticky="wns")
 
         self.help_button = ctk.CTkButton(master=self.qeueuframe, text="Help", command=self.help_queue_text_func, width=10, height=10, fg_color="#585858")
-        self.help_button.grid(row=0, column=1, padx=(0, 20), pady=(20, 20), sticky="wns")
-        self.help_button_tooltip = CTkToolTip(self.help_button, message="This only works if the text area is empty (press twice if you had something in it)")
+        self.help_button.grid(row=0, column=0, padx=(352, 0), pady=(23, 0), sticky="en")
         self.help_restore_content = None
 
         self.queuetextarea = ctk.CTkTextbox(master=self.qeueuframe, font=("", 15))
@@ -91,6 +90,8 @@ class BOIIIWD(ctk.CTk):
 
         self.status_text = ctk.CTkLabel(self.qeueuframe, text="Status: Not Downloading")
         self.status_text.grid(row=3, column=0, padx=(20, 20), pady=(0, 20), sticky="ws")
+
+        self.skip_boutton = ctk.CTkButton(master=self.qeueuframe, text="Skip", command=self.skip_current_queue_item, width=10, height=10, fg_color="#585858")
 
         self.qeueuframe.grid_remove()
 
@@ -254,7 +255,7 @@ class BOIIIWD(ctk.CTk):
 
         queue_text_area_menu = Menu(self.queuetextarea, tearoff=False, background='#565b5e', fg='white', borderwidth=0, bd=0)
         queue_text_area_menu.add_command(label="Paste", command=lambda: self.queuetextarea.insert(END, self.clipboard_get()))
-        queue_text_area_menu.add_command(label="Copy", command=lambda: self.clipboard_copy(self.queuetextarea))
+        queue_text_area_menu.add_command(label="Copy", command=lambda: self.clipboard_copy(self.queuetextarea, textbox=True))
         self.queuetextarea.bind("<Button-3>", lambda event: self.do_popup(event, frame=queue_text_area_menu))
 
         # load ui configs
@@ -284,9 +285,12 @@ class BOIIIWD(ctk.CTk):
         try: frame.tk_popup(event.x_root, event.y_root)
         finally: frame.grab_release()
 
-    def clipboard_copy(self, text):
+    def clipboard_copy(self, text, textbox=False):
         text.clipboard_clear()
-        text.clipboard_append(text.get())
+        if textbox:
+            text.clipboard_append(text.get("1.0", "end").strip())
+        else:
+            text.clipboard_append(text.get())
 
     def save_window_size(self, event):
         with open("boiiiwd_dont_touch.conf", "w") as conf:
@@ -700,6 +704,25 @@ class BOIIIWD(ctk.CTk):
         finally:
             os.remove(temp_file_path)
 
+    def skip_current_queue_item(self):
+        if self.button_download._state == "normal":
+            self.skip_boutton.grid_remove()
+            self.after(1, self.status_text.configure(text=f"Status: Not Downloading"))
+            return
+        self.settings_tab.stopped = True
+        self.settings_tab.steam_fail_counter = 0
+        self.is_pressed = False
+        self.is_downloading = False
+        self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
+
+        subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    creationflags=subprocess.CREATE_NO_WINDOW)
+        self.skip_boutton.grid_remove()
+        self.after(2, self.status_text.configure(text=f"Status: Skipping..."))
+        self.label_speed.configure(text="Network Speed: 0 KB/s")
+        self.progress_text.configure(text="0%")
+        self.progress_bar.set(0.0)
+
     # the real deal
     def run_steamcmd_command(self, command, map_folder, wsid, queue=None):
         steamcmd_path = get_steamcmd_path()
@@ -968,6 +991,22 @@ class BOIIIWD(ctk.CTk):
                             previous_net_speed = 0
                             est_downloaded_bytes = 0
 
+                        while not self.is_downloading and not self.settings_tab.stopped:
+                            self.after(1, self.label_speed.configure(text=f"Waiting for steamcmd..."))
+                            time_elapsed = time.time() - start_time
+                            elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
+                            if self.settings_tab.show_fails:
+                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.fail_threshold}"))
+                            else:
+                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
+                            self.after(1, self.status_text.configure(
+                                text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | ID: {workshop_id} | {item_name} | Waiting {current_number}/{total_items}"))
+                            if len(items) > 1:
+                                self.skip_boutton.grid(row=3, column=1, padx=(10, 20), pady=(0, 25), sticky="ws")
+                            time.sleep(1)
+                            if self.is_downloading:
+                                break
+
                         try:
                             current_size = sum(os.path.getsize(os.path.join(download_folder, f)) for f in os.listdir(download_folder))
                         except:
@@ -978,7 +1017,7 @@ class BOIIIWD(ctk.CTk):
 
                         progress = int(current_size / file_size * 100)
 
-                        if progress > 100:
+                        if progress > 100 and not self.settings_tab.stopped:
                             progress = int(current_size / current_size * 100)
                             self.total_queue_size -= file_size
                             file_size = current_size
@@ -987,19 +1026,7 @@ class BOIIIWD(ctk.CTk):
                                 text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | ID: {workshop_id} | {item_name} | Downloading {current_number}/{total_items}"))
                             self.after(1, lambda p=progress: self.label_file_size.configure(text=f"Wrong size reported\nFile size: ~{convert_bytes_to_readable(current_size)}"))
 
-                        while not self.is_downloading and not self.settings_tab.stopped:
-                            self.after(1, self.label_speed.configure(text=f"Waiting for steamcmd..."))
-                            time_elapsed = time.time() - start_time
-                            elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
-                            if self.settings_tab.show_fails:
-                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.fail_threshold}"))
-                            else:
-                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
-                            time.sleep(1)
-                            if self.is_downloading:
-                                break
-
-                        if self.settings_tab.estimated_progress:
+                        if self.settings_tab.estimated_progress and not self.settings_tab.stopped:
                             time_elapsed = time.time() - start_time
                             raw_net_speed = psutil.net_io_counters().bytes_recv
 
@@ -1035,27 +1062,28 @@ class BOIIIWD(ctk.CTk):
 
                             time.sleep(1)
                         else:
-                            time_elapsed = time.time() - start_time
-                            progress = int(current_size / file_size * 100)
-                            self.after(1, lambda v=progress / 100.0: self.progress_bar.set(v))
+                            if not self.settings_tab.stopped:
+                                time_elapsed = time.time() - start_time
+                                progress = int(current_size / file_size * 100)
+                                self.after(1, lambda v=progress / 100.0: self.progress_bar.set(v))
 
-                            current_net_speed = psutil.net_io_counters().bytes_recv
+                                current_net_speed = psutil.net_io_counters().bytes_recv
 
-                            net_speed_bytes = current_net_speed - previous_net_speed
-                            previous_net_speed = current_net_speed
+                                net_speed_bytes = current_net_speed - previous_net_speed
+                                previous_net_speed = current_net_speed
 
-                            net_speed, speed_unit = convert_speed(net_speed_bytes)
-                            elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
+                                net_speed, speed_unit = convert_speed(net_speed_bytes)
+                                elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
 
-                            self.after(1, self.status_text.configure(
-                                text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | ID: {workshop_id} | {item_name} | Downloading {current_number}/{total_items}"))
-                            self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
-                            self.after(1, lambda p=progress: self.progress_text.configure(text=f"{p}%"))
-                            if self.settings_tab.show_fails:
-                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.fail_threshold}"))
-                            else:
-                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
-                            time.sleep(1)
+                                self.after(1, self.status_text.configure(
+                                    text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | ID: {workshop_id} | {item_name} | Downloading {current_number}/{total_items}"))
+                                self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
+                                self.after(1, lambda p=progress: self.progress_text.configure(text=f"{p}%"))
+                                if self.settings_tab.show_fails:
+                                    self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.fail_threshold}"))
+                                else:
+                                    self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
+                                time.sleep(1)
 
                 command = f"+login anonymous app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
                 steamcmd_thread = threading.Thread(target=lambda: self.run_steamcmd_command(command, map_folder, workshop_id, queue=True))
@@ -1101,6 +1129,7 @@ class BOIIIWD(ctk.CTk):
                             remove_tree(download_folder)
 
                         if index == len(items) - 1:
+                            self.after(1, self.status_text.configure(text=f"Status: Done! => Please press stop only if you see no popup window (rare bug)"))
                             msg = CTkMessagebox(title="Downloads Complete", message=f"All files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)", icon="info", option_1="Launch", option_2="Ok")
                             response = msg.get()
                             if response=="Launch":
@@ -1119,6 +1148,7 @@ class BOIIIWD(ctk.CTk):
                     self.button_download.configure(state="normal")
                     self.button_stop.configure(state="disabled")
                     self.after(1, self.status_text.configure(text=f"Status: Done!"))
+                    self.skip_boutton.grid_remove()
                     self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
                     self.settings_tab.stopped = True
                     self.stop_download
@@ -1217,6 +1247,18 @@ class BOIIIWD(ctk.CTk):
                         previous_net_speed = 0
                         est_downloaded_bytes = 0
 
+                    while not self.is_downloading and not self.settings_tab.stopped:
+                        self.after(1, self.label_speed.configure(text=f"Waiting for steamcmd..."))
+                        time_elapsed = time.time() - start_time
+                        elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
+                        if self.settings_tab.show_fails:
+                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.fail_threshold}"))
+                        else:
+                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
+                        time.sleep(1)
+                        if self.is_downloading:
+                            break
+
                     try:
                         current_size = sum(os.path.getsize(os.path.join(download_folder, f)) for f in os.listdir(download_folder))
                     except:
@@ -1232,19 +1274,8 @@ class BOIIIWD(ctk.CTk):
                         file_size = current_size
                         self.after(1, lambda p=progress: self.label_file_size.configure(text=f"Wrong size reported\nActual size: ~{convert_bytes_to_readable(current_size)}"))
 
-                    while not self.is_downloading and not self.settings_tab.stopped:
-                        self.after(1, self.label_speed.configure(text=f"Waiting for steamcmd..."))
-                        time_elapsed = time.time() - start_time
-                        elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
-                        if self.settings_tab.show_fails:
-                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.fail_threshold}"))
-                        else:
-                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
-                        time.sleep(1)
-                        if self.is_downloading:
-                            break
 
-                    if self.settings_tab.estimated_progress:
+                    if self.settings_tab.estimated_progress and not self.settings_tab.stopped:
                         time_elapsed = time.time() - start_time
                         raw_net_speed = psutil.net_io_counters().bytes_recv
 
@@ -1279,25 +1310,26 @@ class BOIIIWD(ctk.CTk):
 
                         time.sleep(1)
                     else:
-                        time_elapsed = time.time() - start_time
-                        progress = int(current_size / file_size * 100)
-                        self.after(1, lambda v=progress / 100.0: self.progress_bar.set(v))
+                        if not self.settings_tab.stopped:
+                            time_elapsed = time.time() - start_time
+                            progress = int(current_size / file_size * 100)
+                            self.after(1, lambda v=progress / 100.0: self.progress_bar.set(v))
 
-                        current_net_speed = psutil.net_io_counters().bytes_recv
+                            current_net_speed = psutil.net_io_counters().bytes_recv
 
-                        net_speed_bytes = current_net_speed - previous_net_speed
-                        previous_net_speed = current_net_speed
+                            net_speed_bytes = current_net_speed - previous_net_speed
+                            previous_net_speed = current_net_speed
 
-                        net_speed, speed_unit = convert_speed(net_speed_bytes)
-                        elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
+                            net_speed, speed_unit = convert_speed(net_speed_bytes)
+                            elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
 
-                        self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
-                        self.after(1, lambda p=progress: self.progress_text.configure(text=f"{p}%"))
-                        if self.settings_tab.show_fails:
-                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.fail_threshold}"))
-                        else:
-                            self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
-                        time.sleep(1)
+                            self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
+                            self.after(1, lambda p=progress: self.progress_text.configure(text=f"{p}%"))
+                            if self.settings_tab.show_fails:
+                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.fail_threshold}"))
+                            else:
+                                self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
+                            time.sleep(1)
 
             command = f"+login anonymous app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
             steamcmd_thread = threading.Thread(target=lambda: self.run_steamcmd_command(command, map_folder, workshop_id))
@@ -1404,10 +1436,11 @@ class BOIIIWD(ctk.CTk):
         subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                        creationflags=subprocess.CREATE_NO_WINDOW)
 
-        self.after(2, self.status_text.configure(text=f"Status: Not Downloading"))
         self.button_download.configure(state="normal")
         self.button_stop.configure(state="disabled")
         self.label_speed.configure(text="Network Speed: 0 KB/s")
         self.progress_text.configure(text="0%")
         self.elapsed_time.configure(text=f"")
         self.progress_bar.set(0.0)
+        self.after(50, self.status_text.configure(text=f"Status: Not Downloading"))
+        self.skip_boutton.grid_remove()

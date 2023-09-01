@@ -21,7 +21,7 @@ import io
 import os
 import re
 
-VERSION = "v0.2.5"
+VERSION = "v0.2.6"
 GITHUB_REPO = "faroukbmiled/BOIIIWD"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 UPDATER_FOLDER = "update"
