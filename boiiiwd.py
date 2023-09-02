@@ -111,7 +111,7 @@ def check_for_updates_func(window, ignore_up_todate=False):
         int_current_version = int(current_version.replace("v", "").replace(".", ""))
 
         if latest_version and int_latest_version > int_current_version:
-            msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1))
+            msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1), sound=True)
 
             result = msg_box.get()
 
@@ -128,12 +128,12 @@ def check_for_updates_func(window, ignore_up_todate=False):
         elif int_latest_version < int_current_version:
             if ignore_up_todate:
                 return
-            msg_box = CTkMessagebox(title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="Ok")
+            msg_box = CTkMessagebox(title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="Ok", sound=True)
             result = msg_box.get()
         elif int_latest_version == int_current_version:
             if ignore_up_todate:
                 return
-            msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok")
+            msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok", sound=True)
             result = msg_box.get()
 
         else:
@@ -261,7 +261,7 @@ def get_workshop_file_size(workshop_id, raw=None):
 def show_message(title, message, icon="warning", exit_on_close=False):
 
     if exit_on_close:
-        msg = CTkMessagebox(title=title, message=message, icon=icon, option_1="No", option_2="Ok")
+        msg = CTkMessagebox(title=title, message=message, icon=icon, option_1="No", option_2="Ok", sound=True)
         response = msg.get()
         if response=="No":
             return False
@@ -270,7 +270,7 @@ def show_message(title, message, icon="warning", exit_on_close=False):
         else:
             return False
     else:
-        CTkMessagebox(title=title, message=message, icon=icon)
+        CTkMessagebox(title=title, message=message, icon=icon, sound=True)
 
 def launch_boiii_func(path):
     procname = "boiii.exe"
@@ -1590,7 +1590,7 @@ class BOIIIWD(ctk.CTk):
 
     def show_warning_message(self):
         msg = CTkMessagebox(title="Warning", message="steamcmd.exe was not found in the specified directory.\nPress Download to get it or Press Cancel and select it from there!.",
-                            icon="warning", option_1="Cancel", option_2="Download")
+                            icon="warning", option_1="Cancel", option_2="Download", sound=True)
 
         response = msg.get()
         if response == "Cancel":
@@ -2249,7 +2249,7 @@ class BOIIIWD(ctk.CTk):
 
                         if index == len(items) - 1:
                             self.after(1, self.status_text.configure(text=f"Status: Done! => Please press stop only if you see no popup window (rare bug)"))
-                            msg = CTkMessagebox(title="Downloads Complete", message=f"All files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)", icon="info", option_1="Launch", option_2="Ok")
+                            msg = CTkMessagebox(title="Downloads Complete", message=f"All files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)", icon="info", option_1="Launch", option_2="Ok", sound=True)
                             response = msg.get()
                             if response=="Launch":
                                 launch_boiii_func(self.edit_destination_folder.get().strip())
@@ -2496,7 +2496,7 @@ class BOIIIWD(ctk.CTk):
                         remove_tree(map_folder)
                         remove_tree(download_folder)
 
-                    msg = CTkMessagebox(title="Download Complete", message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)", icon="info", option_1="Launch", option_2="Ok")
+                    msg = CTkMessagebox(title="Download Complete", message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)", icon="info", option_1="Launch", option_2="Ok", sound=True)
                     response = msg.get()
                     if response=="Launch":
                         launch_boiii_func(self.edit_destination_folder.get().strip())
