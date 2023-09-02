@@ -2,5 +2,6 @@ beautifulsoup4==4.12.2
 customtkinter==5.2.0
 requests==2.31.0
 ctktooltip==0.8
-CTkMessagebox==2.4
+CTkMessagebox==2.5
 psutil==5.9.5
+pyinstaller==5.13.0
