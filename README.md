@@ -17,7 +17,7 @@
 ## Usage (exe):
 - Run [BOIIIWD.exe](https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip) and use it (it'll ask you to download steamcmd within the app if not found)
 - That's it slap in your workshop item link or just the id then hit Download and wait for it to finish, when it does just launch your game (Please check [Notes](#notes) before you ask anything)
-- If the exe is getting flagged as a virus by your ac it is obviously a false positive, if you still do not trust it you can [compile/freeze](#freezing) it yourself ([VirusTotal Scan](https://www.virustotal.com/gui/file/9b7bbfa444da4ef2e73c32bdcd4ed29b220e2c51da05074d16e492319797a7b2/detection))
+- If the exe is getting flagged as a virus by your ac it is obviously a false positive, if you still do not trust it you can [compile/freeze](#freezing) it yourself ([VirusTotal Scan](https://www.virustotal.com/gui/file/5ca1367a82893a1f412b59a52431e9ac4219a67a50c294ee86a7d41473826b14/detection))
 
 ## Usage (script):
 - ```pip install -r requirements.txt```
@@ -52,7 +52,7 @@
 . Rare UI bug => instead of showing a warning message, its window goes invisible and leads to the whole ui becoming unclickable (end the task from task manager) <br>
 . Possible logic bugs related to the progress bar , sometimes it carries on progressing when you pressed stop => please raise an issue if this happens often <br>
 . If the exe is getting flagged as a virus by your ac it is obviously a false positive, if you still do not trust it you can [compile/freeze](#freezing) it yourself <br>
-. [VirusTotal](https://www.virustotal.com/gui/file/9b7bbfa444da4ef2e73c32bdcd4ed29b220e2c51da05074d16e492319797a7b2/detection) <br>
+. [VirusTotal](https://www.virustotal.com/gui/file/5ca1367a82893a1f412b59a52431e9ac4219a67a50c294ee86a7d41473826b14/detection) <br>
   
 ### todos:
 - [x] add a menu that shows you current installed mods/maps
