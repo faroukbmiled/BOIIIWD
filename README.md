@@ -52,6 +52,7 @@
 . Rare UI bug => instead of showing a warning message, its window goes invisible and leads to the whole ui becoming unclickable (end the task from task manager) <br>
 . Possible logic bugs related to the progress bar , sometimes it carries on progressing when you pressed stop => please raise an issue if this happens often <br>
 . If the exe is getting flagged as a virus by your ac it is obviously a false positive, if you still do not trust it you can [compile/freeze](#freezing) it yourself <br>
+[VirusTotal](https://www.virustotal.com/gui/url/c7f8c0e9e39920ca2ab596de21305678e555ca03287022a7ffc217c550253a5b?nocache=1)
   
 ### todos:
 - [x] add a menu that shows you current installed mods/maps
