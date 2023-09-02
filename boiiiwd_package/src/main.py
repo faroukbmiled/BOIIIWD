@@ -238,25 +238,15 @@ class BOIIIWD(ctk.CTk):
         self.bind("<Configure>", self.save_window_size)
 
         # context_menus
-        edit_workshop_menu = Menu(self.edit_workshop_id, tearoff=False, background='#565b5e', fg='white', borderwidth=0, bd=0)
-        edit_workshop_menu.add_command(label="Paste", command=lambda: self.edit_workshop_id.insert(END, self.clipboard_get()))
-        edit_workshop_menu.add_command(label="Copy", command=lambda: self.clipboard_copy(self.edit_workshop_id))
-        self.edit_workshop_id.bind("<Button-3>", lambda event: self.do_popup(event, frame=edit_workshop_menu))
-
-        edit_destination_folder_menu = Menu(self.edit_destination_folder, tearoff=False, background='#565b5e', fg='white', borderwidth=0, bd=0)
-        edit_destination_folder_menu.add_command(label="Paste", command=lambda: self.edit_destination_folder.insert(END, self.clipboard_get()))
-        edit_destination_folder_menu.add_command(label="Copy", command=lambda: self.clipboard_copy(self.edit_destination_folder))
-        self.edit_destination_folder.bind("<Button-3>", lambda event: self.do_popup(event, frame=edit_destination_folder_menu))
-
-        edit_steamcmd_path_menu = Menu(self.edit_steamcmd_path, tearoff=False, background='#565b5e', fg='white', borderwidth=0, bd=0)
-        edit_steamcmd_path_menu.add_command(label="Paste", command=lambda: self.edit_steamcmd_path.insert(END, self.clipboard_get()))
-        edit_steamcmd_path_menu.add_command(label="Copy", command=lambda: self.clipboard_copy(self.edit_steamcmd_path))
-        self.edit_steamcmd_path.bind("<Button-3>", lambda event: self.do_popup(event, frame=edit_steamcmd_path_menu))
-
-        queue_text_area_menu = Menu(self.queuetextarea, tearoff=False, background='#565b5e', fg='white', borderwidth=0, bd=0)
-        queue_text_area_menu.add_command(label="Paste", command=lambda: self.queuetextarea.insert(END, self.clipboard_get()))
-        queue_text_area_menu.add_command(label="Copy", command=lambda: self.clipboard_copy(self.queuetextarea, textbox=True))
-        self.queuetextarea.bind("<Button-3>", lambda event: self.do_popup(event, frame=queue_text_area_menu))
+        self.create_context_menu(self.edit_workshop_id)
+        self.create_context_menu(self.edit_destination_folder)
+        self.create_context_menu(self.edit_steamcmd_path)
+        self.create_context_menu(self.queuetextarea, textbox=True)
+        self.create_context_menu(self.library_tab.filter_entry, textbox=False, library=True)
+        # valid event required for filter_items()
+        self.cevent = Event()
+        self.cevent.x = 0
+        self.cevent.y = 0
 
         # load ui configs
         self.load_configs()
@@ -285,12 +275,84 @@ class BOIIIWD(ctk.CTk):
         try: frame.tk_popup(event.x_root, event.y_root)
         finally: frame.grab_release()
 
-    def clipboard_copy(self, text, textbox=False):
+    def create_context_menu(self, text_widget, textbox=False, library=False):
+        context_menu = Menu(text_widget, tearoff=False, background='#565b5e', fg='white', borderwidth=0, bd=0)
+        context_menu.add_command(label="Paste", command=lambda: self.clipboard_paste(text_widget, textbox, library))
+        context_menu.add_command(label="Copy", command=lambda: self.clipboard_copy(text_widget, textbox, library))
+        context_menu.add_command(label="Cut", command=lambda: self.clipboard_cut(text_widget, textbox, library))
+        context_menu.add_command(label="Select All", command=lambda: self.select_all(text_widget, textbox))
+        text_widget.bind("<Button-3>", lambda event: self.do_popup(event, frame=context_menu))
+
+    def clipboard_copy(self, text, textbox=False, library=False):
+        text.clipboard_clear()
+        try:
+            text.clipboard_append(text.selection_get())
+        except:
+            if textbox:
+                text.clipboard_append(text.get("1.0", END))
+            else:
+                text.clipboard_append(text.get())
+        finally:
+            if library:
+                self.library_tab.filter_items(self.cevent)
+
+    def clipboard_paste(self, text, textbox=False, library=False):
+        try:
+            if textbox:
+                text_cont = text.get("1.0", END)
+            else:
+                text_cont = text.get()
+            if textbox:
+                if text.tag_ranges("sel"):
+                    text.delete("sel.first", "sel.last")
+            else:
+                if text.selection_get() in text_cont:
+                    start_index = text_cont.index(text.selection_get())
+                    end_index = start_index + len(text.selection_get())
+                    text.delete(start_index, end_index)
+            text.insert(ctk.INSERT, text.clipboard_get())
+        except:
+            text.insert(ctk.INSERT, text.clipboard_get())
+        finally:
+            if library:
+                self.library_tab.filter_items(self.cevent)
+
+    def select_all(self, text_widget, textbox=False):
+        if textbox:
+            text_widget.tag_add("sel", "1.0", "end")
+            text_widget.focus()
+        else:
+            text_widget.select_range(0, END)
+            text_widget.focus()
+
+    def clipboard_cut(self, text, textbox=False, library=False):
         text.clipboard_clear()
         if textbox:
-            text.clipboard_append(text.get("1.0", "end").strip())
+            text_cont = text.get(1.0, END)
         else:
-            text.clipboard_append(text.get())
+            text_cont = text.get()
+        try:
+            if textbox:
+                if text.tag_ranges("sel"):
+                    selected_text = text.get("sel.first", "sel.last")
+                    text.clipboard_append(selected_text)
+                    text.delete("sel.first", "sel.last")
+            else:
+                text.clipboard_append(text.selection_get())
+                if text.selection_get() in text_cont:
+                    start_index = text_cont.index(text.selection_get())
+                    end_index = start_index + len(text.selection_get())
+                    text.delete(start_index, end_index)
+        except:
+            if textbox:
+                text.clipboard_append(text.get("1.0", END))
+                text.delete(1.0, "end")
+            else:
+                text.clipboard_append(text.get())
+                text.delete(1.0, "end")
+        finally:
+            if library:
+                self.library_tab.filter_items(self.cevent)
 
     def save_window_size(self, event):
         with open("boiiiwd_dont_touch.conf", "w") as conf:

@@ -18,31 +18,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.filter_refresh_button = ctk.CTkButton(self, image=ctk.CTkImage(Image.open(filter_refresh_button_image)), command=self.refresh_items, width=20, height=20,
                                                    fg_color="transparent", text="")
         self.filter_refresh_button.grid(row=0, column=1, padx=(10, 20), pady=(10, 20), sticky="enw")
-        lib_filter_menu = Menu(self.filter_entry, tearoff=False, background='#565b5e', fg='white', borderwidth=0, bd=0)
-        paste_event = Event()
-        paste_event.x = 0
-        paste_event.y = 0
-        lib_filter_menu.add_command(label="Paste", command=lambda: self.paste_update_filter(paste_event))
-        lib_filter_menu.add_command(label="Copy", command=lambda: self.clipboard_copy(self.filter_entry))
-        self.filter_entry.bind("<Button-3>", lambda event: self.do_popup(event, frame=lib_filter_menu))
         self.label_list = []
         self.button_list = []
         self.button_view_list = []
         self.filter_type = True
-
-    def do_popup(self, event, frame):
-        try:
-            frame.tk_popup(event.x_root, event.y_root)
-        finally:
-            frame.grab_release()
-
-    def clipboard_copy(self, text):
-        text.clipboard_clear()
-        text.clipboard_append(text.get())
-
-    def paste_update_filter(self, event):
-        self.filter_entry.insert(END, self.clipboard_get())
-        self.filter_items(event)
 
     def add_item(self, item, image=None, item_type="map", workshop_id=None, folder=None):
         label = ctk.CTkLabel(self, text=item, image=image, compound="left", padx=5, anchor="w")
