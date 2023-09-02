@@ -1409,7 +1409,6 @@ class BOIIIWD(ctk.CTk):
             if textbox:
                 if text.tag_ranges("sel"):
                     selected_text = text.get("sel.first", "sel.last")
-                    print(selected_text)
                     text.clipboard_append(selected_text)
                     text.delete("sel.first", "sel.last")
                 else:
