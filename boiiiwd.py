@@ -21,7 +21,7 @@ import io
 import os
 import re
 
-VERSION = "v0.2.6"
+VERSION = "v0.2.7"
 GITHUB_REPO = "faroukbmiled/BOIIIWD"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 UPDATER_FOLDER = "update"
@@ -881,7 +881,7 @@ class SettingsTab(ctk.CTkFrame):
 
         self.theme_options_label = ctk.CTkLabel(right_frame, text="Themes:", anchor="n")
         self.theme_options_label.grid(row=8, column=1, padx=20, pady=(10, 0))
-        self.theme_options = ctk.CTkOptionMenu(right_frame, values=["Default", "Blue", "Grey", "Custom"],
+        self.theme_options = ctk.CTkOptionMenu(right_frame, values=["Default", "Blue", "Grey", "Obsidian", "Ghost","NeonBanana", "Custom"],
                                                                command=self.theme_options_func)
         self.theme_options.grid(row=9, column=1, padx=20, pady=(0, 0))
         self.theme_options.set(value=self.load_settings("theme", "Default"))
@@ -914,10 +914,18 @@ class SettingsTab(ctk.CTkFrame):
         if option == "Grey":
             self.boiiiwd_custom_theme(disable_only=True)
             save_config("theme", "boiiiwd_grey.json")
+        if option == "Ghost":
+            self.boiiiwd_custom_theme(disable_only=True)
+            save_config("theme", "boiiiwd_ghost.json")
+        if option == "Obsidian":
+            self.boiiiwd_custom_theme(disable_only=True)
+            save_config("theme", "boiiiwd_obsidian.json")
+        if option == "NeonBanana":
+            self.boiiiwd_custom_theme(disable_only=True)
+            save_config("theme", "boiiiwd_neonbanana.json")
         if option == "Custom":
             self.boiiiwd_custom_theme()
             save_config("theme", "boiiiwd_theme.json")
-
         if not option == "Custom":
             show_message("Restart to take effect!", f"{option} theme has been set ,please restart to take effect", icon="info")
 
@@ -1057,6 +1065,12 @@ class SettingsTab(ctk.CTkFrame):
                 return "Grey"
             if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_blue.json":
                 return "Blue"
+            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_obsidian.json":
+                return "Obsidian"
+            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_ghost.json":
+                return "Ghost"
+            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_neonbanana.json":
+                return "NeonBanana"
         else:
             if check_config(setting, fallback) == "on":
                 return 1
@@ -1215,7 +1229,7 @@ class BOIIIWD(ctk.CTk):
         self.progress_bar = ctk.CTkProgressBar(master=self.slider_progressbar_frame, mode="determinate", height=20, corner_radius=7)
         self.progress_bar.grid(row=2, column=0, padx=20, pady=(0, 10), columnspan=3, sticky="ew")
 
-        self.progress_text = ctk.CTkLabel(self.progress_bar, text="0%", font=("Helvetica", 12), fg_color="transparent", height=0, width=0, corner_radius=0)
+        self.progress_text = ctk.CTkLabel(self.progress_bar, text="0%", font=("Helvetica", 12), fg_color="transparent", text_color="white", height=0, width=0, corner_radius=0)
         self.progress_text.place(relx=0.5, rely=0.5, anchor="center")
 
         self.button_download = ctk.CTkButton(master=self.slider_progressbar_frame, text="Download", command=self.download_map)
@@ -1335,8 +1349,11 @@ class BOIIIWD(ctk.CTk):
     def create_context_menu(self, text_widget, textbox=False, library=False):
         context_menu = Menu(text_widget, tearoff=False, background='#565b5e', fg='white', borderwidth=0, bd=0)
         context_menu.add_command(label="Paste", command=lambda: self.clipboard_paste(text_widget, textbox, library))
+        context_menu.add_separator()
         context_menu.add_command(label="Copy", command=lambda: self.clipboard_copy(text_widget, textbox, library))
+        context_menu.add_separator()
         context_menu.add_command(label="Cut", command=lambda: self.clipboard_cut(text_widget, textbox, library))
+        context_menu.add_separator()
         context_menu.add_command(label="Select All", command=lambda: self.select_all(text_widget, textbox))
         text_widget.bind("<Button-3>", lambda event: self.do_popup(event, frame=context_menu))
 
@@ -1392,8 +1409,11 @@ class BOIIIWD(ctk.CTk):
             if textbox:
                 if text.tag_ranges("sel"):
                     selected_text = text.get("sel.first", "sel.last")
+                    print(selected_text)
                     text.clipboard_append(selected_text)
                     text.delete("sel.first", "sel.last")
+                else:
+                    raise
             else:
                 text.clipboard_append(text.selection_get())
                 if text.selection_get() in text_cont:
@@ -1406,7 +1426,7 @@ class BOIIIWD(ctk.CTk):
                 text.delete(1.0, "end")
             else:
                 text.clipboard_append(text.get())
-                text.delete(1.0, "end")
+                text.delete(0, "end")
         finally:
             if library:
                 self.library_tab.filter_items(self.cevent)
