@@ -224,6 +224,7 @@ class BOIIIWD(ctk.CTk):
         self.queue_enabled = False
         self.queue_stop_button = False
         self.is_downloading = False
+        self.item_skipped = False
         self.fail_threshold = 0
 
         # sidebar windows bouttons
@@ -777,6 +778,7 @@ class BOIIIWD(ctk.CTk):
             self.after(1, self.status_text.configure(text=f"Status: Not Downloading"))
             return
         self.settings_tab.stopped = True
+        self.item_skipped = True
         self.settings_tab.steam_fail_counter = 0
         self.is_pressed = False
         self.is_downloading = False
@@ -912,6 +914,7 @@ class BOIIIWD(ctk.CTk):
             self.is_pressed = True
             self.library_tab.load_items(self.edit_destination_folder.get())
             if self.queue_enabled:
+                self.item_skipped = False
                 start_down_thread = threading.Thread(target=self.queue_download_thread)
                 start_down_thread.start()
             else:
@@ -1058,6 +1061,22 @@ class BOIIIWD(ctk.CTk):
                             previous_net_speed = 0
                             est_downloaded_bytes = 0
 
+                        if self.item_skipped:
+                            if index > 0:
+                                prev_item_size = None
+                                previous_item = items[index - 1]
+                                prev_item_path = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "downloads", "311210", previous_item)
+                                prev_item_path_2 = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", previous_item)
+                                if os.path.exists(prev_item_path):
+                                    prev_item_size = sum(os.path.getsize(os.path.join(prev_item_path, f)) for f in os.listdir(prev_item_path))
+                                elif os.path.exists(prev_item_path_2):
+                                    prev_item_size = sum(os.path.getsize(os.path.join(prev_item_path_2, f)) for f in os.listdir(prev_item_path_2))
+                                else:
+                                    prev_item_size = get_workshop_file_size(previous_item)
+                                if prev_item_size:
+                                    self.total_queue_size -= prev_item_size
+                            self.item_skipped = False
+
                         while not self.is_downloading and not self.settings_tab.stopped:
                             self.after(1, self.label_speed.configure(text=f"Waiting for steamcmd..."))
                             time_elapsed = time.time() - start_time
@@ -1070,6 +1089,8 @@ class BOIIIWD(ctk.CTk):
                                 text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | ID: {workshop_id} | {item_name} | Waiting {current_number}/{total_items}"))
                             if len(items) > 1:
                                 self.skip_boutton.grid(row=3, column=1, padx=(10, 20), pady=(0, 25), sticky="ws")
+                                if index == len(items) - 1:
+                                    self.skip_boutton.grid_remove()
                             time.sleep(1)
                             if self.is_downloading:
                                 break
