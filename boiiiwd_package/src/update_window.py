@@ -76,11 +76,20 @@ class UpdateWindow(ctk.CTkToplevel):
                 with zipfile.ZipFile(zip_path, "r") as zip_ref:
                     zip_ref.extractall(update_dir)
                 self.label_download.configure(text="Update Downloaded successfully!")
-                if not show_message("Success!", "Update Downloaded successfully!\nPress ok to install it", icon="info", exit_on_close=True):
-                    return
-                script_path = create_update_script(current_exe, new_exe, update_dir, program_name)
-                subprocess.run(('cmd', '/C', 'start', '', fr'{script_path}'))
-                sys.exit(0)
+                def update_msg():
+                    msg = CTkMessagebox(title="Success!", message="Update Downloaded successfully!\nPress ok to install it", icon="info", option_1="No", option_2="Ok", sound=True)
+                    response = msg.get()
+                    if response == "No":
+                        self.destroy()
+                        return
+                    elif response == "Ok":
+                        script_path = create_update_script(current_exe, new_exe, update_dir, program_name)
+                        subprocess.run(('cmd', '/C', 'start', '', fr'{script_path}'))
+                        sys.exit(0)
+                    else:
+                        return
+                self.after(0, update_msg)
+                return
             else:
                 if os.path.exists(zip_path):
                     os.remove(fr"{zip_path}")

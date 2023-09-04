@@ -191,19 +191,21 @@ def get_workshop_file_size(workshop_id, raw=None):
     except:
         return None
 
-def show_message(title, message, icon="warning", exit_on_close=False):
-
+def show_message(title, message, icon="warning", exit_on_close=False, option_1="No", option_2="Ok"):
     if exit_on_close:
-        msg = CTkMessagebox(title=title, message=message, icon=icon, option_1="No", option_2="Ok")
+        msg = CTkMessagebox(title=title, message=message, icon=icon, option_1=option_1, option_2=option_2, sound=True)
         response = msg.get()
-        if response=="No":
+        if response == "No":
             return False
-        if response=="Ok":
+        elif response == "Ok":
             return True
         else:
             return False
     else:
-        CTkMessagebox(title=title, message=message, icon=icon)
+        def callback():
+            CTkMessagebox(title=title, message=message, icon=icon, sound=True)
+        from src.main import master_win
+        master_win.after(0, callback)
 
 def launch_boiii_func(path):
     procname = "boiii.exe"
@@ -295,4 +297,8 @@ def get_item_name(id):
             return True
     except:
         return False
+
+def show_noti(widget ,message, event=None, noti_dur=3.0):
+    CTkToolTip(widget, message=message, is_noti=True, noti_event=event, noti_dur=noti_dur)
+
 # End helper functions

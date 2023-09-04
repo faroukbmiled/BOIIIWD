@@ -10,7 +10,7 @@ def check_for_updates_func(window, ignore_up_todate=False):
         int_current_version = int(current_version.replace("v", "").replace(".", ""))
 
         if latest_version and int_latest_version > int_current_version:
-            msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1))
+            msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1), sound=True)
 
             result = msg_box.get()
 
@@ -18,7 +18,6 @@ def check_for_updates_func(window, ignore_up_todate=False):
                 webbrowser.open(f"https://github.com/{GITHUB_REPO}/releases/latest")
 
             from src.update_window import UpdateWindow
-
             if result == "Yes":
                 update_window = UpdateWindow(window, LATEST_RELEASE_URL)
                 update_window.start_update()
@@ -29,12 +28,12 @@ def check_for_updates_func(window, ignore_up_todate=False):
         elif int_latest_version < int_current_version:
             if ignore_up_todate:
                 return
-            msg_box = CTkMessagebox(title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="Ok")
+            msg_box = CTkMessagebox(title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="Ok", sound=True)
             result = msg_box.get()
         elif int_latest_version == int_current_version:
             if ignore_up_todate:
                 return
-            msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok")
+            msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok", sound=True)
             result = msg_box.get()
 
         else:
@@ -182,12 +181,20 @@ class SettingsTab(ctk.CTkFrame):
         if option == "Custom":
             try:
                 save_config("reset_on_fail", "10")
-                if show_message("config.ini" ,"change reset_on_fail value to whatever you want", exit_on_close=True):
-                    os.system(f"notepad {os.path.join(cwd(), 'config.ini')}")
+                def callback():
+                    msg = CTkMessagebox(title="config.ini", message="change reset_on_fail value to whatever you want", icon="info", option_1="No", option_2="Ok", sound=True)
+                    response = msg.get()
+                    if response == "No":
+                        return
+                    elif response == "Ok":
+                        os.system(f"notepad {os.path.join(cwd(), 'config.ini')}")
+                    else:
+                        return
+                self.after(0, callback)
             except:
                 show_message("Couldn't open config.ini" ,"you can do so by yourself and change reset_on_fail value to whatever you want")
         else:
-            pass
+            return
     def theme_options_func(self, option: str):
         if option == "Default":
             self.boiiiwd_custom_theme(disable_only=True)

@@ -1,6 +1,6 @@
 from src.imports import *
 from src.helpers import show_message, get_folder_size, convert_bytes_to_readable,\
-    extract_json_data, get_workshop_file_size, extract_workshop_id
+    extract_json_data, get_workshop_file_size, extract_workshop_id, show_noti
 
 class LibraryTab(ctk.CTkScrollableFrame):
     def __init__(self, master, **kwargs):
@@ -22,6 +22,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.button_list = []
         self.button_view_list = []
         self.filter_type = True
+        self.clipboard_has_content = False
 
     def add_item(self, item, image=None, item_type="map", workshop_id=None, folder=None):
         label = ctk.CTkLabel(self, text=item, image=image, compound="left", padx=5, anchor="w")
@@ -37,6 +38,41 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.label_list.append(label)
         self.button_list.append(button)
         self.button_view_list.append(button_view)
+        label.bind("<Enter>", lambda event, label=label: self.on_label_hover(label, enter=True))
+        label.bind("<Leave>", lambda event, label=label: self.on_label_hover(label, enter=False))
+        label.bind("<Button-1>", lambda event, label=label: self.copy_to_clipboard(label, workshop_id, event))
+        label.bind("<Control-Button-1>", lambda event, label=label: self.copy_to_clipboard(label, workshop_id, event, append=True))
+        label.bind("<Button-2>", lambda event: self.open_folder_location(folder, event))
+        label.bind("<Button-3>", lambda event, label=label: self.copy_to_clipboard(label, folder, event))
+
+    def on_label_hover(self, label, enter):
+        if enter:
+            label.configure(fg_color="#272727")
+        else:
+            label.configure(fg_color="transparent")
+
+    def copy_to_clipboard(self, label, something, event=None, append=False):
+        try:
+            if append:
+                if self.clipboard_has_content:
+                    label.clipboard_append(f"\n{something}")
+                    show_noti(label, "Appended to clipboard", event, 1.0)
+                else:
+                    label.clipboard_clear()
+                    label.clipboard_append(something)
+                    self.clipboard_has_content = True
+                    show_noti(label, "Copied to clipboard", event, 1.0)
+            else:
+                label.clipboard_clear()
+                label.clipboard_append(something)
+                self.clipboard_has_content = True
+                show_noti(label, "Copied to clipboard", event, 1.0)
+        except:
+            pass
+
+    def open_folder_location(self,folder, event=None):
+        if os.path.exists(folder):
+            os.startfile(folder)
 
     def filter_items(self, event):
         filter_text = self.filter_entry.get().lower()

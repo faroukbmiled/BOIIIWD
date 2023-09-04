@@ -258,19 +258,20 @@ def get_workshop_file_size(workshop_id, raw=None):
     except:
         return None
 
-def show_message(title, message, icon="warning", exit_on_close=False):
-
+def show_message(title, message, icon="warning", exit_on_close=False, option_1="No", option_2="Ok"):
     if exit_on_close:
-        msg = CTkMessagebox(title=title, message=message, icon=icon, option_1="No", option_2="Ok", sound=True)
+        msg = CTkMessagebox(title=title, message=message, icon=icon, option_1=option_1, option_2=option_2, sound=True)
         response = msg.get()
-        if response=="No":
+        if response == "No":
             return False
-        if response=="Ok":
+        elif response == "Ok":
             return True
         else:
             return False
     else:
-        CTkMessagebox(title=title, message=message, icon=icon, sound=True)
+        def callback():
+            CTkMessagebox(title=title, message=message, icon=icon, sound=True)
+        app.after(0, callback)
 
 def launch_boiii_func(path):
     procname = "boiii.exe"
@@ -363,6 +364,9 @@ def get_item_name(id):
     except:
         return False
 
+def show_noti(widget ,message, event=None, noti_dur=3.0):
+    CTkToolTip(widget, message=message, is_noti=True, noti_event=event, noti_dur=noti_dur)
+
 # End helper functions
 class UpdateWindow(ctk.CTkToplevel):
     def __init__(self, master, update_url):
@@ -438,11 +442,20 @@ class UpdateWindow(ctk.CTkToplevel):
                 with zipfile.ZipFile(zip_path, "r") as zip_ref:
                     zip_ref.extractall(update_dir)
                 self.label_download.configure(text="Update Downloaded successfully!")
-                if not show_message("Success!", "Update Downloaded successfully!\nPress ok to install it", icon="info", exit_on_close=True):
-                    return
-                script_path = create_update_script(current_exe, new_exe, update_dir, program_name)
-                subprocess.run(('cmd', '/C', 'start', '', fr'{script_path}'))
-                sys.exit(0)
+                def update_msg():
+                    msg = CTkMessagebox(title="Success!", message="Update Downloaded successfully!\nPress ok to install it", icon="info", option_1="No", option_2="Ok", sound=True)
+                    response = msg.get()
+                    if response == "No":
+                        self.destroy()
+                        return
+                    elif response == "Ok":
+                        script_path = create_update_script(current_exe, new_exe, update_dir, program_name)
+                        subprocess.run(('cmd', '/C', 'start', '', fr'{script_path}'))
+                        sys.exit(0)
+                    else:
+                        return
+                self.after(0, update_msg)
+                return
             else:
                 if os.path.exists(zip_path):
                     os.remove(fr"{zip_path}")
@@ -488,6 +501,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.button_list = []
         self.button_view_list = []
         self.filter_type = True
+        self.clipboard_has_content = False
 
     def add_item(self, item, image=None, item_type="map", workshop_id=None, folder=None):
         label = ctk.CTkLabel(self, text=item, image=image, compound="left", padx=5, anchor="w")
@@ -503,6 +517,41 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.label_list.append(label)
         self.button_list.append(button)
         self.button_view_list.append(button_view)
+        label.bind("<Enter>", lambda event, label=label: self.on_label_hover(label, enter=True))
+        label.bind("<Leave>", lambda event, label=label: self.on_label_hover(label, enter=False))
+        label.bind("<Button-1>", lambda event, label=label: self.copy_to_clipboard(label, workshop_id, event))
+        label.bind("<Control-Button-1>", lambda event, label=label: self.copy_to_clipboard(label, workshop_id, event, append=True))
+        label.bind("<Button-2>", lambda event: self.open_folder_location(folder, event))
+        label.bind("<Button-3>", lambda event, label=label: self.copy_to_clipboard(label, folder, event))
+
+    def on_label_hover(self, label, enter):
+        if enter:
+            label.configure(fg_color="#272727")
+        else:
+            label.configure(fg_color="transparent")
+
+    def copy_to_clipboard(self, label, something, event=None, append=False):
+        try:
+            if append:
+                if self.clipboard_has_content:
+                    label.clipboard_append(f"\n{something}")
+                    show_noti(label, "Appended to clipboard", event, 1.0)
+                else:
+                    label.clipboard_clear()
+                    label.clipboard_append(something)
+                    self.clipboard_has_content = True
+                    show_noti(label, "Copied to clipboard", event, 1.0)
+            else:
+                label.clipboard_clear()
+                label.clipboard_append(something)
+                self.clipboard_has_content = True
+                show_noti(label, "Copied to clipboard", event, 1.0)
+        except:
+            pass
+
+    def open_folder_location(self,folder, event=None):
+        if os.path.exists(folder):
+            os.startfile(folder)
 
     def filter_items(self, event):
         filter_text = self.filter_entry.get().lower()
@@ -898,12 +947,20 @@ class SettingsTab(ctk.CTkFrame):
         if option == "Custom":
             try:
                 save_config("reset_on_fail", "10")
-                if show_message("config.ini" ,"change reset_on_fail value to whatever you want", exit_on_close=True):
-                    os.system(f"notepad {os.path.join(cwd(), 'config.ini')}")
+                def callback():
+                    msg = CTkMessagebox(title="config.ini", message="change reset_on_fail value to whatever you want", icon="info", option_1="No", option_2="Ok", sound=True)
+                    response = msg.get()
+                    if response == "No":
+                        return
+                    elif response == "Ok":
+                        os.system(f"notepad {os.path.join(cwd(), 'config.ini')}")
+                    else:
+                        return
+                self.after(0, callback)
             except:
                 show_message("Couldn't open config.ini" ,"you can do so by yourself and change reset_on_fail value to whatever you want")
         else:
-            pass
+            return
     def theme_options_func(self, option: str):
         if option == "Default":
             self.boiiiwd_custom_theme(disable_only=True)
@@ -1341,7 +1398,7 @@ class BOIIIWD(ctk.CTk):
             pass
 
         if not check_steamcmd():
-            self.show_warning_message()
+            self.show_steam_warning_message()
 
     def do_popup(self, event, frame):
         try: frame.tk_popup(event.x_root, event.y_root)
@@ -1608,15 +1665,16 @@ class BOIIIWD(ctk.CTk):
             save_config("DestinationFolder" ,self.edit_destination_folder.get())
             save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
 
-    def show_warning_message(self):
-        msg = CTkMessagebox(title="Warning", message="steamcmd.exe was not found in the specified directory.\nPress Download to get it or Press Cancel and select it from there!.",
-                            icon="warning", option_1="Cancel", option_2="Download", sound=True)
-
-        response = msg.get()
-        if response == "Cancel":
-            return
-        elif response == "Download":
-            self.download_steamcmd()
+    def show_steam_warning_message(self):
+        def callback():
+            msg = CTkMessagebox(title="Warning", message="steamcmd.exe was not found in the specified directory.\nPress Download to get it or Press Cancel and select it from there!.",
+                                icon="warning", option_1="Cancel", option_2="Download", sound=True)
+            response = msg.get()
+            if response == "Cancel":
+                return
+            elif response == "Download":
+                self.download_steamcmd()
+        self.after(0, callback)
 
     def open_browser(self):
         link = "https://steamcommunity.com/app/311210/workshop/"
@@ -1642,11 +1700,17 @@ class BOIIIWD(ctk.CTk):
 
             if check_steamcmd():
                 os.remove(fr"{steamcmd_zip_path}")
-                if not show_message("Success", "SteamCMD has been downloaded ,Press ok to initialize it.", icon="info", exit_on_close=True):
-                    pass
-                else:
-                    initialize_steam_thread = threading.Thread(target=lambda: initialize_steam(self))
-                    initialize_steam_thread.start()
+                def inti_steam():
+                    msg = CTkMessagebox(title="Success", message="SteamCMD has been downloaded ,Press ok to initialize it.", icon="info", option_1="No", option_2="Ok", sound=True)
+                    response = msg.get()
+                    if response == "No":
+                        pass
+                    elif response == "Ok":
+                        initialize_steam_thread = threading.Thread(target=lambda: initialize_steam(self))
+                        initialize_steam_thread.start()
+                    else:
+                        pass
+                self.after(0, inti_steam)
             else:
                 show_message("Error", "Failed to find steamcmd.exe after extraction.\nMake you sure to select the correct SteamCMD path (by default current BOIIIWD path)", icon="cancel")
                 os.remove(fr"{steamcmd_zip_path}")
@@ -1978,6 +2042,29 @@ class BOIIIWD(ctk.CTk):
 
         return process.returncode
 
+    def show_init_message(self):
+        def callback():
+            msg = CTkMessagebox(title="Warning", message="SteamCMD is not initialized, Press OK to do so!\nProgram may go unresponsive until SteamCMD is finished downloading.", icon="info", option_1="No", option_2="Ok", sound=True)
+            response = msg.get()
+            if response == "No":
+                return
+            elif response == "Ok":
+                initialize_steam_thread = threading.Thread(target=lambda: initialize_steam(self))
+                initialize_steam_thread.start()
+            else:
+                return
+        self.after(0, callback)
+
+    def show_complete_message(self, message):
+        def callback():
+            msg = CTkMessagebox(title="Downloads Complete", message=message, icon="info", option_1="Launch", option_2="Ok", sound=True)
+            response = msg.get()
+            if response=="Launch":
+                launch_boiii_func(self.edit_destination_folder.get().strip())
+            if response=="Ok":
+                return
+        self.after(0, callback)
+
     def download_map(self):
         self.is_downloading = False
         self.fail_threshold = 0
@@ -2002,18 +2089,13 @@ class BOIIIWD(ctk.CTk):
             save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
 
             if not check_steamcmd():
-                self.show_warning_message()
+                self.show_steam_warning_message()
                 return
 
             steamcmd_path = get_steamcmd_path()
 
             if not is_steamcmd_initialized():
-                if not show_message("Warning", "SteamCMD is not initialized, Press OK to do so!\nProgram may go unresponsive until SteamCMD is finished downloading.",
-                            icon="warning" ,exit_on_close=True):
-                    pass
-                else:
-                    initialize_steam_thread = threading.Thread(target=lambda: initialize_steam(self))
-                    initialize_steam_thread.start()
+                self.show_init_message()
                 return
 
             text = self.queuetextarea.get("1.0", "end")
@@ -2289,12 +2371,7 @@ class BOIIIWD(ctk.CTk):
 
                         if index == len(items) - 1:
                             self.after(1, self.status_text.configure(text=f"Status: Done! => Please press stop only if you see no popup window (rare bug)"))
-                            msg = CTkMessagebox(title="Downloads Complete", message=f"All files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)", icon="info", option_1="Launch", option_2="Ok", sound=True)
-                            response = msg.get()
-                            if response=="Launch":
-                                launch_boiii_func(self.edit_destination_folder.get().strip())
-                            if response=="Ok":
-                                pass
+                            self.show_complete_message(message=f"All files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)")
 
                 self.button_download.configure(state="disabled")
                 self.button_stop.configure(state="normal")
@@ -2327,18 +2404,13 @@ class BOIIIWD(ctk.CTk):
             save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
 
             if not check_steamcmd():
-                self.show_warning_message()
+                self.show_steam_warning_message()
                 return
 
             steamcmd_path = get_steamcmd_path()
 
             if not is_steamcmd_initialized():
-                if not show_message("Warning", "SteamCMD is not initialized, Press OK to do so!\nProgram may go unresponsive until SteamCMD is finished downloading.",
-                            icon="warning" ,exit_on_close=True):
-                    pass
-                else:
-                    initialize_steam_thread = threading.Thread(target=lambda: initialize_steam(self))
-                    initialize_steam_thread.start()
+                self.show_init_message()
                 return
 
             workshop_id = self.edit_workshop_id.get().strip()
@@ -2536,13 +2608,7 @@ class BOIIIWD(ctk.CTk):
                         remove_tree(map_folder)
                         remove_tree(download_folder)
 
-                    msg = CTkMessagebox(title="Download Complete", message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)", icon="info", option_1="Launch", option_2="Ok", sound=True)
-                    response = msg.get()
-                    if response=="Launch":
-                        launch_boiii_func(self.edit_destination_folder.get().strip())
-                    if response=="Ok":
-                        pass
-
+                    self.show_complete_message(message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)")
                     self.button_download.configure(state="normal")
                     self.button_stop.configure(state="disabled")
 
