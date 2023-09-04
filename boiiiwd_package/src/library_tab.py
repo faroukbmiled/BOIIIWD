@@ -252,79 +252,81 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
     def toplevel_info_window(self, map_name, map_mod_type, map_size, image, image_size,
                              date_created ,date_updated, stars_image, stars_image_size, ratings_text, url):
-        try:
-            top = ctk.CTkToplevel(self)
-            if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
-                top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
-            top.title("Map/Mod Information")
-            top.attributes('-topmost', 'true')
+        def main_thread():
+            try:
+                top = ctk.CTkToplevel(self)
+                if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
+                    top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
+                top.title("Map/Mod Information")
+                top.attributes('-topmost', 'true')
 
-            def close_window():
-                top.destroy()
+                def close_window():
+                    top.destroy()
 
-            def view_map_mod():
-                webbrowser.open(url)
+                def view_map_mod():
+                    webbrowser.open(url)
 
-            # frames
-            stars_frame = ctk.CTkFrame(top)
-            stars_frame.grid(row=0, column=0, columnspan=2, padx=20, pady=(20, 0), sticky="nsew")
-            stars_frame.columnconfigure(0, weight=0)
-            stars_frame.rowconfigure(0, weight=1)
+                # frames
+                stars_frame = ctk.CTkFrame(top)
+                stars_frame.grid(row=0, column=0, columnspan=2, padx=20, pady=(20, 0), sticky="nsew")
+                stars_frame.columnconfigure(0, weight=0)
+                stars_frame.rowconfigure(0, weight=1)
 
-            image_frame = ctk.CTkFrame(top)
-            image_frame.grid(row=1, column=0, columnspan=2, padx=20, pady=0, sticky="nsew")
+                image_frame = ctk.CTkFrame(top)
+                image_frame.grid(row=1, column=0, columnspan=2, padx=20, pady=0, sticky="nsew")
 
-            info_frame = ctk.CTkFrame(top)
-            info_frame.grid(row=2, column=0, columnspan=2, padx=20, pady=20, sticky="nsew")
+                info_frame = ctk.CTkFrame(top)
+                info_frame.grid(row=2, column=0, columnspan=2, padx=20, pady=20, sticky="nsew")
 
-            buttons_frame = ctk.CTkFrame(top)
-            buttons_frame.grid(row=3, column=0, columnspan=2, padx=20, pady=(0, 20), sticky="nsew")
+                buttons_frame = ctk.CTkFrame(top)
+                buttons_frame.grid(row=3, column=0, columnspan=2, padx=20, pady=(0, 20), sticky="nsew")
 
-            # fillers
-            name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}")
-            name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                # fillers
+                name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}")
+                name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-            type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}")
-            type_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}")
+                type_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-            size_label = ctk.CTkLabel(info_frame, text=f"Size (Workshop): {map_size}")
-            size_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                size_label = ctk.CTkLabel(info_frame, text=f"Size (Workshop): {map_size}")
+                size_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-            date_created_label = ctk.CTkLabel(info_frame, text=f"Posted: {date_created}")
-            date_created_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                date_created_label = ctk.CTkLabel(info_frame, text=f"Posted: {date_created}")
+                date_created_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-            date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
-            date_updated_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
+                date_updated_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-            stars_image_label = ctk.CTkLabel(stars_frame)
-            stars_width, stars_height = stars_image_size
-            stars_image_widget = ctk.CTkImage(stars_image, size=(int(stars_width), int(stars_height)))
-            stars_image_label.configure(image=stars_image_widget, text="")
-            stars_image_label.pack(side="left", padx=(10, 20), pady=(10, 10))
+                stars_image_label = ctk.CTkLabel(stars_frame)
+                stars_width, stars_height = stars_image_size
+                stars_image_widget = ctk.CTkImage(stars_image, size=(int(stars_width), int(stars_height)))
+                stars_image_label.configure(image=stars_image_widget, text="")
+                stars_image_label.pack(side="left", padx=(10, 20), pady=(10, 10))
 
-            ratings = ctk.CTkLabel(stars_frame)
-            ratings.configure(text=ratings_text)
-            ratings.pack(side="right", padx=(10, 20), pady=(10, 10))
+                ratings = ctk.CTkLabel(stars_frame)
+                ratings.configure(text=ratings_text)
+                ratings.pack(side="right", padx=(10, 20), pady=(10, 10))
 
-            image_label = ctk.CTkLabel(image_frame)
-            width, height = image_size
-            image_widget = ctk.CTkImage(image, size=(int(width), int(height)))
-            image_label.configure(image=image_widget, text="")
-            image_label.pack(expand=True, fill="both", padx=(10, 20), pady=(10, 10))
+                image_label = ctk.CTkLabel(image_frame)
+                width, height = image_size
+                image_widget = ctk.CTkImage(image, size=(int(width), int(height)))
+                image_label.configure(image=image_widget, text="")
+                image_label.pack(expand=True, fill="both", padx=(10, 20), pady=(10, 10))
 
-            # Buttons
-            close_button = ctk.CTkButton(buttons_frame, text="View", command=view_map_mod)
-            close_button.pack(side="left", padx=(10, 20), pady=(10, 10))
+                # Buttons
+                close_button = ctk.CTkButton(buttons_frame, text="View", command=view_map_mod)
+                close_button.pack(side="left", padx=(10, 20), pady=(10, 10))
 
-            view_button = ctk.CTkButton(buttons_frame, text="Close", command=close_window)
-            view_button.pack(side="right", padx=(10, 20), pady=(10, 10))
+                view_button = ctk.CTkButton(buttons_frame, text="Close", command=close_window)
+                view_button.pack(side="right", padx=(10, 20), pady=(10, 10))
 
-            top.grid_rowconfigure(0, weight=0)
-            top.grid_rowconfigure(1, weight=0)
-            top.grid_rowconfigure(2, weight=1)
-            top.grid_columnconfigure(0, weight=1)
-            top.grid_columnconfigure(1, weight=1)
+                top.grid_rowconfigure(0, weight=0)
+                top.grid_rowconfigure(1, weight=0)
+                top.grid_rowconfigure(2, weight=1)
+                top.grid_columnconfigure(0, weight=1)
+                top.grid_columnconfigure(1, weight=1)
 
-        finally:
-            for button_view in self.button_view_list:
-                button_view.configure(state="normal")
+            finally:
+                for button_view in self.button_view_list:
+                    button_view.configure(state="normal")
+        self.after(0, main_thread)
