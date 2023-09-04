@@ -70,9 +70,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
         except:
             pass
 
-    def open_folder_location(self,folder, event=None):
+    def open_folder_location(self, folder, event=None):
         if os.path.exists(folder):
             os.startfile(folder)
+            show_noti(self, "Opening folder", event, 1.0)
 
     def filter_items(self, event):
         filter_text = self.filter_entry.get().lower()

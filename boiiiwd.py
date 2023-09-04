@@ -549,9 +549,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
         except:
             pass
 
-    def open_folder_location(self,folder, event=None):
+    def open_folder_location(self, folder, event=None):
         if os.path.exists(folder):
             os.startfile(folder)
+            show_noti(self, "Opening folder", event, 1.0)
 
     def filter_items(self, event):
         filter_text = self.filter_entry.get().lower()
@@ -1218,7 +1219,7 @@ class BOIIIWD(ctk.CTk):
         self.queuetextarea = ctk.CTkTextbox(master=self.qeueuframe, font=("", 15))
         self.queuetextarea.grid(row=1, column=0, columnspan=4, padx=(20, 20), pady=(0, 20), sticky="nwse")
 
-        self.status_text = ctk.CTkLabel(self.qeueuframe, text="Status: Not Downloading")
+        self.status_text = ctk.CTkLabel(self.qeueuframe, text="Status: Standby!")
         self.status_text.grid(row=3, column=0, padx=(20, 20), pady=(0, 20), sticky="ws")
 
         self.skip_boutton = ctk.CTkButton(master=self.qeueuframe, text="Skip", command=self.skip_current_queue_item, width=10, height=10, fg_color="#585858")
@@ -1246,14 +1247,14 @@ class BOIIIWD(ctk.CTk):
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
         self.txt_label = ctk.CTkLabel(self.sidebar_frame, text="- Sidebar -", font=(font, 17))
         self.txt_label.grid(row=1, column=0, padx=20, pady=(20, 10))
-        self.sidebar_main = ctk.CTkButton(self.sidebar_frame)
-        self.sidebar_main.grid(row=2, column=0, padx=20, pady=10)
-        self.sidebar_queue = ctk.CTkButton(self.sidebar_frame)
-        self.sidebar_queue.grid(row=3, column=0, padx=20, pady=10)
-        self.sidebar_library = ctk.CTkButton(self.sidebar_frame)
-        self.sidebar_library.grid(row=4, column=0, padx=20, pady=10, sticky="n")
-        self.sidebar_settings = ctk.CTkButton(self.sidebar_frame)
-        self.sidebar_settings.grid(row=5, column=0, padx=20, pady=10, sticky="n")
+        self.sidebar_main = ctk.CTkButton(self.sidebar_frame, height=28)
+        self.sidebar_main.grid(row=2, column=0, padx=10, pady=(20, 6))
+        self.sidebar_queue = ctk.CTkButton(self.sidebar_frame, height=28)
+        self.sidebar_queue.grid(row=3, column=0, padx=10, pady=6)
+        self.sidebar_library = ctk.CTkButton(self.sidebar_frame, height=28)
+        self.sidebar_library.grid(row=4, column=0, padx=10, pady=6, sticky="n")
+        self.sidebar_settings = ctk.CTkButton(self.sidebar_frame, height=28)
+        self.sidebar_settings.grid(row=5, column=0, padx=10, pady=6, sticky="n")
 
         # create optionsframe
         self.optionsframe = ctk.CTkFrame(self)
@@ -1276,12 +1277,10 @@ class BOIIIWD(ctk.CTk):
         # self.spacer = ctk.CTkLabel(master=self.slider_progressbar_frame, text="")
         # self.spacer.grid(row=0, column=0, columnspan=1)
 
-        self.label_speed = ctk.CTkLabel(master=self.slider_progressbar_frame, text="Network Speed: 0 KB/s")
+        self.label_speed = ctk.CTkLabel(master=self.slider_progressbar_frame, text="Awaiting Download!")
         self.label_speed.grid(row=1, column=0, padx=20, pady=(0, 10), sticky="w")
-
-        self.elapsed_time = ctk.CTkLabel(master=self.slider_progressbar_frame, text="")
-        self.elapsed_time.grid(row=1, column=1, padx=20, pady=(0, 10), sticky="nsew", columnspan=1)
-
+        self.elapsed_time = ctk.CTkLabel(master=self.slider_progressbar_frame, text="", anchor="center")
+        self.elapsed_time.grid(row=1, column=1, padx=20, pady=(0, 10), sticky="nsew")  # Use "nsew" to center label
         self.label_file_size = ctk.CTkLabel(master=self.slider_progressbar_frame, text="File size: 0KB")
         self.label_file_size.grid(row=1, column=2, padx=(0, 20), pady=(0, 10), sticky="e")
 
@@ -1915,7 +1914,7 @@ class BOIIIWD(ctk.CTk):
     def skip_current_queue_item(self):
         if self.button_download._state == "normal":
             self.skip_boutton.grid_remove()
-            self.after(1, self.status_text.configure(text=f"Status: Not Downloading"))
+            self.after(1, self.status_text.configure(text=f"Status: Standby!"))
             return
         self.settings_tab.stopped = True
         self.item_skipped = True
@@ -1958,7 +1957,7 @@ class BOIIIWD(ctk.CTk):
                 self.settings_tab.stopped = True
                 self.queue_stop_button = True
                 show_message("Error", f"Couldn't remove {map_folder}, please do so manually\n{e}", icon="cancel")
-                self.stop_download
+                self.stop_download()
                 return
 
         if self.settings_tab.continuous:
@@ -2074,6 +2073,7 @@ class BOIIIWD(ctk.CTk):
         self.is_downloading = False
         self.fail_threshold = 0
         if not self.is_pressed:
+            self.after(1, self.label_speed.configure(text=f"Loading..."))
             self.is_pressed = True
             self.library_tab.load_items(self.edit_destination_folder.get())
             if self.queue_enabled:
@@ -2112,19 +2112,19 @@ class BOIIIWD(ctk.CTk):
 
             if not items:
                 show_message("Warning", "Please enter valid Workshop IDs/Links.", icon="warning")
-                self.stop_download
+                self.stop_download()
                 return
 
             destination_folder = self.edit_destination_folder.get().strip()
 
             if not destination_folder or not os.path.exists(destination_folder):
                 show_message("Error", "Please select a valid destination folder => in the main tab!.")
-                self.stop_download
+                self.stop_download()
                 return
 
             if not steamcmd_path or not os.path.exists(steamcmd_path):
                 show_message("Error", "Please enter a valid SteamCMD path => in the main tab!.")
-                self.stop_download
+                self.stop_download()
                 return
 
             self.total_queue_size = 0
@@ -2139,15 +2139,15 @@ class BOIIIWD(ctk.CTk):
                             workshop_id = extract_workshop_id(workshop_id).strip()
                         else:
                             show_message("Warning", "Please enter valid Workshop IDs/Links.", icon="warning")
-                            self.stop_download
+                            self.stop_download()
                             return
                     except:
                         show_message("Warning", "Please enter valid Workshop IDs/Links.", icon="warning")
-                        self.stop_download
+                        self.stop_download()
                         return
                 if not valid_id(workshop_id):
                     show_message("Warning", "Please enter valid Workshop IDs/Links.", icon="warning")
-                    self.stop_download
+                    self.stop_download()
                     return
 
                 ws_file_size = get_workshop_file_size(workshop_id)
@@ -2156,7 +2156,7 @@ class BOIIIWD(ctk.CTk):
 
                 if file_size is None:
                     show_message("Error", "Failed to retrieve file size.", icon="cancel")
-                    self.stop_download
+                    self.stop_download()
                     return
 
                 if any(workshop_id in item for item in self.library_tab.added_items):
@@ -2170,7 +2170,7 @@ class BOIIIWD(ctk.CTk):
                             items.remove(item)
                     show_message("Heads up!, map/s skipped => skip is on in settings", f"These item IDs may already be installed and are skipped:\n{item_ids}", icon="info")
                     if not any(isinstance(item, int) for item in items):
-                        self.stop_download
+                        self.stop_download()
                         return
                 else:
                     show_message("Heads up! map/s not skipped => skip is off in settings", f"These item IDs may already be installed:\n{item_ids}", icon="info")
@@ -2182,7 +2182,7 @@ class BOIIIWD(ctk.CTk):
                 current_number = index + 1
                 total_items = len(items)
                 if self.queue_stop_button:
-                    self.stop_download
+                    self.stop_download()
                     break
                 item.strip()
                 self.settings_tab.stopped = False
@@ -2193,11 +2193,11 @@ class BOIIIWD(ctk.CTk):
                             workshop_id = extract_workshop_id(workshop_id).strip()
                         else:
                             show_message("Warning", "Please enter valid Workshop IDs/Links.", icon="warning")
-                            self.stop_download
+                            self.stop_download()
                             return
                     except:
                         show_message("Warning", "Please enter valid Workshop IDs/Links.", icon="warning")
-                        self.stop_download
+                        self.stop_download()
                         return
                 ws_file_size = get_workshop_file_size(workshop_id)
                 file_size = ws_file_size
@@ -2341,7 +2341,6 @@ class BOIIIWD(ctk.CTk):
                     update_ui_thread.start()
                     update_ui_thread.join()
 
-                    self.label_speed.configure(text="Network Speed: 0 KB/s")
                     self.progress_text.configure(text="0%")
                     self.progress_bar.set(0.0)
 
@@ -2350,6 +2349,7 @@ class BOIIIWD(ctk.CTk):
                     json_file_path = os.path.join(map_folder, "workshop.json")
 
                     if os.path.exists(json_file_path):
+                        self.label_speed.configure(text="Installing...")
                         mod_type = extract_json_data(json_file_path, "Type")
                         folder_name = extract_json_data(json_file_path, "FolderName")
 
@@ -2377,6 +2377,12 @@ class BOIIIWD(ctk.CTk):
                         if index == len(items) - 1:
                             self.after(1, self.status_text.configure(text=f"Status: Done! => Please press stop only if you see no popup window (rare bug)"))
                             self.show_complete_message(message=f"All files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)")
+                            self.label_speed.configure(text="Awaiting Download!")
+                    elif os.path.exists(json_file_path) and not self.settings_tab.stopped:
+                        show_message("Error", "Failed to find workshop.json, please try again.", icon="cancel")
+                        if index == len(items) - 1:
+                            self.stop_download()
+                        return
 
                 self.button_download.configure(state="disabled")
                 self.button_stop.configure(state="normal")
@@ -2392,14 +2398,13 @@ class BOIIIWD(ctk.CTk):
                     self.skip_boutton.grid_remove()
                     self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
                     self.settings_tab.stopped = True
-                    self.stop_download
+                    self.stop_download()
                     return
         finally:
             self.settings_tab.steam_fail_counter = 0
             self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
-            self.stop_download
+            self.stop_download()
             self.is_pressed = False
-
 
     def download_thread(self):
         try:
@@ -2424,12 +2429,12 @@ class BOIIIWD(ctk.CTk):
 
             if not destination_folder or not os.path.exists(destination_folder):
                 show_message("Error", "Please select a valid destination folder.")
-                self.stop_download
+                self.stop_download()
                 return
 
             if not steamcmd_path or not os.path.exists(steamcmd_path):
                 show_message("Error", "Please enter a valid SteamCMD path.")
-                self.stop_download
+                self.stop_download()
                 return
 
             if not workshop_id.isdigit():
@@ -2438,11 +2443,11 @@ class BOIIIWD(ctk.CTk):
                         workshop_id = extract_workshop_id(workshop_id).strip()
                     else:
                         show_message("Warning", "Please enter a valid Workshop ID/Link.", icon="warning")
-                        self.stop_download
+                        self.stop_download()
                         return
                 except:
                     show_message("Warning", "Please enter a valid Workshop ID/Link.", icon="warning")
-                    self.stop_download
+                    self.stop_download()
                     return
 
             ws_file_size = get_workshop_file_size(workshop_id)
@@ -2450,18 +2455,18 @@ class BOIIIWD(ctk.CTk):
 
             if not valid_id(workshop_id):
                 show_message("Warning", "Please enter a valid Workshop ID/Link.", icon="warning")
-                self.stop_download
+                self.stop_download()
                 return
 
             if file_size is None:
                 show_message("Error", "Failed to retrieve file size.", icon="cancel")
-                self.stop_download
+                self.stop_download()
                 return
 
             if any(workshop_id in item for item in self.library_tab.added_items):
                 if self.settings_tab.skip_already_installed:
                     show_message("Heads up!, map skipped => Skip is on in settings", f"This item may already be installed, Stopping: {workshop_id}", icon="info")
-                    self.stop_download
+                    self.stop_download()
                     return
                 show_message("Heads up! map not skipped => Skip is off in settings", f"This item may already be installed: {workshop_id}", icon="info")
 
@@ -2578,8 +2583,6 @@ class BOIIIWD(ctk.CTk):
                 update_ui_thread.join()
 
                 self.settings_tab.stopped = True
-
-                self.label_speed.configure(text="Network Speed: 0 KB/s")
                 self.progress_text.configure(text="0%")
                 self.progress_bar.set(0.0)
 
@@ -2588,6 +2591,7 @@ class BOIIIWD(ctk.CTk):
                 json_file_path = os.path.join(map_folder, "workshop.json")
 
                 if os.path.exists(json_file_path):
+                    self.label_speed.configure(text="Installing...")
                     mod_type = extract_json_data(json_file_path, "Type")
                     folder_name = extract_json_data(json_file_path, "FolderName")
 
@@ -2599,7 +2603,7 @@ class BOIIIWD(ctk.CTk):
                         folder_name_path = os.path.join(usermaps_folder, folder_name, "zone")
                     else:
                         show_message("Error", "Invalid workshop type in workshop.json, are you sure this is a map or a mod?.", icon="cancel")
-                        self.stop_download
+                        self.stop_download()
                         return
 
                     os.makedirs(folder_name_path, exist_ok=True)
@@ -2616,16 +2620,21 @@ class BOIIIWD(ctk.CTk):
                     self.show_complete_message(message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)")
                     self.button_download.configure(state="normal")
                     self.button_stop.configure(state="disabled")
+                elif os.path.exists(json_file_path) and not self.settings_tab.stopped:
+                    show_message("Error", "Failed to find workshop.json, please try again.", icon="cancel")
+                    self.stop_download()
+                    return
 
             update_wait_thread = threading.Thread(target=wait_for_threads)
             update_wait_thread.start()
-
             self.button_download.configure(state="disabled")
             self.button_stop.configure(state="normal")
+            steamcmd_thread.join()
+            update_wait_thread.join()
 
         finally:
             self.settings_tab.steam_fail_counter = 0
-            self.stop_download
+            self.stop_download()
             self.is_pressed = False
 
     def copy_with_progress(self, src, dst):
@@ -2668,11 +2677,11 @@ class BOIIIWD(ctk.CTk):
 
         self.button_download.configure(state="normal")
         self.button_stop.configure(state="disabled")
-        self.label_speed.configure(text="Network Speed: 0 KB/s")
         self.progress_text.configure(text="0%")
         self.elapsed_time.configure(text=f"")
         self.progress_bar.set(0.0)
-        self.after(50, self.status_text.configure(text=f"Status: Not Downloading"))
+        self.after(50, self.status_text.configure(text=f"Status: Standby!"))
+        self.after(1, self.label_speed.configure(text=f"Awaiting Download!"))
         self.skip_boutton.grid_remove()
 
 if __name__ == "__main__":
