@@ -20,13 +20,13 @@
 - If the exe is getting flagged as a virus by your ac it is obviously a false positive, if you still do not trust it you can [compile/freeze](#freezing) it yourself ([VirusTotal Scan](https://www.virustotal.com/gui/file/5ca1367a82893a1f412b59a52431e9ac4219a67a50c294ee86a7d41473826b14/detection))
 
 ## Usage (script):
-- ```pip install -r requirements.txt```
+- ```pip install -r requirements.txt``` -> use my modified [CTkToolTip](./CTkToolTip) for [v0.2.8](https://github.com/faroukbmiled/BOIIIWD/releases) and up
 - ```python boiiiwd.py```
 - Slap in your workshop item link for example: "https://steamcommunity.com/sharedfiles/filedetails/?id=3011930738" or just the id 3011930738)
 
 <a name="freezing"></a>
 ## Freezing into an exe (pyinstaller):
-- ```pip install -r requirements.txt```
+- ```pip install -r requirements.txt``` -> use my modified [CTkToolTip](./CTkToolTip) for [v0.2.8](https://github.com/faroukbmiled/BOIIIWD/releases) and up
 - ```pip install pyinstaller```
 - ```pyinstaller --noconfirm --onefile --windowed --icon "ryuk.ico" --name "BOIIIWD" --ascii  "boiiiwd.py" --add-data "resources;resources" --add-data "c:\<python_path>\lib\site-packages\customtkinter;customtkinter\" --add-data "c:\<python_path>\lib\site-packages\CTkMessagebox;CTkMessagebox\" --add-data "c:\<python_path>\lib\site-packages\CTkToolTip;CTkToolTip\"```
 
