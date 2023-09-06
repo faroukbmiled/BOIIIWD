@@ -3,6 +3,7 @@ from tkinter import Menu, END, Event
 from bs4 import BeautifulSoup
 import customtkinter as ctk
 from CTkToolTip import *
+from pathlib import Path
 from PIL import Image
 import configparser
 import webbrowser
@@ -21,7 +22,7 @@ import io
 import os
 import re
 
-VERSION = "v0.2.8"
+VERSION = "v0.2.9"
 GITHUB_REPO = "faroukbmiled/BOIIIWD"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 UPDATER_FOLDER = "update"
@@ -178,7 +179,8 @@ def initialize_steam(master):
         show_message("Error!", "An error occurred please check your paths and try again.", icon="cancel")
     master.attributes('-alpha', 1.0)
 
-def valid_id(workshop_id):
+
+def valid_id(workshop_id, yo=None):
     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
     response = requests.get(url)
     response.raise_for_status()
@@ -222,9 +224,9 @@ def get_steamcmd_path():
     return config.get("Settings", "SteamCMDPath", fallback=cwd())
 
 def extract_json_data(json_path, key):
-    with open(json_path, "r") as json_file:
+    with open(json_path, 'r') as json_file:
         data = json.load(json_file)
-    return data[key]
+        return data.get(key, '')
 
 def convert_bytes_to_readable(size_in_bytes, no_symb=None):
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
@@ -258,13 +260,13 @@ def get_workshop_file_size(workshop_id, raw=None):
     except:
         return None
 
-def show_message(title, message, icon="warning", exit_on_close=False, option_1="No", option_2="Ok"):
-    if exit_on_close:
+def show_message(title, message, icon="warning", _return=False, option_1="No", option_2="Ok"):
+    if _return:
         msg = CTkMessagebox(title=title, message=message, icon=icon, option_1=option_1, option_2=option_2, sound=True)
         response = msg.get()
-        if response == "No":
+        if response == option_1:
             return False
-        elif response == "Ok":
+        elif response == option_2:
             return True
         else:
             return False
@@ -568,40 +570,34 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 button.grid_remove()
 
     def load_items(self, boiiiFolder):
-        # if you add this under init the whole app shrinks for some reason
-        global boiiiFolderGlobal
-        boiiiFolderGlobal = boiiiFolder
-        maps_folder = os.path.join(boiiiFolder, "mods")
-        mods_folder = os.path.join(boiiiFolder, "usermaps")
+        maps_folder = Path(boiiiFolder) / "mods"
+        mods_folder = Path(boiiiFolder) / "usermaps"
+        mod_img = os.path.join(RESOURCES_DIR, "mod_image.png")
+        map_img = os.path.join(RESOURCES_DIR, "map_image.png")
 
         folders_to_process = [mods_folder, maps_folder]
 
         for folder_path in folders_to_process:
-            for root, _, _ in os.walk(folder_path):
-                zone_path = os.path.join(root, "zone")
-                if os.path.exists(zone_path):
-                    json_path = os.path.join(zone_path, "workshop.json")
-                    if os.path.exists(json_path):
-                        name = extract_json_data(json_path, "Title").replace(">", "").replace("^", "")
-                        name = name[:45] + "..." if len(name) > 45 else name
-                        item_type = extract_json_data(json_path, "Type")
-                        workshop_id = extract_json_data(json_path, "PublisherID")
-                        folder_name = extract_json_data(json_path, "FolderName")
-                        size = convert_bytes_to_readable(get_folder_size(root))
-                        text_to_add = f"{name} | Type: {item_type.capitalize()}"
-                        mode_type = "ZM" if item_type == "map" and folder_name.startswith("zm") else "MP" if folder_name.startswith("mp") and item_type == "map" else None
-                        if mode_type:
-                            text_to_add += f" | Mode: {mode_type}"
-                        text_to_add += f" | ID: {workshop_id} | Size: {size}"
-                        if text_to_add not in self.added_items:
-                            self.added_items.add(text_to_add)
+            for zone_path in folder_path.glob("**/zone"):
+                json_path = zone_path / "workshop.json"
+                if json_path.exists():
+                    name = extract_json_data(json_path, "Title").replace(">", "").replace("^", "")
+                    name = name[:45] + "..." if len(name) > 45 else name
+                    item_type = extract_json_data(json_path, "Type")
+                    workshop_id = extract_json_data(json_path, "PublisherID")
+                    folder_name = extract_json_data(json_path, "FolderName")
+                    size = convert_bytes_to_readable(get_folder_size(zone_path.parent))
+                    text_to_add = f"{name} | Type: {item_type.capitalize()}"
+                    mode_type = "ZM" if item_type == "map" and folder_name.startswith("zm") else "MP" if folder_name.startswith("mp") and item_type == "map" else None
+                    if mode_type:
+                        text_to_add += f" | Mode: {mode_type}"
+                    text_to_add += f" | ID: {workshop_id} | Size: {size}"
+                    if text_to_add not in self.added_items:
+                        self.added_items.add(text_to_add)
+                        image_path = mod_img if item_type == "mod" else map_img
 
-                            if item_type == "mod":
-                                image_path = os.path.join(RESOURCES_DIR, "mod_image.png")
-                            else:
-                                image_path = os.path.join(RESOURCES_DIR, "map_image.png")
+                        self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), item_type=item_type, workshop_id=workshop_id, folder=zone_path.parent)
 
-                            self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), item_type=item_type, workshop_id=workshop_id, folder=root)
         if not self.added_items:
             self.show_no_items_message()
         else:
@@ -632,7 +628,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.button_list.clear()
         self.button_view_list.clear()
         self.added_items.clear()
-        self.load_items(boiiiFolderGlobal)
+        self.load_items(app.edit_destination_folder.get().strip())
 
     def view_item(self, workshop_id):
         url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
@@ -987,7 +983,17 @@ class SettingsTab(ctk.CTkFrame):
             self.boiiiwd_custom_theme()
             save_config("theme", "boiiiwd_theme.json")
         if not option == "Custom":
-            show_message("Restart to take effect!", f"{option} theme has been set ,please restart to take effect", icon="info")
+            if show_message("Restart to take effect!", f"{option} theme has been set ,please restart to take effect", icon="info", _return=True, option_1="Ok", option_2="Restart"):
+                try:
+                    p = psutil.Process(os.getpid())
+                    for handler in p.open_files() + p.connections():
+                        os.close(handler.fd)
+                except Exception:
+                    pass
+                python = sys.executable
+                os.execl(python, python, *sys.argv)
+            else:
+                pass
 
     def enable_save_button(self, *args):
         try:
