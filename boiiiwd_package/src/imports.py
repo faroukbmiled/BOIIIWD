@@ -3,6 +3,7 @@ from tkinter import Menu, END, Event
 from bs4 import BeautifulSoup
 import customtkinter as ctk
 from CTkToolTip import *
+from pathlib import Path
 from PIL import Image
 import configparser
 import webbrowser
@@ -21,7 +22,7 @@ import io
 import os
 import re
 
-VERSION = "v0.2.8"
+VERSION = "v0.2.9"
 GITHUB_REPO = "faroukbmiled/BOIIIWD"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 UPDATER_FOLDER = "update"

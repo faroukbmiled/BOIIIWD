@@ -155,9 +155,9 @@ def get_steamcmd_path():
     return config.get("Settings", "SteamCMDPath", fallback=cwd())
 
 def extract_json_data(json_path, key):
-    with open(json_path, "r") as json_file:
+    with open(json_path, 'r') as json_file:
         data = json.load(json_file)
-    return data[key]
+        return data.get(key, '')
 
 def convert_bytes_to_readable(size_in_bytes, no_symb=None):
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
@@ -191,13 +191,13 @@ def get_workshop_file_size(workshop_id, raw=None):
     except:
         return None
 
-def show_message(title, message, icon="warning", exit_on_close=False, option_1="No", option_2="Ok"):
-    if exit_on_close:
+def show_message(title, message, icon="warning", _return=False, option_1="No", option_2="Ok"):
+    if _return:
         msg = CTkMessagebox(title=title, message=message, icon=icon, option_1=option_1, option_2=option_2, sound=True)
         response = msg.get()
-        if response == "No":
+        if response == option_1:
             return False
-        elif response == "Ok":
+        elif response == option_2:
             return True
         else:
             return False

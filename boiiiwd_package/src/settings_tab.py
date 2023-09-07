@@ -218,7 +218,17 @@ class SettingsTab(ctk.CTkFrame):
             self.boiiiwd_custom_theme()
             save_config("theme", "boiiiwd_theme.json")
         if not option == "Custom":
-            show_message("Restart to take effect!", f"{option} theme has been set ,please restart to take effect", icon="info")
+            if show_message("Restart to take effect!", f"{option} theme has been set ,please restart to take effect", icon="info", _return=True, option_1="Ok", option_2="Restart"):
+                try:
+                    p = psutil.Process(os.getpid())
+                    for handler in p.open_files() + p.connections():
+                        os.close(handler.fd)
+                except Exception:
+                    pass
+                python = sys.executable
+                os.execl(python, python, *sys.argv)
+            else:
+                pass
 
     def enable_save_button(self, *args):
         try:

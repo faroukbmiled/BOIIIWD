@@ -89,40 +89,34 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 button.grid_remove()
 
     def load_items(self, boiiiFolder):
-        # if you add this under init the whole app shrinks for some reason
-        global boiiiFolderGlobal
-        boiiiFolderGlobal = boiiiFolder
-        maps_folder = os.path.join(boiiiFolder, "mods")
-        mods_folder = os.path.join(boiiiFolder, "usermaps")
+        maps_folder = Path(boiiiFolder) / "mods"
+        mods_folder = Path(boiiiFolder) / "usermaps"
+        mod_img = os.path.join(RESOURCES_DIR, "mod_image.png")
+        map_img = os.path.join(RESOURCES_DIR, "map_image.png")
 
         folders_to_process = [mods_folder, maps_folder]
 
         for folder_path in folders_to_process:
-            for root, _, _ in os.walk(folder_path):
-                zone_path = os.path.join(root, "zone")
-                if os.path.exists(zone_path):
-                    json_path = os.path.join(zone_path, "workshop.json")
-                    if os.path.exists(json_path):
-                        name = extract_json_data(json_path, "Title").replace(">", "").replace("^", "")
-                        name = name[:45] + "..." if len(name) > 45 else name
-                        item_type = extract_json_data(json_path, "Type")
-                        workshop_id = extract_json_data(json_path, "PublisherID")
-                        folder_name = extract_json_data(json_path, "FolderName")
-                        size = convert_bytes_to_readable(get_folder_size(root))
-                        text_to_add = f"{name} | Type: {item_type.capitalize()}"
-                        mode_type = "ZM" if item_type == "map" and folder_name.startswith("zm") else "MP" if folder_name.startswith("mp") and item_type == "map" else None
-                        if mode_type:
-                            text_to_add += f" | Mode: {mode_type}"
-                        text_to_add += f" | ID: {workshop_id} | Size: {size}"
-                        if text_to_add not in self.added_items:
-                            self.added_items.add(text_to_add)
+            for zone_path in folder_path.glob("**/zone"):
+                json_path = zone_path / "workshop.json"
+                if json_path.exists():
+                    name = extract_json_data(json_path, "Title").replace(">", "").replace("^", "")
+                    name = name[:45] + "..." if len(name) > 45 else name
+                    item_type = extract_json_data(json_path, "Type")
+                    workshop_id = extract_json_data(json_path, "PublisherID")
+                    folder_name = extract_json_data(json_path, "FolderName")
+                    size = convert_bytes_to_readable(get_folder_size(zone_path.parent))
+                    text_to_add = f"{name} | Type: {item_type.capitalize()}"
+                    mode_type = "ZM" if item_type == "map" and folder_name.startswith("zm") else "MP" if folder_name.startswith("mp") and item_type == "map" else None
+                    if mode_type:
+                        text_to_add += f" | Mode: {mode_type}"
+                    text_to_add += f" | ID: {workshop_id} | Size: {size}"
+                    if text_to_add not in self.added_items:
+                        self.added_items.add(text_to_add)
+                        image_path = mod_img if item_type == "mod" else map_img
 
-                            if item_type == "mod":
-                                image_path = os.path.join(RESOURCES_DIR, "mod_image.png")
-                            else:
-                                image_path = os.path.join(RESOURCES_DIR, "map_image.png")
+                        self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), item_type=item_type, workshop_id=workshop_id, folder=zone_path.parent)
 
-                            self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), item_type=item_type, workshop_id=workshop_id, folder=root)
         if not self.added_items:
             self.show_no_items_message()
         else:
@@ -153,7 +147,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.button_list.clear()
         self.button_view_list.clear()
         self.added_items.clear()
-        self.load_items(boiiiFolderGlobal)
+        from src.main import master_win
+        self.load_items(master_win.edit_destination_folder.get().strip())
 
     def view_item(self, workshop_id):
         url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
@@ -239,7 +234,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 image = Image.open(io.BytesIO(image_response.content))
                 image_size = image.size
 
-                self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created ,
+                self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created,
                                         date_updated, stars_image, stars_image_size, ratings_text, url)
 
             except requests.exceptions.RequestException as e:

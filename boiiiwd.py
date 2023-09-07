@@ -180,7 +180,7 @@ def initialize_steam(master):
     master.attributes('-alpha', 1.0)
 
 
-def valid_id(workshop_id, yo=None):
+def valid_id(workshop_id):
     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
     response = requests.get(url)
     response.raise_for_status()
