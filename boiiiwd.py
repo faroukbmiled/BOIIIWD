@@ -28,6 +28,7 @@ LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/do
 UPDATER_FOLDER = "update"
 CONFIG_FILE_PATH = "config.ini"
 RESOURCES_DIR = os.path.join(os.path.dirname(__file__), 'resources')
+LIBRARY_FILE = "boiiiwd_library.json"
 
 # Start Helper Functions
 def cwd():
@@ -41,7 +42,7 @@ def check_config(name, fallback=None):
     config.read(CONFIG_FILE_PATH)
     if fallback:
         return config.get("Settings", name, fallback=fallback)
-    return config.get("Settings", name, fallback="on")
+    return config.get("Settings", name, fallback="")
 
 def save_config(name, value):
     config = configparser.ConfigParser()
@@ -509,7 +510,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         label = ctk.CTkLabel(self, text=item, image=image, compound="left", padx=5, anchor="w")
         button = ctk.CTkButton(self, text="Remove", width=60, height=24, fg_color="#3d3f42")
         button_view = ctk.CTkButton(self, text="Details", width=55, height=24, fg_color="#3d3f42")
-        button.configure(command=lambda: self.remove_item(item, folder))
+        button.configure(command=lambda: self.remove_item(item, folder, workshop_id))
         button_view.configure(command=lambda: self.show_map_info(workshop_id))
         button_view_tooltip = CTkToolTip(button_view, message="Opens up a window that shows basic details")
         button_tooltip = CTkToolTip(button, message="Removes the map/mod from your game")
@@ -556,6 +557,72 @@ class LibraryTab(ctk.CTkScrollableFrame):
             os.startfile(folder)
             show_noti(self, "Opening folder", event, 1.0)
 
+    def item_exists_in_file(self, items_file, workshop_id):
+        if not os.path.exists(items_file):
+            return False
+
+        with open(items_file, "r") as f:
+            items_data = json.load(f)
+            for item_info in items_data:
+                if item_info["id"] == workshop_id:
+                    return True
+        return False
+
+    def remove_item_by_id(self, items_file, item_id):
+
+        items_file_ = os.path.join(cwd(), items_file)
+
+        if not os.path.exists(items_file_):
+            return
+
+        with open(items_file_, "r") as f:
+            items_data = json.load(f)
+
+        updated_items_data = [item for item in items_data if item.get("id") != item_id]
+
+        if len(updated_items_data) < len(items_data):
+            with open(items_file_, "w") as f:
+                json.dump(updated_items_data, f, indent=4)
+
+    def get_item_by_id(self, items_file, item_id, return_option="all"):
+        items_file_ = os.path.join(cwd(), items_file)
+
+        if not os.path.exists(items_file_):
+            return None
+
+        with open(items_file_, "r") as f:
+            items_data = json.load(f)
+
+        for item in items_data:
+            if item.get("id") == item_id:
+                if return_option == "all":
+                    return item
+                elif return_option == return_option:
+                    return item.get(return_option)
+        return None
+
+    def get_item_index_by_id(self, items_data, item_id):
+        for index, item in enumerate(items_data):
+            if item.get("id") == item_id:
+                return index
+        return None
+
+    def update_or_add_item_by_id(self, items_file, item_info):
+        if not os.path.exists(items_file):
+            with open(items_file, "w") as f:
+                json.dump([item_info], f, indent=4)
+        else:
+            with open(items_file, "r+") as f:
+                items_data = json.load(f)
+                item_id = item_info.get("id")
+                existing_item_index = self.get_item_index_by_id(items_data, item_id)
+                if existing_item_index is not None:
+                    items_data[existing_item_index] = item_info
+                else:
+                    items_data.append(item_info)
+                f.seek(0)
+                json.dump(items_data, f, indent=4)
+
     def filter_items(self, event):
         filter_text = self.filter_entry.get().lower()
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
@@ -569,7 +636,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 button_view_list.grid_remove()
                 button.grid_remove()
 
-    def load_items(self, boiiiFolder):
+    def load_items(self, boiiiFolder, up_json=False):
         maps_folder = Path(boiiiFolder) / "mods"
         mods_folder = Path(boiiiFolder) / "usermaps"
         mod_img = os.path.join(RESOURCES_DIR, "mod_image.png")
@@ -592,18 +659,43 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     if mode_type:
                         text_to_add += f" | Mode: {mode_type}"
                     text_to_add += f" | ID: {workshop_id} | Size: {size}"
+                    date_added = datetime.datetime.now().strftime("%d %b, %Y @ %I:%M%p")
+                    items_file = os.path.join(cwd(), LIBRARY_FILE)
                     if text_to_add not in self.added_items:
                         self.added_items.add(text_to_add)
                         image_path = mod_img if item_type == "mod" else map_img
-
                         self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), item_type=item_type, workshop_id=workshop_id, folder=zone_path.parent)
+
+                        if not self.item_exists_in_file(items_file, workshop_id):
+                            item_info = {
+                                "id": workshop_id,
+                                "text": text_to_add,
+                                "date": date_added
+                            }
+
+                            if not os.path.exists(items_file):
+                                with open(items_file, "w") as f:
+                                    json.dump([item_info], f, indent=4)
+                            else:
+                                with open(items_file, "r+") as f:
+                                    items_data = json.load(f)
+                                    items_data.append(item_info)
+                                    f.seek(0)
+                                    json.dump(items_data, f, indent=4)
+                    if up_json:
+                        item_info = {
+                            "id": workshop_id,
+                            "text": text_to_add,
+                            "date": date_added
+                        }
+                        self.update_or_add_item_by_id(items_file, item_info)
 
         if not self.added_items:
             self.show_no_items_message()
         else:
             self.hide_no_items_message()
 
-    def remove_item(self, item, folder):
+    def remove_item(self, item, folder, id):
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
             if item == label.cget("text"):
                 try:
@@ -618,6 +710,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 self.button_list.remove(button)
                 self.added_items.remove(label.cget("text"))
                 self.button_view_list.remove(button_view_list)
+                self.remove_item_by_id(LIBRARY_FILE, id)
 
     def refresh_items(self):
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
@@ -715,7 +808,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 image_size = image.size
 
                 self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created,
-                                        date_updated, stars_image, stars_image_size, ratings_text, url)
+                                        date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id)
 
             except requests.exceptions.RequestException as e:
                 show_message("Error", f"Failed to fetch map information.\nError: {e}", icon="cancel")
@@ -727,7 +820,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         info_thread.start()
 
     def toplevel_info_window(self, map_name, map_mod_type, map_size, image, image_size,
-                             date_created ,date_updated, stars_image, stars_image_size, ratings_text, url):
+                             date_created ,date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id):
         def main_thread():
             try:
                 top = ctk.CTkToplevel(self)
@@ -772,6 +865,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
                 date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
                 date_updated_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+
+                date_updated_label = ctk.CTkLabel(info_frame, text=f"Downloaded at: {self.get_item_by_id(LIBRARY_FILE, workshop_id, 'date')}")
+                date_updated_label.grid(row=5, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
                 stars_image_label = ctk.CTkLabel(stars_frame)
                 stars_width, stars_height = stars_image_size
@@ -912,26 +1008,30 @@ class SettingsTab(ctk.CTkFrame):
         self.reset_steamcmd.grid(row=3, column=1, padx=20, pady=(20, 0), sticky="n")
         self.reset_steamcmd_tooltip = CTkToolTip(self.reset_steamcmd, message="This will remove steamapps folder + all the maps that are potentioaly corrupted or not so use at ur own risk (could fix some issues as well)")
 
+        self.steam_to_boiii = ctk.CTkButton(right_frame, text="Steam to Boiii", command=self.from_steam_to_boiii_toplevel)
+        self.steam_to_boiii.grid(row=5, column=1, padx=20, pady=(20, 0), sticky="n")
+        self.steam_to_boiii_tooltip = CTkToolTip(self.steam_to_boiii, message="Moves/copies maps and mods from steam to boiii (opens up a window)")
+
         # appearance
         self.appearance_mode_label = ctk.CTkLabel(right_frame, text="Appearance Mode:", anchor="n")
-        self.appearance_mode_label.grid(row=4, column=1, padx=20, pady=(20, 0))
+        self.appearance_mode_label.grid(row=6, column=1, padx=20, pady=(20, 0))
         self.appearance_mode_optionemenu = ctk.CTkOptionMenu(right_frame, values=["Light", "Dark", "System"],
                                                                        command=master.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=5, column=1, padx=20, pady=(0, 0))
+        self.appearance_mode_optionemenu.grid(row=7, column=1, padx=20, pady=(0, 0))
         self.scaling_label = ctk.CTkLabel(right_frame, text="UI Scaling:", anchor="n")
-        self.scaling_label.grid(row=6, column=1, padx=20, pady=(10, 0))
+        self.scaling_label.grid(row=8, column=1, padx=20, pady=(10, 0))
         self.scaling_optionemenu = ctk.CTkOptionMenu(right_frame, values=["80%", "90%", "100%", "110%", "120%"],
                                                                command=master.change_scaling_event)
-        self.scaling_optionemenu.grid(row=7, column=1, padx=20, pady=(0, 0))
+        self.scaling_optionemenu.grid(row=9, column=1, padx=20, pady=(0, 0))
 
         # self.custom_theme = ctk.CTkButton(right_frame, text="Custom theme", command=self.boiiiwd_custom_theme)
         # self.custom_theme.grid(row=8, column=1, padx=20, pady=(20, 0), sticky="n")
 
         self.theme_options_label = ctk.CTkLabel(right_frame, text="Themes:", anchor="n")
-        self.theme_options_label.grid(row=8, column=1, padx=20, pady=(10, 0))
+        self.theme_options_label.grid(row=10, column=1, padx=20, pady=(10, 0))
         self.theme_options = ctk.CTkOptionMenu(right_frame, values=["Default", "Blue", "Grey", "Obsidian", "Ghost","NeonBanana", "Custom"],
                                                                command=self.theme_options_func)
-        self.theme_options.grid(row=9, column=1, padx=20, pady=(0, 0))
+        self.theme_options.grid(row=11, column=1, padx=20, pady=(0, 0))
         self.theme_options.set(value=self.load_settings("theme", "Default"))
 
         # Save button
@@ -1182,6 +1282,189 @@ class SettingsTab(ctk.CTkFrame):
 
     def settings_reset_steamcmd(self):
         reset_steamcmd()
+
+    def from_steam_to_boiii_toplevel(self):
+        def main_thread():
+            try:
+                top = ctk.CTkToplevel(self)
+                if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
+                    top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
+                top.title("Steam to boiii -> Workshop items")
+                top.attributes('-topmost', 'true')
+                top.resizable(False, False)
+                # Create input boxes
+                center_frame = ctk.CTkFrame(top)
+                center_frame.grid(row=0, column=0, padx=20, pady=20)
+
+                # Create input boxes
+                steam_folder_label = ctk.CTkLabel(center_frame, text="Steam Folder:")
+                steam_folder_label.grid(row=0, column=0, padx=(20, 20), pady=(10, 0), sticky='w')
+                steam_folder_entry = ctk.CTkEntry(center_frame, width=225)
+                steam_folder_entry.grid(row=1, column=0, columnspan=2, padx=(0, 20), pady=(10, 10), sticky='nes')
+                button_steam_browse = ctk.CTkButton(center_frame, text="Select", width=10)
+                button_steam_browse.grid(row=1, column=2, padx=(0, 20), pady=(10, 10), sticky="wnes")
+
+                boiii_folder_label = ctk.CTkLabel(center_frame, text="BOIII Folder:")
+                boiii_folder_label.grid(row=2, column=0, padx=(20, 20), pady=(10, 0), sticky='w')
+                boiii_folder_entry = ctk.CTkEntry(center_frame, width=225)
+                boiii_folder_entry.grid(row=3, column=0, columnspan=2, padx=(0, 20), pady=(10, 10), sticky='nes')
+                button_BOIII_browse = ctk.CTkButton(center_frame, text="Select", width=10)
+                button_BOIII_browse.grid(row=3, column=2, padx=(0, 20), pady=(10, 10), sticky="wnes")
+
+                # Create option to choose between cut or copy
+                operation_label = ctk.CTkLabel(center_frame, text="Choose operation:")
+                operation_label.grid(row=4, column=0, padx=(20, 20), pady=(10, 10), sticky='wnes')
+                copy_var = ctk.BooleanVar()
+                cut_var = ctk.BooleanVar()
+                copy_check = ctk.CTkCheckBox(center_frame, text="Copy", variable=copy_var)
+                cut_check = ctk.CTkCheckBox(center_frame, text="Cut", variable=cut_var)
+                copy_check.grid(row=4, column=1, padx=(0, 10), pady=(10, 10), sticky='wnes')
+                cut_check.grid(row=4, column=2, padx=(0, 10), pady=(10, 10), sticky='nes')
+
+                # Create progress bar
+                progress_bar = ctk.CTkProgressBar(center_frame, mode="determinate", height=20, corner_radius=7)
+                progress_bar.grid(row=5, column=0, columnspan=3, padx=(20, 20), pady=(10, 10), sticky='wnes')
+                progress_text = ctk.CTkLabel(progress_bar, text="0%", font=("Helvetica", 12), fg_color="transparent", text_color="white", height=0, width=0, corner_radius=0)
+                progress_text.place(relx=0.5, rely=0.5, anchor="center")
+
+                copy_button = ctk.CTkButton(center_frame, text="Start (Copy)")
+                copy_button.grid(row=6, column=0, columnspan=3,padx=(20, 20), pady=(10, 10), sticky='wnes')
+
+                # funcs
+                # had to use this shit again cuz of threading issues with widgets
+                def copy_with_progress(src, dst):
+                    try:
+                        total_files = sum([len(files) for root, dirs, files in os.walk(src)])
+                        progress = 0
+
+                        def copy_progress(src, dst):
+                            nonlocal progress
+                            shutil.copy2(src, dst)
+                            progress += 1
+                            top.after(0, progress_text.configure(text=f"Copying files: {progress}/{total_files}"))
+                            value = (progress / total_files) * 100
+                            valuep = value / 100
+                            progress_bar.set(valuep)
+
+                        try:
+                            shutil.copytree(src, dst, dirs_exist_ok=True, copy_function=copy_progress)
+                        except Exception as E:
+                            show_message("Error", f"Error copying files: {E}", icon="cancel")
+                    finally:
+                        top.after(0, progress_text.configure(text="0%"))
+                        top.after(0, progress_bar.set(0.0))
+
+                def check_status(var, op_var):
+                    if var.get():
+                        op_var.set(False)
+                    if cut_var.get():
+                        copy_button.configure(text=f"Start (Cut)")
+                    if copy_var.get():
+                        copy_button.configure(text=f"Start (Copy)")
+
+                def open_BOIII_browser():
+                    selected_folder = ctk.filedialog.askdirectory(title="Select BOIII Folder")
+                    if selected_folder:
+                        boiii_folder_entry.delete(0, "end")
+                        boiii_folder_entry.insert(0, selected_folder)
+
+                def open_steam_browser():
+                    selected_folder = ctk.filedialog.askdirectory(title="Select Steam Folder (ex: C:\Program Files (x86)\Steam)")
+                    if selected_folder:
+                        steam_folder_entry.delete(0, "end")
+                        steam_folder_entry.insert(0, selected_folder)
+                        save_config("steam_folder" ,steam_folder_entry.get())
+
+                def start_copy_operation():
+                    def start_thread():
+                        try:
+                            copy_button.configure(state="disabled")
+                            steam_folder = steam_folder_entry.get()
+                            ws_folder = os.path.join(steam_folder, "steamapps/workshop/content/311210")
+                            boiii_folder = boiii_folder_entry.get()
+
+                            if not os.path.exists(steam_folder) and not os.path.exists(ws_folder):
+                                show_message("Not found", "Either you have no items downloaded from Steam or wrong path, please recheck path (ex: C:\Program Files (x86)\Steam)")
+                                return
+
+                            if not os.path.exists(boiii_folder):
+                                show_message("Not found", "BOIII folder not found, please recheck path")
+                                return
+
+                            top.after(0, progress_text.configure(text="Loading..."))
+
+                            map_folder = os.path.join(ws_folder)
+
+                            subfolders = [f for f in os.listdir(map_folder) if os.path.isdir(os.path.join(map_folder, f))]
+                            total_folders = len(subfolders)
+
+                            if not subfolders:
+                                show_message("No items found", f"No items found in \n{map_folder}")
+                                return
+
+                            for i, workshop_id in enumerate(subfolders, start=1):
+                                json_file_path = os.path.join(map_folder, workshop_id, "workshop.json")
+                                copy_button.configure(text=f"Working on -> {i}/{total_folders}")
+
+                                if os.path.exists(json_file_path):
+                                    mod_type = extract_json_data(json_file_path, "Type")
+                                    folder_name = extract_json_data(json_file_path, "FolderName")
+
+                                    if mod_type == "mod":
+                                        mods_folder = os.path.join(boiii_folder, "mods")
+                                        folder_name_path = os.path.join(mods_folder, folder_name, "zone")
+                                    elif mod_type == "map":
+                                        usermaps_folder = os.path.join(boiii_folder, "usermaps")
+                                        folder_name_path = os.path.join(usermaps_folder, folder_name, "zone")
+                                    else:
+                                        show_message("Error", "Invalid workshop type in workshop.json, are you sure this is a map or a mod?.", icon="cancel")
+                                        continue
+
+                                    os.makedirs(folder_name_path, exist_ok=True)
+
+                                    try:
+                                        copy_with_progress(os.path.join(map_folder, workshop_id), folder_name_path)
+                                    except Exception as E:
+                                        show_message("Error", f"Error copying files: {E}", icon="cancel")
+                                        continue
+
+                                    if cut_var.get():
+                                        remove_tree(os.path.join(map_folder, workshop_id))
+
+                            if subfolders:
+                                app.show_complete_message(message=f"All items were moved\nYou can run the game now!\nPS: You have to restart the game\n(pressing launch will launch/restarts)")
+
+                        finally:
+                            if cut_var.get():
+                                copy_button.configure(text=f"Start (Cut)")
+                            if copy_var.get():
+                                copy_button.configure(text=f"Start (Copy)")
+                            copy_button.configure(state="normal")
+                            top.after(0, progress_bar.set(0))
+                            top.after(0, progress_text.configure(text="0%"))
+
+                    # prevents app hanging
+                    threading.Thread(target=start_thread).start()
+
+                # config
+                progress_color = get_button_state_colors(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")), "progress_bar_fill_color")
+                progress_bar.configure(progress_color=progress_color)
+                steam_folder_entry.insert(1, check_config("steam_folder", ""))
+                boiii_folder_entry.insert(1, app.edit_destination_folder.get())
+                button_BOIII_browse.configure(command=open_BOIII_browser)
+                button_steam_browse.configure(command=open_steam_browser)
+                copy_button.configure(command=start_copy_operation)
+                cut_check.configure(command = lambda: check_status(cut_var, copy_var))
+                copy_check.configure(command = lambda: check_status(copy_var, cut_var))
+                app.create_context_menu(steam_folder_entry)
+                app.create_context_menu(boiii_folder_entry)
+                copy_var.set(True)
+                progress_bar.set(0)
+
+            finally:
+                pass
+
+        app.after(0, main_thread)
 
 class BOIIIWD(ctk.CTk):
     def __init__(self):
@@ -2380,6 +2663,8 @@ class BOIIIWD(ctk.CTk):
                             remove_tree(map_folder)
                             remove_tree(download_folder)
 
+                        self.library_tab.load_items(self.edit_destination_folder.get(), True)
+
                         if index == len(items) - 1:
                             self.after(1, self.status_text.configure(text=f"Status: Done! => Please press stop only if you see no popup window (rare bug)"))
                             self.show_complete_message(message=f"All files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)")
@@ -2623,6 +2908,7 @@ class BOIIIWD(ctk.CTk):
                         remove_tree(map_folder)
                         remove_tree(download_folder)
 
+                    self.library_tab.load_items(self.edit_destination_folder.get(), True)
                     self.show_complete_message(message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)")
                     self.button_download.configure(state="normal")
                     self.button_stop.configure(state="disabled")
