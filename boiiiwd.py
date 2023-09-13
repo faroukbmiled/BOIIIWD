@@ -506,10 +506,11 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.filter_type = True
         self.clipboard_has_content = False
 
-    def add_item(self, item, image=None, item_type="map", workshop_id=None, folder=None):
+    def add_item(self, item, image=None, workshop_id=None, folder=None):
         label = ctk.CTkLabel(self, text=item, image=image, compound="left", padx=5, anchor="w")
         button = ctk.CTkButton(self, text="Remove", width=60, height=24, fg_color="#3d3f42")
         button_view = ctk.CTkButton(self, text="Details", width=55, height=24, fg_color="#3d3f42")
+        button_update = ctk.CTkButton(self, text="Update", width=55, height=24, fg_color="#3d3f42")
         button.configure(command=lambda: self.remove_item(item, folder, workshop_id))
         button_view.configure(command=lambda: self.show_map_info(workshop_id))
         button_view_tooltip = CTkToolTip(button_view, message="Opens up a window that shows basic details")
@@ -664,7 +665,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     if text_to_add not in self.added_items:
                         self.added_items.add(text_to_add)
                         image_path = mod_img if item_type == "mod" else map_img
-                        self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), item_type=item_type, workshop_id=workshop_id, folder=zone_path.parent)
+                        self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), workshop_id=workshop_id, folder=zone_path.parent)
 
                         if not self.item_exists_in_file(items_file, workshop_id):
                             item_info = {
@@ -828,12 +829,46 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
                 top.title("Map/Mod Information")
                 top.attributes('-topmost', 'true')
+                current_year = datetime.datetime.now().year
+                down_date = self.get_item_by_id(LIBRARY_FILE, workshop_id, 'date')
 
                 def close_window():
                     top.destroy()
 
                 def view_map_mod():
                     webbrowser.open(url)
+
+                def check_for_updates():
+                    date_format_with_year = "%d %b, %Y @ %I:%M%p"
+                    date_format_with_added_year = "%d %b @ %I:%M%p, %Y"
+                    try:
+                        try:
+                            download_datetime = datetime.datetime.strptime(down_date, date_format_with_year)
+                        except ValueError:
+                            download_datetime = datetime.datetime.strptime(down_date + f", {current_year}", date_format_with_added_year)
+
+                        try:
+                            upload_datetime = datetime.datetime.strptime(date_updated, date_format_with_year)
+                        except ValueError:
+                            upload_datetime = datetime.datetime.strptime(date_updated + f", {current_year}", date_format_with_added_year)
+
+                        if upload_datetime >= download_datetime:
+                            if show_message("There is an update.", "Press update to redownload!", icon="info", _return=True, option_1="No", option_2="Download"):
+                                if app.is_downloading:
+                                    show_message("Error", "Please wait for the current download to finish or stop it then restart.", icon="cancel")
+                                    return
+                                app.edit_workshop_id.delete(0, "end")
+                                app.edit_workshop_id.insert(0, workshop_id)
+                                app.main_button_event()
+                                app.download_map(update=True)
+                                top.destroy()
+                                return
+
+                        elif upload_datetime < download_datetime:
+                            show_message("Up to date!", "No updates found!", icon="info")
+                    except:
+                        print(f"Error {date_updated}")
+                        show_message("Up to date!", "No updates found!", icon="info")
 
                 # frames
                 stars_frame = ctk.CTkFrame(top)
@@ -866,7 +901,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
                 date_updated_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-                date_updated_label = ctk.CTkLabel(info_frame, text=f"Downloaded at: {self.get_item_by_id(LIBRARY_FILE, workshop_id, 'date')}")
+                date_updated_label = ctk.CTkLabel(info_frame, text=f"Downloaded at: {down_date}")
                 date_updated_label.grid(row=5, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
                 stars_image_label = ctk.CTkLabel(stars_frame)
@@ -886,17 +921,28 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 image_label.pack(expand=True, fill="both", padx=(10, 20), pady=(10, 10))
 
                 # Buttons
-                close_button = ctk.CTkButton(buttons_frame, text="View", command=view_map_mod)
-                close_button.pack(side="left", padx=(10, 20), pady=(10, 10))
+                close_button = ctk.CTkButton(buttons_frame, text="View", command=view_map_mod, width=130)
+                close_button.grid(row=0, column=0, padx=(20, 20), pady=(10, 10), sticky="n")
 
-                view_button = ctk.CTkButton(buttons_frame, text="Close", command=close_window)
-                view_button.pack(side="right", padx=(10, 20), pady=(10, 10))
+                update_btn = ctk.CTkButton(buttons_frame, text="Update", command=check_for_updates, width=130)
+                update_btn.grid(row=0, column=1, padx=(10, 20), pady=(10, 10), sticky="n")
+                update_btn_tooltip = CTkToolTip(update_btn, message="Checks and installs updates of the current selected item (redownload!)", topmost=True)
+
+                view_button = ctk.CTkButton(buttons_frame, text="Close", command=close_window, width=130)
+                view_button.grid(row=0, column=2, padx=(10, 20), pady=(10, 10), sticky="n")
 
                 top.grid_rowconfigure(0, weight=0)
                 top.grid_rowconfigure(1, weight=0)
                 top.grid_rowconfigure(2, weight=1)
                 top.grid_columnconfigure(0, weight=1)
                 top.grid_columnconfigure(1, weight=1)
+
+                buttons_frame.grid_rowconfigure(0, weight=1)
+                buttons_frame.grid_rowconfigure(1, weight=1)
+                buttons_frame.grid_rowconfigure(2, weight=1)
+                buttons_frame.grid_columnconfigure(0, weight=1)
+                buttons_frame.grid_columnconfigure(1, weight=1)
+                buttons_frame.grid_columnconfigure(2, weight=1)
 
             finally:
                 for button_view in self.button_view_list:
@@ -1378,6 +1424,10 @@ class SettingsTab(ctk.CTkFrame):
                 def start_copy_operation():
                     def start_thread():
                         try:
+                            if not cut_var.get() and not copy_var.get():
+                                show_message("Choose operation!", "Please choose an operation, Copy or Cut files from steam!")
+                                return
+
                             copy_button.configure(state="disabled")
                             steam_folder = steam_folder_entry.get()
                             ws_folder = os.path.join(steam_folder, "steamapps/workshop/content/311210")
@@ -1461,8 +1511,8 @@ class SettingsTab(ctk.CTkFrame):
                 copy_var.set(True)
                 progress_bar.set(0)
 
-            finally:
-                pass
+            except Exception as e:
+                show_message("Error", f"{e}", icon="cancel")
 
         app.after(0, main_thread)
 
@@ -2358,7 +2408,7 @@ class BOIIIWD(ctk.CTk):
                 return
         self.after(0, callback)
 
-    def download_map(self):
+    def download_map(self, update=False):
         self.is_downloading = False
         self.fail_threshold = 0
         if not self.is_pressed:
@@ -2367,15 +2417,15 @@ class BOIIIWD(ctk.CTk):
             self.library_tab.load_items(self.edit_destination_folder.get())
             if self.queue_enabled:
                 self.item_skipped = False
-                start_down_thread = threading.Thread(target=self.queue_download_thread)
+                start_down_thread = threading.Thread(target=self.queue_download_thread, args=(update,))
                 start_down_thread.start()
             else:
-                start_down_thread = threading.Thread(target=self.download_thread)
+                start_down_thread = threading.Thread(target=self.download_thread, args=(update,))
                 start_down_thread.start()
         else:
             show_message("Warning", "Already pressed, Please wait.")
 
-    def queue_download_thread(self):
+    def queue_download_thread(self, update=None):
         self.stopped = False
         self.queue_stop_button = False
         try:
@@ -2451,18 +2501,19 @@ class BOIIIWD(ctk.CTk):
                 if any(workshop_id in item for item in self.library_tab.added_items):
                     self.already_installed.append(workshop_id)
 
-            if self.already_installed:
-                item_ids = ", ".join(self.already_installed)
-                if self.settings_tab.skip_already_installed:
-                    for item in self.already_installed:
-                        if item in items:
-                            items.remove(item)
-                    show_message("Heads up!, map/s skipped => skip is on in settings", f"These item IDs may already be installed and are skipped:\n{item_ids}", icon="info")
-                    if not any(isinstance(item, int) for item in items):
-                        self.stop_download()
-                        return
-                else:
-                    show_message("Heads up! map/s not skipped => skip is off in settings", f"These item IDs may already be installed:\n{item_ids}", icon="info")
+            if not update:
+                if self.already_installed:
+                    item_ids = ", ".join(self.already_installed)
+                    if self.settings_tab.skip_already_installed:
+                        for item in self.already_installed:
+                            if item in items:
+                                items.remove(item)
+                        show_message("Heads up!, map/s skipped => skip is on in settings", f"These item IDs may already be installed and are skipped:\n{item_ids}", icon="info")
+                        if not any(isinstance(item, int) for item in items):
+                            self.stop_download()
+                            return
+                    else:
+                        show_message("Heads up! map/s not skipped => skip is off in settings", f"These item IDs may already be installed:\n{item_ids}", icon="info")
 
             self.after(1, self.status_text.configure(text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)}"))
             start_time = time.time()
@@ -2697,7 +2748,7 @@ class BOIIIWD(ctk.CTk):
             self.stop_download()
             self.is_pressed = False
 
-    def download_thread(self):
+    def download_thread(self, update=None):
         try:
             self.settings_tab.stopped = False
 
@@ -2754,12 +2805,13 @@ class BOIIIWD(ctk.CTk):
                 self.stop_download()
                 return
 
-            if any(workshop_id in item for item in self.library_tab.added_items):
-                if self.settings_tab.skip_already_installed:
-                    show_message("Heads up!, map skipped => Skip is on in settings", f"This item may already be installed, Stopping: {workshop_id}", icon="info")
-                    self.stop_download()
-                    return
-                show_message("Heads up! map not skipped => Skip is off in settings", f"This item may already be installed: {workshop_id}", icon="info")
+            if not update:
+                if any(workshop_id in item for item in self.library_tab.added_items):
+                    if self.settings_tab.skip_already_installed:
+                        show_message("Heads up!, map skipped => Skip is on in settings", f"This item may already be installed, Stopping: {workshop_id}", icon="info")
+                        self.stop_download()
+                        return
+                    show_message("Heads up! map not skipped => Skip is off in settings", f"This item may already be installed: {workshop_id}", icon="info")
 
             self.after(1, lambda mid=workshop_id: self.label_file_size.configure(text=f"File size: {get_workshop_file_size(mid ,raw=True)}"))
             download_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "downloads", "311210", workshop_id)
