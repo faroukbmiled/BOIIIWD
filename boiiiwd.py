@@ -1,15 +1,16 @@
 from CTkMessagebox import CTkMessagebox
 from tkinter import Menu, END, Event
 from bs4 import BeautifulSoup
+from datetime import datetime
 import customtkinter as ctk
-from CTkToolTip import *
 from pathlib import Path
+from CTkToolTip import *
+from CTkListbox import *
 from PIL import Image
 import configparser
 import webbrowser
 import subprocess
 import threading
-import datetime
 import requests
 import zipfile
 import shutil
@@ -367,8 +368,30 @@ def get_item_name(id):
     except:
         return False
 
-def show_noti(widget ,message, event=None, noti_dur=3.0):
-    CTkToolTip(widget, message=message, is_noti=True, noti_event=event, noti_dur=noti_dur)
+def show_noti(widget ,message, event=None, noti_dur=3.0, topmost=False):
+    CTkToolTip(widget, message=message, is_noti=True, noti_event=event, noti_dur=noti_dur, topmost=topmost)
+
+def check_item_date(down_date, date_updated):
+    current_year = datetime.now().year
+    date_format_with_year = "%d %b, %Y @ %I:%M%p"
+    date_format_with_added_year = "%d %b @ %I:%M%p, %Y"
+    try:
+        try:
+            download_datetime = datetime.strptime(down_date, date_format_with_year)
+        except ValueError:
+            download_datetime = datetime.strptime(down_date + f", {current_year}", date_format_with_added_year)
+
+        try:
+            upload_datetime = datetime.strptime(date_updated, date_format_with_year)
+        except ValueError:
+            upload_datetime = datetime.strptime(date_updated + f", {current_year}", date_format_with_added_year)
+
+        if upload_datetime >= download_datetime:
+            return True
+        elif upload_datetime < download_datetime:
+            return False
+    except:
+        return False
 
 # End helper functions
 class UpdateWindow(ctk.CTkToplevel):
@@ -497,9 +520,15 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.filter_entry.bind("<KeyRelease>", self.filter_items)
         self.filter_entry.grid(row=0, column=0,  padx=(10, 20), pady=(10, 20), sticky="we")
         filter_refresh_button_image = os.path.join(RESOURCES_DIR, "Refresh_icon.svg.png")
+        update_button_image = os.path.join(RESOURCES_DIR, "update_icon.png")
         self.filter_refresh_button = ctk.CTkButton(self, image=ctk.CTkImage(Image.open(filter_refresh_button_image)), command=self.refresh_items, width=20, height=20,
                                                    fg_color="transparent", text="")
-        self.filter_refresh_button.grid(row=0, column=1, padx=(10, 20), pady=(10, 20), sticky="enw")
+        self.filter_refresh_button.grid(row=0, column=1, padx=(10, 0), pady=(10, 20), sticky="nw")
+        self.update_button = ctk.CTkButton(self, image=ctk.CTkImage(Image.open(update_button_image)), command=self.check_for_updates, width=65, height=20,
+                                           text="", fg_color="transparent")
+        self.update_button.grid(row=0, column=1, padx=(0, 20), pady=(10, 20), sticky="en")
+        self.update_tooltip = CTkToolTip(self.update_button, message="Check items for updates", topmost=True)
+        filter_tooltip = CTkToolTip(self.filter_refresh_button, message="Refresh library", topmost=True)
         self.label_list = []
         self.button_list = []
         self.button_view_list = []
@@ -510,7 +539,6 @@ class LibraryTab(ctk.CTkScrollableFrame):
         label = ctk.CTkLabel(self, text=item, image=image, compound="left", padx=5, anchor="w")
         button = ctk.CTkButton(self, text="Remove", width=60, height=24, fg_color="#3d3f42")
         button_view = ctk.CTkButton(self, text="Details", width=55, height=24, fg_color="#3d3f42")
-        button_update = ctk.CTkButton(self, text="Update", width=55, height=24, fg_color="#3d3f42")
         button.configure(command=lambda: self.remove_item(item, folder, workshop_id))
         button_view.configure(command=lambda: self.show_map_info(workshop_id))
         button_view_tooltip = CTkToolTip(button_view, message="Opens up a window that shows basic details")
@@ -660,7 +688,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     if mode_type:
                         text_to_add += f" | Mode: {mode_type}"
                     text_to_add += f" | ID: {workshop_id} | Size: {size}"
-                    date_added = datetime.datetime.now().strftime("%d %b, %Y @ %I:%M%p")
+                    date_added = datetime.now().strftime("%d %b, %Y @ %I:%M%p")
                     items_file = os.path.join(cwd(), LIBRARY_FILE)
                     if text_to_add not in self.added_items:
                         self.added_items.add(text_to_add)
@@ -829,7 +857,6 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
                 top.title("Map/Mod Information")
                 top.attributes('-topmost', 'true')
-                current_year = datetime.datetime.now().year
                 down_date = self.get_item_by_id(LIBRARY_FILE, workshop_id, 'date')
 
                 def close_window():
@@ -839,21 +866,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     webbrowser.open(url)
 
                 def check_for_updates():
-                    date_format_with_year = "%d %b, %Y @ %I:%M%p"
-                    date_format_with_added_year = "%d %b @ %I:%M%p, %Y"
                     try:
-                        try:
-                            download_datetime = datetime.datetime.strptime(down_date, date_format_with_year)
-                        except ValueError:
-                            download_datetime = datetime.datetime.strptime(down_date + f", {current_year}", date_format_with_added_year)
 
-                        try:
-                            upload_datetime = datetime.datetime.strptime(date_updated, date_format_with_year)
-                        except ValueError:
-                            upload_datetime = datetime.datetime.strptime(date_updated + f", {current_year}", date_format_with_added_year)
-
-                        if upload_datetime >= download_datetime:
-                            if show_message("There is an update.", "Press update to redownload!", icon="info", _return=True, option_1="No", option_2="Download"):
+                        if check_item_date(down_date, date_updated):
+                            if show_message("There is an update.", "Press download to redownload!", icon="info", _return=True, option_1="No", option_2="Download"):
                                 if app.is_downloading:
                                     show_message("Error", "Please wait for the current download to finish or stop it then restart.", icon="cancel")
                                     return
@@ -863,11 +879,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
                                 app.download_map(update=True)
                                 top.destroy()
                                 return
-
-                        elif upload_datetime < download_datetime:
+                        else:
                             show_message("Up to date!", "No updates found!", icon="info")
                     except:
-                        print(f"Error {date_updated}")
                         show_message("Up to date!", "No updates found!", icon="info")
 
                 # frames
@@ -948,6 +962,139 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 for button_view in self.button_view_list:
                     button_view.configure(state="normal")
         self.after(0, main_thread)
+
+    def check_for_updates(self):
+        self.after(1, self.update_button.configure(state="disabled"))
+        self.update_tooltip.configure(message='Still loading please wait...')
+        cevent = Event()
+        cevent.x_root = self.update_button.winfo_rootx()
+        cevent.y_root = self.update_button.winfo_rooty()
+        show_noti(self.update_button, "Please wait, window will popup shortly", event=cevent, noti_dur=3.0, topmost=True)
+        threading.Thread(target=self.update_items_window).start()
+
+    # yeah im lazy as shit this is what were working with for now
+    def update_items_window(self):
+        try:
+            top = ctk.CTkToplevel(master=None)
+            top.withdraw()
+            if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
+                top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
+            top.title("Item updater - List of items that need updating! - Click to select 1 or more")
+            top.geometry("600x400")
+            top.attributes('-topmost', 'true')
+            top.resizable(False, False)
+            to_update = set()
+            selected_id_list = []
+            cevent = Event()
+
+            listbox = CTkListbox(top, multiple_selection=True)
+            listbox.grid(row=0, column=0, sticky="nsew")
+
+            update_button = ctk.CTkButton(top, text="Update")
+            update_button.grid(row=1, column=0, pady=10)
+
+            def if_id_needs_update(item_id, item_date):
+                try:
+                    url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={item_id}"
+                    response = requests.get(url)
+                    response.raise_for_status()
+                    content = response.text
+                    soup = BeautifulSoup(content, "html.parser")
+                    details_stats_container = soup.find("div", class_="detailsStatsContainerRight")
+                    details_stat_elements = details_stats_container.find_all("div", class_="detailsStatRight")
+                    try:
+                        date_updated = details_stat_elements[2].text.strip()
+                    except:
+                        try:
+                            date_updated = details_stat_elements[1].text.strip()
+                        except:
+                            return False
+
+                    if check_item_date(item_date, date_updated):
+                        return True
+                    else:
+                        return False
+
+                except Exception as e:
+                    show_message("Error", f"Error occured\n{e}", icon="cancel")
+                    return
+
+            def add_checkbox_item(index, item_text):
+                listbox.insert(index, item_text)
+
+            def check_for_update():
+                with open(LIBRARY_FILE, 'r') as file:
+                    data = json.load(file)
+
+                for item in data:
+                    item_id = item["id"]
+                    item_date = item["date"]
+                    if if_id_needs_update(item_id, item_date):
+                        to_update.add(item["text"])
+
+            def load_items():
+                for index, item_text in enumerate(to_update):
+                    if index == len(to_update) - 1:
+                        add_checkbox_item("end", item_text)
+                        top.deiconify()
+                        return
+                    add_checkbox_item(index, item_text)
+
+
+            def update_list(selected_option):
+                selected_id_list.clear()
+
+                if selected_option:
+                    for option in selected_option:
+                        parts = option.split('ID: ')
+                        if len(parts) > 1:
+                            id_part = parts[1].split('|')[0].strip()
+                            selected_id_list.append(id_part)
+
+            def update_btn_fun():
+                if len(selected_id_list) == 1:
+                    if app.is_downloading:
+                        show_message("Error", "Please wait for the current download to finish or stop it then start.", icon="cancel")
+                        return
+                    app.edit_workshop_id.delete(0, "end")
+                    app.edit_workshop_id.insert(0, selected_id_list[0])
+                    app.main_button_event()
+                    app.download_map(update=True)
+                    top.destroy()
+                    return
+
+                elif len(selected_id_list) > 1:
+                    if app.is_downloading:
+                        show_message("Error", "Please wait for the current download to finish or stop it then start.", icon="cancel")
+                        return
+                    comma_separated_ids = ",".join(selected_id_list)
+                    app.queuetextarea.delete("1.0", "end")
+                    app.queuetextarea.insert("1.0", comma_separated_ids)
+                    app.queue_button_event()
+                    app.download_map(update=True)
+                    top.destroy()
+                    return
+
+                else:
+                    cevent.x_root = update_button.winfo_rootx()
+                    cevent.y_root = update_button.winfo_rooty()
+                    show_noti(update_button ,"Please select 1 or more items", event=cevent, noti_dur=0.8, topmost=True)
+
+            listbox.configure(command=update_list)
+            update_button.configure(command=update_btn_fun)
+
+            top.grid_rowconfigure(0, weight=1)
+            top.grid_columnconfigure(0, weight=1)
+
+            check_for_update()
+            load_items()
+
+        except Exception as e:
+            show_message("Error", f"{e}", icon="cancel")
+
+        finally:
+            self.update_tooltip.configure(message='Check items for updates')
+            self.after(1, self.update_button.configure(state="normal"))
 
 class SettingsTab(ctk.CTkFrame):
     def __init__(self, master=None):
@@ -1292,7 +1439,7 @@ class SettingsTab(ctk.CTkFrame):
     def boiiiwd_custom_theme(self, disable_only=None):
         file_to_rename = os.path.join(cwd(), "boiiiwd_theme.json")
         if os.path.exists(file_to_rename):
-            timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+            timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
             new_name = f"boiiiwd_theme_{timestamp}.json"
             os.rename(file_to_rename, os.path.join(cwd(), new_name))
 
@@ -2274,7 +2421,7 @@ class BOIIIWD(ctk.CTk):
     def run_steamcmd_command(self, command, map_folder, wsid, queue=None):
         steamcmd_path = get_steamcmd_path()
         stdout = os.path.join(steamcmd_path, "logs", "workshop_log.txt")
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
         try:
             with open(stdout, 'w') as file:

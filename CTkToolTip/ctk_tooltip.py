@@ -28,6 +28,7 @@ class CTkToolTip(Toplevel):
             border_color: str = None,
             alpha: float = 0.95,
             padding: tuple = (10, 2),
+            topmost: bool = False,
             is_noti: bool = False,
             noti_event: any = None,
             noti_dur: float = 3.0,
@@ -39,6 +40,9 @@ class CTkToolTip(Toplevel):
 
         if not is_noti:
             self.withdraw()
+
+        if topmost:
+            self.attributes('-topmost', 'true')
 
         # Disable ToolTip's title bar
         self.overrideredirect(True)
