@@ -639,20 +639,20 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 return index
         return None
 
-    def update_or_add_item_by_id(self, items_file, item_info):
+    def update_or_add_item_by_id(self, items_file, item_info, item_id):
         if not os.path.exists(items_file):
             with open(items_file, "w") as f:
                 json.dump([item_info], f, indent=4)
         else:
             with open(items_file, "r+") as f:
                 items_data = json.load(f)
-                item_id = item_info.get("id")
                 existing_item_index = self.get_item_index_by_id(items_data, item_id)
                 if existing_item_index is not None:
                     items_data[existing_item_index] = item_info
                 else:
                     items_data.append(item_info)
                 f.seek(0)
+                f.truncate()
                 json.dump(items_data, f, indent=4)
 
     def filter_items(self, event):
@@ -691,11 +691,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     if mode_type:
                         text_to_add += f" | Mode: {mode_type}"
                     text_to_add += f" | ID: {workshop_id} | Size: {size}"
-                    if up_json:
-                        date_added = datetime.now().strftime("%d %b, %Y @ %I:%M%p")
-                    else:
-                        folder_creation_timestamp = zone_path.stat().st_ctime
-                        date_added = datetime.fromtimestamp(folder_creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
+
+                    folder_creation_timestamp = zone_path.stat().st_ctime
+                    date_added = datetime.fromtimestamp(folder_creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
                     items_file = os.path.join(cwd(), LIBRARY_FILE)
                     if text_to_add not in self.added_items:
                         self.added_items.add(text_to_add)
@@ -718,18 +716,49 @@ class LibraryTab(ctk.CTkScrollableFrame):
                                     items_data.append(item_info)
                                     f.seek(0)
                                     json.dump(items_data, f, indent=4)
-                    if up_json:
-                        item_info = {
-                            "id": workshop_id,
-                            "text": text_to_add,
-                            "date": date_added
-                        }
-                        self.update_or_add_item_by_id(items_file, item_info)
 
         if not self.added_items:
             self.show_no_items_message()
         else:
             self.hide_no_items_message()
+
+    def update_item(self, boiiiFolder, id, item_type, folder_name):
+        try:
+            if item_type == "map":
+                folder_path = Path(boiiiFolder) / "usermaps" / f"{folder_name}"
+            elif item_type == "mod":
+                folder_path = Path(boiiiFolder) / "mods" / f"{folder_name}"
+            else:
+                raise ValueError("Unsupported item_type. It must be 'map' or 'mod'.")
+
+            for zone_path in folder_path.glob("**/zone"):
+                json_path = zone_path / "workshop.json"
+                if json_path.exists():
+                    workshop_id = extract_json_data(json_path, "PublisherID")
+                    if workshop_id == id:
+                        name = extract_json_data(json_path, "Title").replace(">", "").replace("^", "")
+                        name = name[:45] + "..." if len(name) > 45 else name
+                        item_type = extract_json_data(json_path, "Type")
+                        folder_name = extract_json_data(json_path, "FolderName")
+                        size = convert_bytes_to_readable(get_folder_size(zone_path.parent))
+                        text_to_add = f"{name} | Type: {item_type.capitalize()}"
+                        mode_type = "ZM" if item_type == "map" and folder_name.startswith("zm") else "MP" if folder_name.startswith("mp") and item_type == "map" else None
+                        if mode_type:
+                            text_to_add += f" | Mode: {mode_type}"
+                        text_to_add += f" | ID: {workshop_id} | Size: {size}"
+                        date_added = datetime.now().strftime("%d %b, %Y @ %I:%M%p")
+                        items_file = os.path.join(cwd(), LIBRARY_FILE)
+
+                        item_info = {
+                            "id": workshop_id,
+                            "text": text_to_add,
+                            "date": date_added
+                        }
+                        self.update_or_add_item_by_id(items_file, item_info, id)
+                        return
+
+        except Exception as e:
+            show_message("Error updating json file", f"Error while updating library json file\n{e}")
 
     def remove_item(self, item, folder, id):
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
@@ -992,11 +1021,14 @@ class LibraryTab(ctk.CTkScrollableFrame):
         return
 
     def check_items_func(self, on_launch):
+        # Needed to refresh item that needs updates
+        self.to_update.clear()
 
         def if_id_needs_update(item_id, item_date, text):
             try:
+                headers = {'Cache-Control': 'no-cache'}
                 url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={item_id}"
-                response = requests.get(url)
+                response = requests.get(url, headers=headers)
                 response.raise_for_status()
                 content = response.text
                 soup = BeautifulSoup(content, "html.parser")
@@ -1021,13 +1053,16 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 return
 
         def check_for_update():
+            lib_data = None
+
             if not os.path.exists(os.path.join(cwd(), LIBRARY_FILE)):
                 show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct boiii path!, you also need to have at lease 1 item!")
                 return
-            with open(LIBRARY_FILE, 'r') as file:
-                data = json.load(file)
 
-            for item in data:
+            with open(LIBRARY_FILE, 'r') as file:
+                lib_data = json.load(file)
+
+            for item in lib_data:
                 item_id = item["id"]
                 item_date = item["date"]
                 if_id_needs_update(item_id, item_date, item["text"])
@@ -2289,8 +2324,9 @@ class BOIIIWD(ctk.CTk):
                 self.after(1, lambda mid=workshop_id: self.label_file_size.configure(text=f"File size: {get_workshop_file_size(mid ,raw=True)}"))
 
             try:
+                headers = {'Cache-Control': 'no-cache'}
                 url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
-                response = requests.get(url)
+                response = requests.get(url, headers=headers)
                 response.raise_for_status()
                 content = response.text
 
@@ -2921,7 +2957,7 @@ class BOIIIWD(ctk.CTk):
                             remove_tree(map_folder)
                             remove_tree(download_folder)
 
-                        self.library_tab.load_items(self.edit_destination_folder.get(), up_json=True)
+                        self.library_tab.update_item(self.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
 
                         if index == len(items) - 1:
                             self.after(1, self.status_text.configure(text=f"Status: Done! => Please press stop only if you see no popup window (rare bug)"))
@@ -3167,7 +3203,7 @@ class BOIIIWD(ctk.CTk):
                         remove_tree(map_folder)
                         remove_tree(download_folder)
 
-                    self.library_tab.load_items(self.edit_destination_folder.get(), up_json=True)
+                    self.library_tab.update_item(self.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
                     self.show_complete_message(message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)")
                     self.button_download.configure(state="normal")
                     self.button_stop.configure(state="disabled")
