@@ -984,6 +984,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
             else:
                 return
         app.after(0, main_thread)
+        self.update_button.configure(state="normal", width=65, height=20)
+        self.update_tooltip.configure(message='Check items for updates')
         return
 
     def check_items_func(self, on_launch):
@@ -1032,7 +1034,6 @@ class LibraryTab(ctk.CTkScrollableFrame):
         to_update_len = len(self.to_update)
         if to_update_len > 0:
             self.items_update_message(to_update_len)
-
         else:
             self.update_button.configure(state="normal", width=65, height=20)
             self.update_tooltip.configure(message='Check items for updates')
