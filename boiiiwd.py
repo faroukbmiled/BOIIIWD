@@ -1,3 +1,4 @@
+# Use CTkToolTip and CTkListbox from my repo originally by Akascape (https://github.com/Akascape)
 from CTkMessagebox import CTkMessagebox
 from tkinter import Menu, END, Event
 from bs4 import BeautifulSoup
@@ -23,7 +24,7 @@ import io
 import os
 import re
 
-VERSION = "v0.2.9"
+VERSION = "v0.3.0"
 GITHUB_REPO = "faroukbmiled/BOIIIWD"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 UPDATER_FOLDER = "update"
@@ -368,6 +369,7 @@ def get_item_name(id):
     except:
         return False
 
+# you gotta use my modded CTkToolTip originaly by Akascape
 def show_noti(widget ,message, event=None, noti_dur=3.0, topmost=False):
     CTkToolTip(widget, message=message, is_noti=True, noti_event=event, noti_dur=noti_dur, topmost=topmost)
 
@@ -512,6 +514,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
         super().__init__(master, **kwargs)
         self.added_items = set()
+        self.to_update = set()
         self.grid_columnconfigure(0, weight=1)
 
         self.radiobutton_variable = ctk.StringVar()
@@ -688,7 +691,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     if mode_type:
                         text_to_add += f" | Mode: {mode_type}"
                     text_to_add += f" | ID: {workshop_id} | Size: {size}"
-                    date_added = datetime.now().strftime("%d %b, %Y @ %I:%M%p")
+                    folder_creation_timestamp = zone_path.stat().st_ctime
+                    date_added = datetime.fromtimestamp(folder_creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
                     items_file = os.path.join(cwd(), LIBRARY_FILE)
                     if text_to_add not in self.added_items:
                         self.added_items.add(text_to_add)
@@ -963,14 +967,77 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     button_view.configure(state="normal")
         self.after(0, main_thread)
 
-    def check_for_updates(self):
+    def check_for_updates(self, on_launch=False):
         self.after(1, self.update_button.configure(state="disabled"))
         self.update_tooltip.configure(message='Still loading please wait...')
         cevent = Event()
         cevent.x_root = self.update_button.winfo_rootx()
         cevent.y_root = self.update_button.winfo_rooty()
-        show_noti(self.update_button, "Please wait, window will popup shortly", event=cevent, noti_dur=3.0, topmost=True)
-        threading.Thread(target=self.update_items_window).start()
+        if not on_launch:
+            show_noti(self.update_button, "Please wait, window will popup shortly", event=cevent, noti_dur=3.0, topmost=True)
+        threading.Thread(target=self.check_items_func, args=(on_launch,)).start()
+
+    def items_update_message(self, to_update_len):
+        def main_thread():
+            if show_message(f"{to_update_len} Item updates available", f"{to_update_len} Workshop Items have an update, Would you like to open the item updater window?", icon="info", _return=True):
+                app.after(1, self.update_items_window)
+            else:
+                return
+        app.after(0, main_thread)
+        return
+
+    def check_items_func(self, on_launch):
+
+        def if_id_needs_update(item_id, item_date, text):
+            try:
+                url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={item_id}"
+                response = requests.get(url)
+                response.raise_for_status()
+                content = response.text
+                soup = BeautifulSoup(content, "html.parser")
+                details_stats_container = soup.find("div", class_="detailsStatsContainerRight")
+                details_stat_elements = details_stats_container.find_all("div", class_="detailsStatRight")
+                try:
+                    date_updated = details_stat_elements[2].text.strip()
+                except:
+                    try:
+                        date_updated = details_stat_elements[1].text.strip()
+                    except:
+                        return False
+
+                if check_item_date(item_date, date_updated):
+                    self.to_update.add(text + f" | Updated: {date_updated}")
+                    return True
+                else:
+                    return False
+
+            except Exception as e:
+                show_message("Error", f"Error occured\n{e}", icon="cancel")
+                return
+
+        def check_for_update():
+            if not os.path.exists(os.path.join(cwd(), LIBRARY_FILE)):
+                show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct boiii path!, you also need to have at lease 1 item!")
+                return
+            with open(LIBRARY_FILE, 'r') as file:
+                data = json.load(file)
+
+            for item in data:
+                item_id = item["id"]
+                item_date = item["date"]
+                if_id_needs_update(item_id, item_date, item["text"])
+
+        check_for_update()
+
+        to_update_len = len(self.to_update)
+        if to_update_len > 0:
+            self.items_update_message(to_update_len)
+
+        else:
+            self.update_button.configure(state="normal", width=65, height=20)
+            self.update_tooltip.configure(message='Check items for updates')
+            if not on_launch:
+                show_message("No updates found!", "Items are up to date!", icon="info")
 
     # yeah im lazy as shit this is what were working with for now
     def update_items_window(self):
@@ -980,10 +1047,11 @@ class LibraryTab(ctk.CTkScrollableFrame):
             if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
                 top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
             top.title("Item updater - List of items that need updating! - Click to select 1 or more")
-            top.geometry("600x400")
+            longest_text_length = max(len(text) for text in self.to_update)
+            window_width = longest_text_length * 6 + 5
+            top.geometry(f"{window_width}x450")
             top.attributes('-topmost', 'true')
-            top.resizable(False, False)
-            to_update = set()
+            top.resizable(True, True)
             selected_id_list = []
             cevent = Event()
 
@@ -993,53 +1061,23 @@ class LibraryTab(ctk.CTkScrollableFrame):
             update_button = ctk.CTkButton(top, text="Update")
             update_button.grid(row=1, column=0, pady=10)
 
-            def if_id_needs_update(item_id, item_date):
-                try:
-                    url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={item_id}"
-                    response = requests.get(url)
-                    response.raise_for_status()
-                    content = response.text
-                    soup = BeautifulSoup(content, "html.parser")
-                    details_stats_container = soup.find("div", class_="detailsStatsContainerRight")
-                    details_stat_elements = details_stats_container.find_all("div", class_="detailsStatRight")
-                    try:
-                        date_updated = details_stat_elements[2].text.strip()
-                    except:
-                        try:
-                            date_updated = details_stat_elements[1].text.strip()
-                        except:
-                            return False
+            def open_url(id_part, e=None):
+                url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={id_part}"
+                webbrowser.open(url)
 
-                    if check_item_date(item_date, date_updated):
-                        return True
-                    else:
-                        return False
-
-                except Exception as e:
-                    show_message("Error", f"Error occured\n{e}", icon="cancel")
-                    return
-
+            # you gotta use my modded CTkListbox originaly by Akascape
             def add_checkbox_item(index, item_text):
-                listbox.insert(index, item_text)
-
-            def check_for_update():
-                with open(LIBRARY_FILE, 'r') as file:
-                    data = json.load(file)
-
-                for item in data:
-                    item_id = item["id"]
-                    item_date = item["date"]
-                    if if_id_needs_update(item_id, item_date):
-                        to_update.add(item["text"])
+                parts = item_text.split('ID: ')
+                id_part = parts[1].split('|')[0].strip()
+                listbox.insert(index, item_text, keybind="<Button-3>", func=lambda e: open_url(id_part))
 
             def load_items():
-                for index, item_text in enumerate(to_update):
-                    if index == len(to_update) - 1:
+                for index, item_text in enumerate(self.to_update):
+                    if index == len(self.to_update) - 1:
                         add_checkbox_item("end", item_text)
                         top.deiconify()
                         return
                     add_checkbox_item(index, item_text)
-
 
             def update_list(selected_option):
                 selected_id_list.clear()
@@ -1086,15 +1124,14 @@ class LibraryTab(ctk.CTkScrollableFrame):
             top.grid_rowconfigure(0, weight=1)
             top.grid_columnconfigure(0, weight=1)
 
-            check_for_update()
             load_items()
 
         except Exception as e:
             show_message("Error", f"{e}", icon="cancel")
 
         finally:
+            self.update_button.configure(state="normal", width=65, height=20)
             self.update_tooltip.configure(message='Check items for updates')
-            self.after(1, self.update_button.configure(state="normal"))
 
 class SettingsTab(ctk.CTkFrame):
     def __init__(self, master=None):
@@ -1111,6 +1148,7 @@ class SettingsTab(ctk.CTkFrame):
         self.steam_fail_number = 10
         self.steamcmd_reset = False
         self.show_fails = True
+        self.check_items_on_launch = False
 
         # Left and right frames, use fg_color="transparent"
         self.grid_rowconfigure(0, weight=1)
@@ -1167,7 +1205,7 @@ class SettingsTab(ctk.CTkFrame):
         # Show show fails checkbox
         self.show_fails_var = ctk.BooleanVar()
         self.show_fails_var.trace_add("write", self.enable_save_button)
-        self.show_fails_cb = ctk.CTkSwitch(left_frame, text="Show fails (on top of progress bar):", variable=self.show_fails_var)
+        self.show_fails_cb = ctk.CTkSwitch(left_frame, text="Show fails (on top of progress bar)", variable=self.show_fails_var)
         self.show_fails_cb.grid(row=5, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.show_fails_tooltip = CTkToolTip(self.show_fails_cb, message="Display how many times steamcmd has failed/crashed\nIf the number is getting high quickly then try pressing Reset SteamCMD and try again, otherwise its fine")
         self.estimated_progress_var.set(self.load_settings("show_fails", "on"))
@@ -1175,18 +1213,26 @@ class SettingsTab(ctk.CTkFrame):
         # Show skip_already_installed maps checkbox
         self.skip_already_installed_var = ctk.BooleanVar()
         self.skip_already_installed_var.trace_add("write", self.enable_save_button)
-        self.skip_already_installed_ch = ctk.CTkSwitch(left_frame, text="Skip already installed maps:", variable=self.skip_already_installed_var)
+        self.skip_already_installed_ch = ctk.CTkSwitch(left_frame, text="Skip already installed maps", variable=self.skip_already_installed_var)
         self.skip_already_installed_ch.grid(row=6, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.skip_already_installed_ch_tooltip = CTkToolTip(self.skip_already_installed_ch, message="If on it will not download installed maps,\nthis can miss sometimes if you remove maps manually and not from library tab while the app is running")
         self.skip_already_installed_var.set(self.load_settings("skip_already_installed", "on"))
+
+        # check items for update on launch
+        self.check_items_var = ctk.BooleanVar()
+        self.check_items_var.trace_add("write", self.enable_save_button)
+        self.check_items_ch = ctk.CTkSwitch(left_frame, text="Check Library items on launch", variable=self.check_items_var)
+        self.check_items_ch.grid(row=7, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.check_items_tooltip = CTkToolTip(self.check_items_ch, message="This will show a window on launch of items that have pending updates -> you can open it manually from library tab")
+        self.check_items_var.set(self.load_settings("check_items", "off"))
 
         # Resetr steam on many fails
         self.reset_steamcmd_on_fail_var = ctk.IntVar()
         self.reset_steamcmd_on_fail_var.trace_add("write", self.enable_save_button)
         self.reset_steamcmd_on_fail_text = ctk.CTkLabel(left_frame, text=f"Reset steamcmd on % fails: (n of fails)", anchor="w")
-        self.reset_steamcmd_on_fail_text.grid(row=7, column=1, padx=20, pady=(10, 0), sticky="nw")
+        self.reset_steamcmd_on_fail_text.grid(row=8, column=1, padx=20, pady=(10, 0), sticky="nw")
         self.reset_steamcmd_on_fail = ctk.CTkOptionMenu(left_frame, values=["5", "10", "20", "30", "40", "Custom", "Disable"], variable=self.reset_steamcmd_on_fail_var, command=self.reset_steamcmd_on_fail_func)
-        self.reset_steamcmd_on_fail.grid(row=8, column=1, padx=20, pady=(0, 0), sticky="nw")
+        self.reset_steamcmd_on_fail.grid(row=9, column=1, padx=20, pady=(0, 0), sticky="nw")
         self.reset_steamcmd_on_fail_tooltip = CTkToolTip(self.reset_steamcmd_on_fail, message="This actually fixes steamcmd when its crashing way too much")
         self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "10"))
 
@@ -1199,7 +1245,7 @@ class SettingsTab(ctk.CTkFrame):
 
         self.reset_steamcmd = ctk.CTkButton(right_frame, text="Reset SteamCMD", command=self.settings_reset_steamcmd)
         self.reset_steamcmd.grid(row=3, column=1, padx=20, pady=(20, 0), sticky="n")
-        self.reset_steamcmd_tooltip = CTkToolTip(self.reset_steamcmd, message="This will remove steamapps folder + all the maps that are potentioaly corrupted or not so use at ur own risk (could fix some issues as well)")
+        self.reset_steamcmd_tooltip = CTkToolTip(self.reset_steamcmd, message="This will remove steamapps folder + all the maps that are potentioaly corrupted\nor not so use at ur own risk (could fix some issues as well)")
 
         self.steam_to_boiii = ctk.CTkButton(right_frame, text="Steam to Boiii", command=self.from_steam_to_boiii_toplevel)
         self.steam_to_boiii.grid(row=5, column=1, padx=20, pady=(20, 0), sticky="n")
@@ -1296,6 +1342,12 @@ class SettingsTab(ctk.CTkFrame):
 
     def save_settings(self):
         self.save_button.configure(state='disabled')
+
+        if self.check_items_var.get():
+            save_config("check_items", "on")
+        else:
+            save_config("check_items", "off")
+
         if self.check_updates_checkbox.get():
             save_config("checkforupdtes", "on")
         else:
@@ -1886,6 +1938,10 @@ class BOIIIWD(ctk.CTk):
 
         if not check_steamcmd():
             self.show_steam_warning_message()
+
+        # items check for update, ill change all the variables to work this way at a later date
+        if self.settings_tab.check_items_var.get():
+            self.library_tab.check_for_updates(on_launch=True)
 
     def do_popup(self, event, frame):
         try: frame.tk_popup(event.x_root, event.y_root)
