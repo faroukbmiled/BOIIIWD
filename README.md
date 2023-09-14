@@ -57,7 +57,7 @@
 * It saves your input except for workshop id <br>
 * If you do not know where to find your map in-game check this [video](https://youtu.be/XIQjfXXlgQs?t=260) out ,for mods find "mods" in the game's main menu <br>
 * Initializing SteamCMD for the first time could take some time depending on your internet speed <br>
-* New item update window: Left click on an item (mouse3) -> will open the item in the browser (Steam Workshop) <br>
+* New item update window: Right click on an item (mouse3) -> will open the item in the browser (Steam Workshop) <br>
 * BOIIIWD requires having "boiiiwd_library.json" in the app's directory for the new features to work -> clicking on the library tab will generate the JSON file (please don't touch it) <br>
 #### PS (Library tab): <br>
 * Mouse1 -> copy id <br>
