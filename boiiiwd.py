@@ -691,8 +691,11 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     if mode_type:
                         text_to_add += f" | Mode: {mode_type}"
                     text_to_add += f" | ID: {workshop_id} | Size: {size}"
-                    folder_creation_timestamp = zone_path.stat().st_ctime
-                    date_added = datetime.fromtimestamp(folder_creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
+                    if up_json:
+                        date_added = datetime.now().strftime("%d %b, %Y @ %I:%M%p")
+                    else:
+                        folder_creation_timestamp = zone_path.stat().st_ctime
+                        date_added = datetime.fromtimestamp(folder_creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
                     items_file = os.path.join(cwd(), LIBRARY_FILE)
                     if text_to_add not in self.added_items:
                         self.added_items.add(text_to_add)
@@ -2918,7 +2921,7 @@ class BOIIIWD(ctk.CTk):
                             remove_tree(map_folder)
                             remove_tree(download_folder)
 
-                        self.library_tab.load_items(self.edit_destination_folder.get(), True)
+                        self.library_tab.load_items(self.edit_destination_folder.get(), up_json=True)
 
                         if index == len(items) - 1:
                             self.after(1, self.status_text.configure(text=f"Status: Done! => Please press stop only if you see no popup window (rare bug)"))
@@ -3164,7 +3167,7 @@ class BOIIIWD(ctk.CTk):
                         remove_tree(map_folder)
                         remove_tree(download_folder)
 
-                    self.library_tab.load_items(self.edit_destination_folder.get(), True)
+                    self.library_tab.load_items(self.edit_destination_folder.get(), up_json=True)
                     self.show_complete_message(message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)")
                     self.button_download.configure(state="normal")
                     self.button_stop.configure(state="disabled")
