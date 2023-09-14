@@ -1047,7 +1047,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
             top.withdraw()
             if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
                 top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
-            top.title("Item updater - List of items that need updating! - Click to select 1 or more")
+            top.title("Item updater - List of Items with Updates - Click to select 1 or more")
             longest_text_length = max(len(text) for text in self.to_update)
             window_width = longest_text_length * 6 + 5
             top.geometry(f"{window_width}x450")
