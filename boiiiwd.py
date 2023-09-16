@@ -24,7 +24,7 @@ import io
 import os
 import re
 
-VERSION = "v0.3.0"
+VERSION = "v0.3.1"
 GITHUB_REPO = "faroukbmiled/BOIIIWD"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 UPDATER_FOLDER = "update"
@@ -534,6 +534,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         filter_tooltip = CTkToolTip(self.filter_refresh_button, message="Refresh library", topmost=True)
         self.label_list = []
         self.button_list = []
+        self.folders_to_rename = []
         self.button_view_list = []
         self.filter_type = True
         self.clipboard_has_content = False
@@ -668,7 +669,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 button_view_list.grid_remove()
                 button.grid_remove()
 
-    def load_items(self, boiiiFolder, up_json=False):
+    def load_items(self, boiiiFolder):
         maps_folder = Path(boiiiFolder) / "mods"
         mods_folder = Path(boiiiFolder) / "usermaps"
         mod_img = os.path.join(RESOURCES_DIR, "mod_image.png")
@@ -680,10 +681,14 @@ class LibraryTab(ctk.CTkScrollableFrame):
             for zone_path in folder_path.glob("**/zone"):
                 json_path = zone_path / "workshop.json"
                 if json_path.exists():
+                    workshop_id = extract_json_data(json_path, "PublisherID")
+
+                    if folder_path.name != workshop_id:
+                        self.folders_to_rename.append((zone_path.parent, folder_path / workshop_id))
+
                     name = extract_json_data(json_path, "Title").replace(">", "").replace("^", "")
                     name = name[:45] + "..." if len(name) > 45 else name
                     item_type = extract_json_data(json_path, "Type")
-                    workshop_id = extract_json_data(json_path, "PublisherID")
                     folder_name = extract_json_data(json_path, "FolderName")
                     size = convert_bytes_to_readable(get_folder_size(zone_path.parent))
                     text_to_add = f"{name} | Type: {item_type.capitalize()}"
@@ -716,6 +721,18 @@ class LibraryTab(ctk.CTkScrollableFrame):
                                     items_data.append(item_info)
                                     f.seek(0)
                                     json.dump(items_data, f, indent=4)
+
+        if len(self.folders_to_rename) > 1:
+            # well the program hangs for too long on some systems so i had to do this instead
+            def update_folder_names_thread():
+                for folder_path, workshop_id in self.folders_to_rename:
+                    try:
+                        os.rename(folder_path, workshop_id)
+                    except Exception as e:
+                        show_message(f"Failed to rename folder from '{folder_path}' to '{workshop_id}'",
+                                    f"{e}\nPlease restart the program and go to the library tab to fix the issue!", icon="cancel")
+                self.folders_to_rename.clear()
+            threading.Thread(target=update_folder_names_thread).start()
 
         if not self.added_items:
             self.show_no_items_message()
@@ -1078,7 +1095,6 @@ class LibraryTab(ctk.CTkScrollableFrame):
             if not on_launch:
                 show_message("No updates found!", "Items are up to date!", icon="info")
 
-    # yeah im lazy as shit this is what were working with for now
     def update_items_window(self):
         try:
             top = ctk.CTkToplevel(master=None)
@@ -1093,12 +1109,16 @@ class LibraryTab(ctk.CTkScrollableFrame):
             top.resizable(True, True)
             selected_id_list = []
             cevent = Event()
+            self.select_all_bool = False
 
             listbox = CTkListbox(top, multiple_selection=True)
             listbox.grid(row=0, column=0, sticky="nsew")
 
             update_button = ctk.CTkButton(top, text="Update")
-            update_button.grid(row=1, column=0, pady=10)
+            update_button.grid(row=1, column=0, pady=10, padx=5, sticky='ns')
+
+            select_button = ctk.CTkButton(top, text="Select All", width=5)
+            select_button.grid(row=1, column=0, pady=10, padx=(230, 0), sticky='ns')
 
             def open_url(id_part, e=None):
                 url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={id_part}"
@@ -1127,6 +1147,17 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         if len(parts) > 1:
                             id_part = parts[1].split('|')[0].strip()
                             selected_id_list.append(id_part)
+
+            def select_all():
+                if self.select_all_bool:
+                    listbox.deactivate("all")
+                    update_list(listbox.get())
+                    self.select_all_bool = False
+                    return
+                listbox.deactivate("all")
+                listbox.activate("all")
+                update_list(listbox.get())
+                self.select_all_bool = True
 
             def update_btn_fun():
                 if len(selected_id_list) == 1:
@@ -1157,8 +1188,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     cevent.y_root = update_button.winfo_rooty()
                     show_noti(update_button ,"Please select 1 or more items", event=cevent, noti_dur=0.8, topmost=True)
 
+
             listbox.configure(command=update_list)
             update_button.configure(command=update_btn_fun)
+            select_button.configure(command=select_all)
 
             top.grid_rowconfigure(0, weight=1)
             top.grid_columnconfigure(0, weight=1)
@@ -1696,7 +1729,7 @@ class SettingsTab(ctk.CTkFrame):
 
                                 if os.path.exists(json_file_path):
                                     mod_type = extract_json_data(json_file_path, "Type")
-                                    folder_name = extract_json_data(json_file_path, "FolderName")
+                                    folder_name = extract_json_data(json_file_path, "PublisherID")
 
                                     if mod_type == "mod":
                                         mods_folder = os.path.join(boiii_folder, "mods")
@@ -2516,14 +2549,16 @@ class BOIIIWD(ctk.CTk):
     # the real deal
     def run_steamcmd_command(self, command, map_folder, wsid, queue=None):
         steamcmd_path = get_steamcmd_path()
-        stdout = os.path.join(steamcmd_path, "logs", "workshop_log.txt")
+        stdout_path = os.path.join(steamcmd_path, "logs", "workshop_log.txt")
         timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
+        os.makedirs(os.path.dirname(stdout_path), exist_ok=True)
+
         try:
-            with open(stdout, 'w') as file:
+            with open(stdout_path, 'w') as file:
                 file.write('')
         except:
-            os.rename(stdout, os.path.join(map_folder, os.path.join(stdout, f"workshop_log_couldntremove_{timestamp}.txt")))
+            os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
 
         show_console = subprocess.CREATE_NO_WINDOW
         if self.settings_tab.console:
@@ -2558,7 +2593,7 @@ class BOIIIWD(ctk.CTk):
                 #wait for process
                 while True:
                     if not self.is_downloading:
-                        if self.check_steamcmd_stdout(stdout, wsid):
+                        if self.check_steamcmd_stdout(stdout_path, wsid):
                             start_time = time.time()
                             self.is_downloading = True
                     elapsed_time = time.time() - start_time
@@ -2569,10 +2604,10 @@ class BOIIIWD(ctk.CTk):
                 # print("Broken freeeee!")
                 self.is_downloading = False
                 try:
-                    with open(stdout, 'w') as file:
+                    with open(stdout_path, 'w') as file:
                         file.write('')
                 except:
-                    os.rename(stdout, os.path.join(map_folder, os.path.join(stdout, f"workshop_log_couldntremove_{timestamp}.txt")))
+                    os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
 
                 if not self.settings_tab.stopped:
                     self.settings_tab.steam_fail_counter = self.settings_tab.steam_fail_counter + 1
@@ -2604,7 +2639,7 @@ class BOIIIWD(ctk.CTk):
 
             while True:
                 if not self.is_downloading:
-                    if self.check_steamcmd_stdout(stdout, wsid):
+                    if self.check_steamcmd_stdout(stdout_path, wsid):
                         self.is_downloading = True
                 if process.poll() != None:
                     break
@@ -2613,10 +2648,10 @@ class BOIIIWD(ctk.CTk):
             # print("Broken freeeee!")
             self.is_downloading = False
             try:
-                with open(stdout, 'w') as file:
+                with open(stdout_path, 'w') as file:
                     file.write('')
             except:
-                os.rename(stdout, os.path.join(map_folder, os.path.join(stdout, f"workshop_log_couldntremove_{timestamp}.txt")))
+                os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
 
             if not os.path.exists(map_folder):
                 show_message("SteamCMD has terminated", "SteamCMD has been terminated\nAnd failed to download the map/mod, try again or enable continuous download in settings")
@@ -2934,7 +2969,7 @@ class BOIIIWD(ctk.CTk):
                     if os.path.exists(json_file_path):
                         self.label_speed.configure(text="Installing...")
                         mod_type = extract_json_data(json_file_path, "Type")
-                        folder_name = extract_json_data(json_file_path, "FolderName")
+                        folder_name = extract_json_data(json_file_path, "PublisherID")
 
                         if mod_type == "mod":
                             mods_folder = os.path.join(destination_folder, "mods")
@@ -3179,7 +3214,7 @@ class BOIIIWD(ctk.CTk):
                 if os.path.exists(json_file_path):
                     self.label_speed.configure(text="Installing...")
                     mod_type = extract_json_data(json_file_path, "Type")
-                    folder_name = extract_json_data(json_file_path, "FolderName")
+                    folder_name = extract_json_data(json_file_path, "PublisherID")
 
                     if mod_type == "mod":
                         mods_folder = os.path.join(destination_folder, "mods")
