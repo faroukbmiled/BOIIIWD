@@ -674,6 +674,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
         mods_folder = Path(boiiiFolder) / "usermaps"
         mod_img = os.path.join(RESOURCES_DIR, "mod_image.png")
         map_img = os.path.join(RESOURCES_DIR, "map_image.png")
+        map_count = 0
+        mod_count = 0
+        total_size = 0
 
         folders_to_process = [mods_folder, maps_folder]
 
@@ -690,7 +693,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     name = name[:45] + "..." if len(name) > 45 else name
                     item_type = extract_json_data(json_path, "Type")
                     folder_name = extract_json_data(json_path, "FolderName")
-                    size = convert_bytes_to_readable(get_folder_size(zone_path.parent))
+                    folder_size_bytes = get_folder_size(zone_path.parent)
+                    size = convert_bytes_to_readable(folder_size_bytes)
+                    total_size += folder_size_bytes
                     text_to_add = f"{name} | Type: {item_type.capitalize()}"
                     mode_type = "ZM" if item_type == "map" and folder_name.startswith("zm") else "MP" if folder_name.startswith("mp") and item_type == "map" else None
                     if mode_type:
@@ -703,6 +708,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     if text_to_add not in self.added_items:
                         self.added_items.add(text_to_add)
                         image_path = mod_img if item_type == "mod" else map_img
+                        map_count += 1 if item_type == "map" else 0
+                        mod_count += 1 if item_type == "mod" else 0
                         self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), workshop_id=workshop_id, folder=zone_path.parent)
 
                         if not self.item_exists_in_file(items_file, workshop_id):
@@ -738,6 +745,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
             self.show_no_items_message()
         else:
             self.hide_no_items_message()
+
+        return f"Maps: {map_count} - Mods: {mod_count} - Total size: {convert_bytes_to_readable(total_size)}"
 
     def update_item(self, boiiiFolder, id, item_type, folder_name):
         try:
@@ -2150,8 +2159,9 @@ class BOIIIWD(ctk.CTk):
 
     def show_library_widgets(self):
         self.title("BOIII Workshop Downloader - Library")
-        self.library_tab.load_items(self.edit_destination_folder.get())
+        count = self.library_tab.load_items(self.edit_destination_folder.get())
         self.library_tab.grid(row=0, rowspan=3, column=1, padx=(0, 20), pady=(20, 20), sticky="nsew")
+        self.title(f"BOIII Workshop Downloader - Library  ➜  {count}")
 
     def show_queue_widgets(self):
         self.title("BOIII Workshop Downloader - Queue")
