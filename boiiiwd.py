@@ -705,11 +705,11 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     folder_creation_timestamp = zone_path.stat().st_ctime
                     date_added = datetime.fromtimestamp(folder_creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
                     items_file = os.path.join(cwd(), LIBRARY_FILE)
+                    map_count += 1 if item_type == "map" else 0
+                    mod_count += 1 if item_type == "mod" else 0
                     if text_to_add not in self.added_items:
                         self.added_items.add(text_to_add)
                         image_path = mod_img if item_type == "mod" else map_img
-                        map_count += 1 if item_type == "map" else 0
-                        mod_count += 1 if item_type == "mod" else 0
                         self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), workshop_id=workshop_id, folder=zone_path.parent)
 
                         if not self.item_exists_in_file(items_file, workshop_id):
