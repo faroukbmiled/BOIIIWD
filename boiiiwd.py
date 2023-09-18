@@ -3120,7 +3120,7 @@ class BOIIIWD(ctk.CTk):
                         mod_type = extract_json_data(json_file_path, "Type")
                         items_file = os.path.join(cwd(), LIBRARY_FILE)
                         if self.library_tab.item_exists_in_file(items_file, workshop_id):
-                            get_folder_name = self.library_tab.get_item_by_id(self, items_file, workshop_id, return_option="folder_name")
+                            get_folder_name = self.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
                             if get_folder_name:
                                 folder_name = get_folder_name
                             else:
@@ -3379,7 +3379,7 @@ class BOIIIWD(ctk.CTk):
                     mod_type = extract_json_data(json_file_path, "Type")
                     items_file = os.path.join(cwd(), LIBRARY_FILE)
                     if self.library_tab.item_exists_in_file(items_file, workshop_id):
-                        get_folder_name = self.library_tab.get_item_by_id(self, items_file, workshop_id, return_option="folder_name")
+                        get_folder_name = self.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
                         if get_folder_name:
                             folder_name = get_folder_name
                         else:
