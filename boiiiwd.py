@@ -107,7 +107,17 @@ def create_update_script(current_exe, new_exe, updater_folder, program_name):
 
     return script_path
 
+def is_internet_available():
+    try:
+        requests.get("https://www.google.com", timeout=3)
+        return True
+    except:
+        return False
+
 def check_for_updates_func(window, ignore_up_todate=False):
+    if not is_internet_available():
+        show_message("Error!", "Internet connection is not available. Please check your internet connection and try again.")
+        return
     try:
         latest_version = get_latest_release_version()
         current_version = VERSION
@@ -342,11 +352,22 @@ def get_button_state_colors(file_path, state):
 
 def reset_steamcmd(no_warn=None):
     steamcmd_path = get_steamcmd_path()
-    steamcmd_steamapps = os.path.join(steamcmd_path, "steamapps")
-    if os.path.exists(steamcmd_steamapps):
-        remove_tree(steamcmd_steamapps, show_error=True)
-        if not no_warn:
-            show_message("Success!", "SteamCMD has been reset successfully!", icon="info")
+
+    directories_to_reset = ["steamapps", "dumps", "logs", "depotcache", "appcache","userdata",]
+
+    for directory in directories_to_reset:
+        directory_path = os.path.join(steamcmd_path, directory)
+        if os.path.exists(directory_path):
+            remove_tree(directory_path, show_error=True)
+
+    for root, _, files in os.walk(steamcmd_path):
+        for filename in files:
+            if filename.endswith((".old", ".crash")):
+                file_path = os.path.join(root, filename)
+                os.remove(file_path)
+
+    if not no_warn:
+        show_message("Success!", "SteamCMD has been reset successfully!", icon="info")
     else:
         if not no_warn:
             show_message("Warning!", "steamapps folder was not found, maybe already removed?", icon="warning")
@@ -534,17 +555,20 @@ class LibraryTab(ctk.CTkScrollableFrame):
         filter_tooltip = CTkToolTip(self.filter_refresh_button, message="Refresh library", topmost=True)
         self.label_list = []
         self.button_list = []
-        self.folders_to_rename = []
         self.button_view_list = []
+        self.file_cleaned = False
         self.filter_type = True
         self.clipboard_has_content = False
+        self.item_block_list = set()
+        self.added_folders = set()
+        self.ids_added = set()
 
-    def add_item(self, item, image=None, workshop_id=None, folder=None):
+    def add_item(self, item, image=None, workshop_id=None, folder=None, invalid_warn=False):
         label = ctk.CTkLabel(self, text=item, image=image, compound="left", padx=5, anchor="w")
         button = ctk.CTkButton(self, text="Remove", width=60, height=24, fg_color="#3d3f42")
         button_view = ctk.CTkButton(self, text="Details", width=55, height=24, fg_color="#3d3f42")
         button.configure(command=lambda: self.remove_item(item, folder, workshop_id))
-        button_view.configure(command=lambda: self.show_map_info(workshop_id))
+        button_view.configure(command=lambda: self.show_map_info(workshop_id, invalid_warn))
         button_view_tooltip = CTkToolTip(button_view, message="Opens up a window that shows basic details")
         button_tooltip = CTkToolTip(button, message="Removes the map/mod from your game")
         label.grid(row=len(self.label_list) + 1, column=0, pady=(0, 10), padx=(5, 10), sticky="w")
@@ -559,6 +583,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
         label.bind("<Control-Button-1>", lambda event, label=label: self.copy_to_clipboard(label, workshop_id, event, append=True))
         label.bind("<Button-2>", lambda event: self.open_folder_location(folder, event))
         label.bind("<Button-3>", lambda event, label=label: self.copy_to_clipboard(label, folder, event))
+        if invalid_warn:
+            label_warn = CTkToolTip(label, message="Duplicated or Blocked item (Search item id in search)")
 
     def on_label_hover(self, label, enter):
         if enter:
@@ -590,40 +616,51 @@ class LibraryTab(ctk.CTkScrollableFrame):
             os.startfile(folder)
             show_noti(self, "Opening folder", event, 1.0)
 
-    def item_exists_in_file(self, items_file, workshop_id):
+    def item_exists_in_file(self, items_file, workshop_id, folder_name=None):
         if not os.path.exists(items_file):
-            return False
+            return False, False
 
         with open(items_file, "r") as f:
             items_data = json.load(f)
             for item_info in items_data:
-                if item_info["id"] == workshop_id:
-                    return True
-        return False
+                if "id" in item_info and "folder_name" in item_info and "json_folder_name" in item_info:
+                    if item_info["id"] == workshop_id and item_info["folder_name"] == folder_name:
+                        if item_info["folder_name"] in self.added_folders:
+                            continue
+                        if item_info["folder_name"] in self.item_block_list:
+                            return False ,None
+                        return True, True
+                    elif item_info["id"] == workshop_id:
+                        if item_info["folder_name"] in self.added_folders:
+                            continue
+                        if item_info["folder_name"] in self.item_block_list:
+                            return False ,None
+                        return True, False
 
-    def remove_item_by_id(self, items_file, item_id):
+                elif "id" in item_info and item_info["id"] == workshop_id:
+                    return True, False
+        return False, False
 
-        items_file_ = os.path.join(cwd(), items_file)
+    def remove_item_by_option(self, items_file, option, option_name="id"):
 
-        if not os.path.exists(items_file_):
+        if not os.path.exists(items_file):
             return
 
-        with open(items_file_, "r") as f:
+        with open(items_file, "r") as f:
             items_data = json.load(f)
 
-        updated_items_data = [item for item in items_data if item.get("id") != item_id]
+        updated_items_data = [item for item in items_data if item.get(option_name) != option]
 
         if len(updated_items_data) < len(items_data):
-            with open(items_file_, "w") as f:
+            with open(items_file, "w") as f:
                 json.dump(updated_items_data, f, indent=4)
 
     def get_item_by_id(self, items_file, item_id, return_option="all"):
-        items_file_ = os.path.join(cwd(), items_file)
 
-        if not os.path.exists(items_file_):
+        if not os.path.exists(items_file):
             return None
 
-        with open(items_file_, "r") as f:
+        with open(items_file, "r") as f:
             items_data = json.load(f)
 
         for item in items_data:
@@ -656,6 +693,21 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 f.truncate()
                 json.dump(items_data, f, indent=4)
 
+    def clean_json_file(self, file):
+
+        if not os.path.exists(file):
+            show_message("Error", f"File '{file}' does not exist.")
+            return
+
+        with open(file, "r") as f:
+            items_data = json.load(f)
+
+        cleaned_items = [item for item in items_data if 'folder_name' in item and 'json_folder_name'
+                         in item and item['folder_name'] not in self.item_block_list and item['folder_name'] in self.added_folders]
+
+        with open(file, 'w') as file:
+            json.dump(cleaned_items, file, indent=4)
+
     def filter_items(self, event):
         filter_text = self.filter_entry.get().lower()
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
@@ -674,6 +726,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
         mods_folder = Path(boiiiFolder) / "usermaps"
         mod_img = os.path.join(RESOURCES_DIR, "mod_image.png")
         map_img = os.path.join(RESOURCES_DIR, "map_image.png")
+        b_mod_img = os.path.join(RESOURCES_DIR, "b_mod_image.png")
+        b_map_img = os.path.join(RESOURCES_DIR, "b_map_image.png")
         map_count = 0
         mod_count = 0
         total_size = 0
@@ -684,11 +738,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
             for zone_path in folder_path.glob("**/zone"):
                 json_path = zone_path / "workshop.json"
                 if json_path.exists():
+                    # current folder name
+                    curr_folder_name = zone_path.parent.name
+
                     workshop_id = extract_json_data(json_path, "PublisherID")
-
-                    if folder_path.name != workshop_id:
-                        self.folders_to_rename.append((zone_path.parent, folder_path / workshop_id))
-
                     name = extract_json_data(json_path, "Title").replace(">", "").replace("^", "")
                     name = name[:45] + "..." if len(name) > 45 else name
                     item_type = extract_json_data(json_path, "Type")
@@ -702,23 +755,57 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         text_to_add += f" | Mode: {mode_type}"
                     text_to_add += f" | ID: {workshop_id} | Size: {size}"
 
-                    folder_creation_timestamp = zone_path.stat().st_ctime
-                    date_added = datetime.fromtimestamp(folder_creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
+                    creation_timestamp = None
+                    if item_type == "mod":
+                        core_mod_file = zone_path / "core_mod.ff"
+                        if core_mod_file.exists():
+                            creation_timestamp = core_mod_file.stat().st_ctime
+                    elif item_type == "map":
+                        for ff_file in zone_path.glob("*.ff"):
+                            if ff_file.exists():
+                                creation_timestamp = ff_file.stat().st_ctime
+                                break
+
+                    if creation_timestamp is not None:
+                        date_added = datetime.fromtimestamp(creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
+                    else:
+                        creation_timestamp = zone_path.stat().st_ctime
+                        date_added = datetime.fromtimestamp(creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
+
                     items_file = os.path.join(cwd(), LIBRARY_FILE)
                     map_count += 1 if item_type == "map" else 0
                     mod_count += 1 if item_type == "mod" else 0
-                    if text_to_add not in self.added_items:
-                        self.added_items.add(text_to_add)
+                    if curr_folder_name not in self.added_folders:
                         image_path = mod_img if item_type == "mod" else map_img
-                        self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), workshop_id=workshop_id, folder=zone_path.parent)
+                        if not (str(curr_folder_name).strip() == str(workshop_id).strip() or str(curr_folder_name).strip() == str(folder_name).strip()):
+                            try: self.remove_item_by_option(items_file, curr_folder_name, "folder_name")
+                            except: pass
+                            self.item_block_list.add(curr_folder_name)
+                            image_path = b_mod_img if item_type == "mod" else b_map_img
+                            text_to_add += " | ⚠️"
+                        elif curr_folder_name not in self.added_folders and workshop_id in self.ids_added:
+                            try: self.remove_item_by_option(items_file, curr_folder_name, "folder_name")
+                            except: pass
+                            image_path = b_mod_img if item_type == "mod" else b_map_img
+                            text_to_add += " | ⚠️"
 
-                        if not self.item_exists_in_file(items_file, workshop_id):
-                            item_info = {
+                        self.added_items.add(text_to_add)
+                        if image_path is b_mod_img or image_path is b_map_img:
+                            self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), workshop_id=workshop_id, folder=zone_path.parent, invalid_warn=True)
+                        else:
+                            self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), workshop_id=workshop_id, folder=zone_path.parent)
+                        id_found, folder_found = self.item_exists_in_file(items_file, workshop_id, curr_folder_name)
+                        item_info = {
                                 "id": workshop_id,
                                 "text": text_to_add,
-                                "date": date_added
+                                "date": date_added,
+                                "folder_name": curr_folder_name,
+                                "json_folder_name": folder_name
                             }
-
+                        # when item is blocked ,item_exists_in_file() returns None for folder_found
+                        if not id_found and folder_found == None:
+                            self.remove_item_by_option(items_file, curr_folder_name, "folder_name")
+                        elif not id_found and not folder_found and curr_folder_name not in self.item_block_list and workshop_id not in self.ids_added:
                             if not os.path.exists(items_file):
                                 with open(items_file, "w") as f:
                                     json.dump([item_info], f, indent=4)
@@ -729,31 +816,33 @@ class LibraryTab(ctk.CTkScrollableFrame):
                                     f.seek(0)
                                     json.dump(items_data, f, indent=4)
 
-        if len(self.folders_to_rename) > 1:
-            # well the program hangs for too long on some systems so i had to do this instead
-            def update_folder_names_thread():
-                for folder_path, workshop_id in self.folders_to_rename:
-                    try:
-                        os.rename(folder_path, workshop_id)
-                    except Exception as e:
-                        show_message(f"Failed to rename folder from '{folder_path}' to '{workshop_id}'",
-                                    f"{e}\nPlease restart the program and go to the library tab to fix the issue!", icon="cancel")
-                self.folders_to_rename.clear()
-            threading.Thread(target=update_folder_names_thread).start()
+                        if id_found and not folder_found and curr_folder_name not in self.item_block_list and workshop_id not in self.ids_added:
+                            self.update_or_add_item_by_id(items_file, item_info, workshop_id)
+
+                        # keep here cuz of item_exists_in_file() testing
+                        self.added_folders.add(curr_folder_name)
+                        if not workshop_id in self.ids_added:
+                            self.ids_added.add(workshop_id)
+
+        if not self.file_cleaned:
+            self.file_cleaned = True
+            self.clean_json_file(items_file)
 
         if not self.added_items:
             self.show_no_items_message()
         else:
             self.hide_no_items_message()
 
-        return f"Maps: {map_count} - Mods: {mod_count} - Total size: {convert_bytes_to_readable(total_size)}"
+        if map_count > 0 or mod_count > 0:
+            return f"Maps: {map_count} - Mods: {mod_count} - Total size: {convert_bytes_to_readable(total_size)}"
+        return "No items in current selected folder"
 
-    def update_item(self, boiiiFolder, id, item_type, folder_name):
+    def update_item(self, boiiiFolder, id, item_type, foldername):
         try:
             if item_type == "map":
-                folder_path = Path(boiiiFolder) / "usermaps" / f"{folder_name}"
+                folder_path = Path(boiiiFolder) / "usermaps" / f"{foldername}"
             elif item_type == "mod":
-                folder_path = Path(boiiiFolder) / "mods" / f"{folder_name}"
+                folder_path = Path(boiiiFolder) / "mods" / f"{foldername}"
             else:
                 raise ValueError("Unsupported item_type. It must be 'map' or 'mod'.")
 
@@ -778,7 +867,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         item_info = {
                             "id": workshop_id,
                             "text": text_to_add,
-                            "date": date_added
+                            "date": date_added,
+                            "folder_name": foldername,
+                            "json_folder_name": folder_name
                         }
                         self.update_or_add_item_by_id(items_file, item_info, id)
                         return
@@ -787,8 +878,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
             show_message("Error updating json file", f"Error while updating library json file\n{e}")
 
     def remove_item(self, item, folder, id):
+        items_file = os.path.join(cwd(), LIBRARY_FILE)
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
             if item == label.cget("text"):
+                self.added_folders.remove(os.path.basename(folder))
                 try:
                     shutil.rmtree(folder)
                 except Exception as e:
@@ -800,8 +893,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 self.label_list.remove(label)
                 self.button_list.remove(button)
                 self.added_items.remove(label.cget("text"))
+                self.ids_added.remove(id)
                 self.button_view_list.remove(button_view_list)
-                self.remove_item_by_id(LIBRARY_FILE, id)
+                self.remove_item_by_option(items_file, id)
 
     def refresh_items(self):
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
@@ -812,6 +906,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.button_list.clear()
         self.button_view_list.clear()
         self.added_items.clear()
+        self.added_folders.clear()
+        self.ids_added.clear()
         self.load_items(app.edit_destination_folder.get().strip())
 
     def view_item(self, workshop_id):
@@ -827,7 +923,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.no_items_label.forget()
 
     # i know i know ,please make a pull request i cant be bother
-    def show_map_info(self, workshop):
+    def show_map_info(self, workshop, invalid_warn=False):
         for button_view in self.button_view_list:
             button_view.configure(state="disabled")
 
@@ -899,7 +995,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 image_size = image.size
 
                 self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created,
-                                        date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id)
+                                        date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id, invalid_warn)
 
             except requests.exceptions.RequestException as e:
                 show_message("Error", f"Failed to fetch map information.\nError: {e}", icon="cancel")
@@ -911,15 +1007,16 @@ class LibraryTab(ctk.CTkScrollableFrame):
         info_thread.start()
 
     def toplevel_info_window(self, map_name, map_mod_type, map_size, image, image_size,
-                             date_created ,date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id):
+                             date_created ,date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id, invalid_warn):
         def main_thread():
             try:
+                items_file = os.path.join(cwd(), LIBRARY_FILE)
                 top = ctk.CTkToplevel(self)
                 if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
                     top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
                 top.title("Map/Mod Information")
                 top.attributes('-topmost', 'true')
-                down_date = self.get_item_by_id(LIBRARY_FILE, workshop_id, 'date')
+                down_date = self.get_item_by_id(items_file, workshop_id, 'date')
 
                 def close_window():
                     top.destroy()
@@ -1007,6 +1104,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 view_button = ctk.CTkButton(buttons_frame, text="Close", command=close_window, width=130)
                 view_button.grid(row=0, column=2, padx=(10, 20), pady=(10, 10), sticky="n")
 
+                if invalid_warn:
+                    update_btn.configure(text="Update", state="disabled")
+                    update_btn_tooltip.configure(message="Disabled due to item being blocked or duplicated")
+
                 top.grid_rowconfigure(0, weight=0)
                 top.grid_rowconfigure(1, weight=0)
                 top.grid_rowconfigure(2, weight=1)
@@ -1026,6 +1127,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.after(0, main_thread)
 
     def check_for_updates(self, on_launch=False):
+        if not is_internet_available():
+            show_message("Error!", "Internet connection is not available. Please check your internet connection and try again.")
+            return
         self.after(1, self.update_button.configure(state="disabled"))
         self.update_tooltip.configure(message='Still loading please wait...')
         cevent = Event()
@@ -1317,6 +1421,15 @@ class SettingsTab(ctk.CTkFrame):
         self.reset_steamcmd_on_fail_tooltip = CTkToolTip(self.reset_steamcmd_on_fail, message="This actually fixes steamcmd when its crashing way too much")
         self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "10"))
 
+        # item folder naming
+        self.folder_options_label_var = ctk.IntVar()
+        self.folder_options_label_var.trace_add("write", self.enable_save_button)
+        self.folder_options_label = ctk.CTkLabel(left_frame, text="Items Folder Naming:", anchor="nw")
+        self.folder_options_label.grid(row=10, column=1, padx=20, pady=(10, 0), sticky="nw")
+        self.folder_options = ctk.CTkOptionMenu(left_frame, values=["PublisherID", "FolderName"], variable=self.folder_options_label_var)
+        self.folder_options.grid(row=11, column=1, padx=20, pady=(0, 0), sticky="nw")
+        self.folder_options.set(value=self.load_settings("folder_naming", "PublisherID"))
+
         # Check for updates button n Launch boiii
         self.check_for_updates = ctk.CTkButton(right_frame, text="Check for updates", command=self.settings_check_for_updates)
         self.check_for_updates.grid(row=1, column=1, padx=20, pady=(20, 0), sticky="n")
@@ -1328,7 +1441,7 @@ class SettingsTab(ctk.CTkFrame):
         self.reset_steamcmd.grid(row=3, column=1, padx=20, pady=(20, 0), sticky="n")
         self.reset_steamcmd_tooltip = CTkToolTip(self.reset_steamcmd, message="This will remove steamapps folder + all the maps that are potentioaly corrupted\nor not so use at ur own risk (could fix some issues as well)")
 
-        self.steam_to_boiii = ctk.CTkButton(right_frame, text="Steam to Boiii", command=self.from_steam_to_boiii_toplevel)
+        self.steam_to_boiii = ctk.CTkButton(right_frame, text="Steam to boiii", command=self.from_steam_to_boiii_toplevel)
         self.steam_to_boiii.grid(row=5, column=1, padx=20, pady=(20, 0), sticky="n")
         self.steam_to_boiii_tooltip = CTkToolTip(self.steam_to_boiii, message="Moves/copies maps and mods from steam to boiii (opens up a window)")
 
@@ -1424,6 +1537,11 @@ class SettingsTab(ctk.CTkFrame):
     def save_settings(self):
         self.save_button.configure(state='disabled')
 
+        if self.folder_options.get() == "PublisherID":
+            save_config("folder_naming", "0")
+        else:
+            save_config("folder_naming", "1")
+
         if self.check_items_var.get():
             save_config("check_items", "on")
         else:
@@ -1486,6 +1604,12 @@ class SettingsTab(ctk.CTkFrame):
             save_config("reset_on_fail", value)
 
     def load_settings(self, setting, fallback=None):
+        if setting == "folder_naming":
+            if check_config(setting, fallback) == "1":
+                return "FolderName"
+            else:
+                return "PublisherID"
+
         if setting == "console":
             if check_config(setting, fallback) == "on":
                 self.console = True
@@ -1630,7 +1754,7 @@ class SettingsTab(ctk.CTkFrame):
                 button_steam_browse = ctk.CTkButton(center_frame, text="Select", width=10)
                 button_steam_browse.grid(row=1, column=2, padx=(0, 20), pady=(10, 10), sticky="wnes")
 
-                boiii_folder_label = ctk.CTkLabel(center_frame, text="BOIII Folder:")
+                boiii_folder_label = ctk.CTkLabel(center_frame, text="boiii Folder:")
                 boiii_folder_label.grid(row=2, column=0, padx=(20, 20), pady=(10, 0), sticky='w')
                 boiii_folder_entry = ctk.CTkEntry(center_frame, width=225)
                 boiii_folder_entry.grid(row=3, column=0, columnspan=2, padx=(0, 20), pady=(10, 10), sticky='nes')
@@ -1689,7 +1813,7 @@ class SettingsTab(ctk.CTkFrame):
                         copy_button.configure(text=f"Start (Copy)")
 
                 def open_BOIII_browser():
-                    selected_folder = ctk.filedialog.askdirectory(title="Select BOIII Folder")
+                    selected_folder = ctk.filedialog.askdirectory(title="Select boiii Folder")
                     if selected_folder:
                         boiii_folder_entry.delete(0, "end")
                         boiii_folder_entry.insert(0, selected_folder)
@@ -1718,7 +1842,7 @@ class SettingsTab(ctk.CTkFrame):
                                 return
 
                             if not os.path.exists(boiii_folder):
-                                show_message("Not found", "BOIII folder not found, please recheck path")
+                                show_message("Not found", "boiii folder not found, please recheck path")
                                 return
 
                             top.after(0, progress_text.configure(text="Loading..."))
@@ -1738,7 +1862,22 @@ class SettingsTab(ctk.CTkFrame):
 
                                 if os.path.exists(json_file_path):
                                     mod_type = extract_json_data(json_file_path, "Type")
-                                    folder_name = extract_json_data(json_file_path, "PublisherID")
+                                    items_file = os.path.join(cwd(), LIBRARY_FILE)
+
+                                    if app.library_tab.item_exists_in_file(items_file, workshop_id):
+                                        get_folder_name = app.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
+                                        if get_folder_name:
+                                            folder_name = get_folder_name
+                                        else:
+                                            try:
+                                                folder_name = extract_json_data(json_file_path, app.settings_tab.folder_options.get())
+                                            except:
+                                                folder_name = extract_json_data(json_file_path, "publisherID")
+                                    else:
+                                        try:
+                                            folder_name = extract_json_data(json_file_path, app.settings_tab.folder_options.get())
+                                        except:
+                                            folder_name = extract_json_data(json_file_path, "publisherID")
 
                                     if mod_type == "mod":
                                         mods_folder = os.path.join(boiii_folder, "mods")
@@ -1802,7 +1941,7 @@ class BOIIIWD(ctk.CTk):
         # self.app_instance = BOIIIWD()
 
         # configure window
-        self.title("BOIII Workshop Downloader - Main")
+        self.title("boiii Workshop Downloader - Main")
 
         try:
             geometry_file = os.path.join(cwd(), "boiiiwd_dont_touch.conf")
@@ -1939,10 +2078,10 @@ class BOIIIWD(ctk.CTk):
         self.info_button = ctk.CTkButton(master=self.optionsframe, text="Details", command=self.show_map_info, width=10)
         self.info_button.grid(row=2, column=5, padx=(0, 20), pady=(0, 10), sticky="wn")
 
-        self.label_destination_folder = ctk.CTkLabel(master=self.optionsframe, text="Enter Your BOIII folder:")
+        self.label_destination_folder = ctk.CTkLabel(master=self.optionsframe, text='Enter Your boiii folder:')
         self.label_destination_folder.grid(row=3, column=1, padx=20, pady=(0, 0), columnspan=4, sticky="ws")
 
-        self.edit_destination_folder = ctk.CTkEntry(master=self.optionsframe, placeholder_text="Your BOIII Instalation folder")
+        self.edit_destination_folder = ctk.CTkEntry(master=self.optionsframe, placeholder_text="Your boiii Instalation folder")
         self.edit_destination_folder.grid(row=4, column=1, padx=20, pady=(0, 25), columnspan=4, sticky="ewn")
 
         self.button_BOIII_browse = ctk.CTkButton(master=self.optionsframe, text="Select", command=self.open_BOIII_browser)
@@ -2275,7 +2414,7 @@ class BOIIIWD(ctk.CTk):
             self.queuetextarea.configure(state="disabled")
 
     def open_BOIII_browser(self):
-        selected_folder = ctk.filedialog.askdirectory(title="Select BOIII Folder")
+        selected_folder = ctk.filedialog.askdirectory(title="Select boiii Folder")
         if selected_folder:
             self.edit_destination_folder.delete(0, "end")
             self.edit_destination_folder.insert(0, selected_folder)
@@ -2979,7 +3118,21 @@ class BOIIIWD(ctk.CTk):
                     if os.path.exists(json_file_path):
                         self.label_speed.configure(text="Installing...")
                         mod_type = extract_json_data(json_file_path, "Type")
-                        folder_name = extract_json_data(json_file_path, "PublisherID")
+                        items_file = os.path.join(cwd(), LIBRARY_FILE)
+                        if self.library_tab.item_exists_in_file(items_file, workshop_id):
+                            get_folder_name = self.library_tab.get_item_by_id(self, items_file, workshop_id, return_option="folder_name")
+                            if get_folder_name:
+                                folder_name = get_folder_name
+                            else:
+                                try:
+                                    folder_name = extract_json_data(json_file_path, self.settings_tab.folder_options.get())
+                                except:
+                                    folder_name = extract_json_data(json_file_path, "publisherID")
+                        else:
+                            try:
+                                folder_name = extract_json_data(json_file_path, self.settings_tab.folder_options.get())
+                            except:
+                                folder_name = extract_json_data(json_file_path, "publisherID")
 
                         if mod_type == "mod":
                             mods_folder = os.path.join(destination_folder, "mods")
@@ -3224,7 +3377,21 @@ class BOIIIWD(ctk.CTk):
                 if os.path.exists(json_file_path):
                     self.label_speed.configure(text="Installing...")
                     mod_type = extract_json_data(json_file_path, "Type")
-                    folder_name = extract_json_data(json_file_path, "PublisherID")
+                    items_file = os.path.join(cwd(), LIBRARY_FILE)
+                    if self.library_tab.item_exists_in_file(items_file, workshop_id):
+                        get_folder_name = self.library_tab.get_item_by_id(self, items_file, workshop_id, return_option="folder_name")
+                        if get_folder_name:
+                            folder_name = get_folder_name
+                        else:
+                            try:
+                                folder_name = extract_json_data(json_file_path, self.settings_tab.folder_options.get())
+                            except:
+                                folder_name = extract_json_data(json_file_path, "publisherID")
+                    else:
+                        try:
+                            folder_name = extract_json_data(json_file_path, self.settings_tab.folder_options.get())
+                        except:
+                            folder_name = extract_json_data(json_file_path, "publisherID")
 
                     if mod_type == "mod":
                         mods_folder = os.path.join(destination_folder, "mods")
