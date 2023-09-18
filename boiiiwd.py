@@ -1414,10 +1414,10 @@ class SettingsTab(ctk.CTkFrame):
         # Resetr steam on many fails
         self.reset_steamcmd_on_fail_var = ctk.IntVar()
         self.reset_steamcmd_on_fail_var.trace_add("write", self.enable_save_button)
-        self.reset_steamcmd_on_fail_text = ctk.CTkLabel(left_frame, text=f"Reset steamcmd on % fails: (n of fails)", anchor="w")
+        self.reset_steamcmd_on_fail_text = ctk.CTkLabel(left_frame, text=f"Reset steamcmd: (n of fails):", anchor="w")
         self.reset_steamcmd_on_fail_text.grid(row=8, column=1, padx=20, pady=(10, 0), sticky="nw")
         self.reset_steamcmd_on_fail = ctk.CTkOptionMenu(left_frame, values=["5", "10", "20", "30", "40", "Custom", "Disable"], variable=self.reset_steamcmd_on_fail_var, command=self.reset_steamcmd_on_fail_func)
-        self.reset_steamcmd_on_fail.grid(row=9, column=1, padx=20, pady=(0, 0), sticky="nw")
+        self.reset_steamcmd_on_fail.grid(row=8, column=1, padx=(190, 0), pady=(10, 0), sticky="nw")
         self.reset_steamcmd_on_fail_tooltip = CTkToolTip(self.reset_steamcmd_on_fail, message="This actually fixes steamcmd when its crashing way too much")
         self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "10"))
 
@@ -1427,7 +1427,7 @@ class SettingsTab(ctk.CTkFrame):
         self.folder_options_label = ctk.CTkLabel(left_frame, text="Items Folder Naming:", anchor="nw")
         self.folder_options_label.grid(row=10, column=1, padx=20, pady=(10, 0), sticky="nw")
         self.folder_options = ctk.CTkOptionMenu(left_frame, values=["PublisherID", "FolderName"], variable=self.folder_options_label_var)
-        self.folder_options.grid(row=11, column=1, padx=20, pady=(0, 0), sticky="nw")
+        self.folder_options.grid(row=10, column=1, padx=(150, 0), pady=(3, 0), sticky="nw")
         self.folder_options.set(value=self.load_settings("folder_naming", "PublisherID"))
 
         # Check for updates button n Launch boiii
