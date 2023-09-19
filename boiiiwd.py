@@ -758,15 +758,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     text_to_add += f" | ID: {workshop_id} | Size: {size}"
 
                     creation_timestamp = None
-                    if item_type == "mod":
-                        core_mod_file = zone_path / "core_mod.ff"
-                        if core_mod_file.exists():
-                            creation_timestamp = core_mod_file.stat().st_ctime
-                    elif item_type == "map":
-                        for ff_file in zone_path.glob("*.ff"):
-                            if ff_file.exists():
-                                creation_timestamp = ff_file.stat().st_ctime
-                                break
+                    for ff_file in zone_path.glob("*.ff"):
+                        if ff_file.exists():
+                            creation_timestamp = ff_file.stat().st_ctime
+                            break
 
                     if creation_timestamp is not None:
                         date_added = datetime.fromtimestamp(creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
@@ -909,7 +904,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.added_items.clear()
         self.added_folders.clear()
         self.ids_added.clear()
-        self.load_items(app.edit_destination_folder.get().strip())
+        status = self.load_items(app.edit_destination_folder.get().strip())
+        app.title(f"BOIII Workshop Downloader - Library  ➜  {status}")
 
     def view_item(self, workshop_id):
         url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
@@ -2299,9 +2295,9 @@ class BOIIIWD(ctk.CTk):
 
     def show_library_widgets(self):
         self.title("BOIII Workshop Downloader - Library")
-        count = self.library_tab.load_items(self.edit_destination_folder.get())
+        status = self.library_tab.load_items(self.edit_destination_folder.get())
         self.library_tab.grid(row=0, rowspan=3, column=1, padx=(0, 20), pady=(20, 20), sticky="nsew")
-        self.title(f"BOIII Workshop Downloader - Library  ➜  {count}")
+        self.title(f"BOIII Workshop Downloader - Library  ➜  {status}")
 
     def show_queue_widgets(self):
         self.title("BOIII Workshop Downloader - Queue")
