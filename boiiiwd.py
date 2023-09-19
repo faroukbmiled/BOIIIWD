@@ -734,6 +734,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
         folders_to_process = [mods_folder, maps_folder]
 
+        items_file = os.path.join(cwd(), LIBRARY_FILE)
+
         for folder_path in folders_to_process:
             for zone_path in folder_path.glob("**/zone"):
                 json_path = zone_path / "workshop.json"
@@ -772,7 +774,6 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         creation_timestamp = zone_path.stat().st_ctime
                         date_added = datetime.fromtimestamp(creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
 
-                    items_file = os.path.join(cwd(), LIBRARY_FILE)
                     map_count += 1 if item_type == "map" else 0
                     mod_count += 1 if item_type == "mod" else 0
                     if curr_folder_name not in self.added_folders:
@@ -824,7 +825,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         if not workshop_id in self.ids_added:
                             self.ids_added.add(workshop_id)
 
-        if not self.file_cleaned:
+        if not self.file_cleaned and os.path.exists(items_file):
             self.file_cleaned = True
             self.clean_json_file(items_file)
 
