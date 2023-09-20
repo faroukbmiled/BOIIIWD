@@ -8,4 +8,3 @@ Homepage: https://github.com/Akascape/CTkToolTip
 __version__ = '0.8'
 
 from .ctk_tooltip import CTkToolTip
-
