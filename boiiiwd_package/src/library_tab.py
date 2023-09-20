@@ -217,7 +217,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     # current folder name
                     curr_folder_name = zone_path.parent.name
 
-                    workshop_id = extract_json_data(json_path, "PublisherID")
+                    workshop_id = extract_json_data(json_path, "PublisherID") or "None"
                     name = re.sub(r'\^\w+', '', extract_json_data(json_path, "Title"))
                     name = name[:45] + "..." if len(name) > 45 else name
                     item_type = extract_json_data(json_path, "Type")
@@ -253,7 +253,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                             self.item_block_list.add(curr_folder_name)
                             image_path = b_mod_img if item_type == "mod" else b_map_img
                             text_to_add += " | ⚠️"
-                        elif curr_folder_name not in self.added_folders and workshop_id in self.ids_added:
+                        elif (curr_folder_name not in self.added_folders and (workshop_id in self.ids_added or workshop_id == "None")):
                             try: self.remove_item_by_option(items_file, curr_folder_name, "folder_name")
                             except: pass
                             image_path = b_mod_img if item_type == "mod" else b_map_img
