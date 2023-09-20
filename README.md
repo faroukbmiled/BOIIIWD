@@ -21,7 +21,7 @@
 
 ## Usage (script):
 - ```pip install -r requirements.txt``` -> use my modified [CTkToolTip](./CTkToolTip) and [CTkListbox](./CTkListbox) for [v0.2.8](https://github.com/faroukbmiled/BOIIIWD/releases) and up
-- ```python boiiiwd.py```
+- ```python boiiiwd_package\boiiiwd.py```
 - Slap in your workshop item link for example: "https://steamcommunity.com/sharedfiles/filedetails/?id=3011930738" or just the id 3011930738)
 
 ## Features:
@@ -36,16 +36,16 @@
 
 <a name="freezing"></a>
 ## Freezing into an exe (pyinstaller):
-- ```pip install -r requirements.txt``` -> use my modified [CTkToolTip](./CTkToolTip) and [CTkListbox](./CTkListbox) for [v0.2.8](https://github.com/faroukbmiled/BOIIIWD/releases) and up
-- ```pip install pyinstaller```
-- ```pyinstaller --noconfirm --onefile --windowed --icon "ryuk.ico" --name "BOIIIWD" --ascii  "boiiiwd.py" --add-data "resources;resources" --add-data "c:\<python_path>\lib\site-packages\customtkinter;customtkinter\" --add-data "c:\<python_path>\lib\site-packages\CTkMessagebox;CTkMessagebox\" --add-data "c:\<python_path>\lib\site-packages\CTkToolTip;CTkToolTip\"```
+- ```pip install -r requirements.txt``` -> use my modified [CTkToolTip](./CTkToolTip) and [CTkListbox](./CTkListbox) for [v0.2.8](https://github.com/faroukbmiled/BOIIIWD/releases) and up.
+- ```python build.py```
 
 ## Queue tab (beta)
 
 - added Queue tab which has a text field that you can slap in workshop ids/links in 2 formats, for example:<br>
 
 
-```3010399939,2976006537,2118338989,2113146805```  or <br>
+```3010399939,2976006537,2118338989``` 
+or <br>
 ```3010399939
 2976006537
 2118338989

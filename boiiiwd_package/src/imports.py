@@ -1,30 +1,44 @@
-from CTkMessagebox import CTkMessagebox
-from tkinter import Menu, END, Event
-from bs4 import BeautifulSoup
-import customtkinter as ctk
-from CTkToolTip import *
-from pathlib import Path
-from PIL import Image
 import configparser
-import webbrowser
-import subprocess
-import threading
-import datetime
-import requests
-import zipfile
-import shutil
-import psutil
+import io
 import json
 import math
-import time
-import sys
-import io
 import os
 import re
+import shutil
+import subprocess
+import sys
+import threading
+import time
+import webbrowser
+import zipfile
+from datetime import datetime
+from pathlib import Path
+from tkinter import END, Event, Menu
 
-VERSION = "v0.2.9"
+import customtkinter as ctk
+import psutil
+import requests
+from bs4 import BeautifulSoup
+from CTkMessagebox import CTkMessagebox
+from PIL import Image
+
+# Use CTkToolTip and CTkListbox from my repo originally by Akascape (https://github.com/Akascape)
+from .CTkListbox import ctk_listbox
+from .CTkToolTip import ctk_tooltip
+
+
+if getattr(sys, 'frozen', False):
+    # If the application is run as a bundle, the PyInstaller bootloader
+    # extends the sys module by a flag frozen=True and sets the app 
+    # path into variable _MEIPASS'.
+    application_path = os.path.dirname(sys.executable)
+else:
+    application_path = os.path.dirname(os.path.abspath(__file__))
+
+CONFIG_FILE_PATH = "config.ini"
 GITHUB_REPO = "faroukbmiled/BOIIIWD"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
+LIBRARY_FILE = "boiiiwd_library.json"
+RESOURCES_DIR = os.path.join(os.path.dirname(__file__), '..', 'resources')
 UPDATER_FOLDER = "update"
-CONFIG_FILE_PATH = "config.ini"
-RESOURCES_DIR = os.path.join(os.path.dirname(__file__), 'resources')
+VERSION = "v0.3.1"

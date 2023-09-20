@@ -12,7 +12,7 @@ def check_config(name, fallback=None):
     config.read(CONFIG_FILE_PATH)
     if fallback:
         return config.get("Settings", name, fallback=fallback)
-    return config.get("Settings", name, fallback="on")
+    return config.get("Settings", name, fallback="")
 
 def save_config(name, value):
     config = configparser.ConfigParser()
@@ -74,6 +74,56 @@ def create_update_script(current_exe, new_exe, updater_folder, program_name):
         script_file.write(script_content)
 
     return script_path
+
+def is_internet_available():
+    try:
+        requests.get("https://www.google.com", timeout=3)
+        return True
+    except:
+        return False
+
+def check_for_updates_func(window, ignore_up_todate=False):
+    if not is_internet_available():
+        show_message("Error!", "Internet connection is not available. Please check your internet connection and try again.")
+        return
+    try:
+        latest_version = get_latest_release_version()
+        current_version = VERSION
+        int_latest_version = int(latest_version.replace("v", "").replace(".", ""))
+        int_current_version = int(current_version.replace("v", "").replace(".", ""))
+
+        if latest_version and int_latest_version > int_current_version:
+            msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1), sound=True)
+
+            result = msg_box.get()
+
+            if result == "View":
+                webbrowser.open(f"https://github.com/{GITHUB_REPO}/releases/latest")
+
+            if result == "Yes":
+                from src.update_window import UpdateWindow
+                update_window = UpdateWindow(window, LATEST_RELEASE_URL)
+                update_window.start_update()
+
+            if result == "No":
+                return
+
+        elif int_latest_version < int_current_version:
+            if ignore_up_todate:
+                return
+            msg_box = CTkMessagebox(title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="Ok", sound=True)
+            result = msg_box.get()
+        elif int_latest_version == int_current_version:
+            if ignore_up_todate:
+                return
+            msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok", sound=True)
+            result = msg_box.get()
+
+        else:
+            show_message("Error!", "An error occured while checking for updates!\nCheck your internet and try again")
+
+    except Exception as e:
+        show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
 
 def extract_workshop_id(link):
     try:
@@ -271,11 +321,22 @@ def get_button_state_colors(file_path, state):
 
 def reset_steamcmd(no_warn=None):
     steamcmd_path = get_steamcmd_path()
-    steamcmd_steamapps = os.path.join(steamcmd_path, "steamapps")
-    if os.path.exists(steamcmd_steamapps):
-        remove_tree(steamcmd_steamapps, show_error=True)
-        if not no_warn:
-            show_message("Success!", "SteamCMD has been reset successfully!", icon="info")
+
+    directories_to_reset = ["steamapps", "dumps", "logs", "depotcache", "appcache","userdata",]
+
+    for directory in directories_to_reset:
+        directory_path = os.path.join(steamcmd_path, directory)
+        if os.path.exists(directory_path):
+            remove_tree(directory_path, show_error=True)
+
+    for root, _, files in os.walk(steamcmd_path):
+        for filename in files:
+            if filename.endswith((".old", ".crash")):
+                file_path = os.path.join(root, filename)
+                os.remove(file_path)
+
+    if not no_warn:
+        show_message("Success!", "SteamCMD has been reset successfully!", icon="info")
     else:
         if not no_warn:
             show_message("Warning!", "steamapps folder was not found, maybe already removed?", icon="warning")
@@ -298,7 +359,30 @@ def get_item_name(id):
     except:
         return False
 
-def show_noti(widget ,message, event=None, noti_dur=3.0):
-    CTkToolTip(widget, message=message, is_noti=True, noti_event=event, noti_dur=noti_dur)
+# you gotta use my modded CTkToolTip originaly by Akascape
+def show_noti(widget ,message, event=None, noti_dur=3.0, topmost=False):
+    ctk_tooltip.CTkToolTip(widget, message=message, is_noti=True, noti_event=event, noti_dur=noti_dur, topmost=topmost)
+
+def check_item_date(down_date, date_updated):
+    current_year = datetime.now().year
+    date_format_with_year = "%d %b, %Y @ %I:%M%p"
+    date_format_with_added_year = "%d %b @ %I:%M%p, %Y"
+    try:
+        try:
+            download_datetime = datetime.strptime(down_date, date_format_with_year)
+        except ValueError:
+            download_datetime = datetime.strptime(down_date + f", {current_year}", date_format_with_added_year)
+
+        try:
+            upload_datetime = datetime.strptime(date_updated, date_format_with_year)
+        except ValueError:
+            upload_datetime = datetime.strptime(date_updated + f", {current_year}", date_format_with_added_year)
+
+        if upload_datetime >= download_datetime:
+            return True
+        elif upload_datetime < download_datetime:
+            return False
+    except:
+        return False
 
 # End helper functions
