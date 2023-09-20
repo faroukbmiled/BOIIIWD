@@ -21,10 +21,8 @@ def check_custom_theme(theme_name):
     if os.path.exists(os.path.join(application_path, theme_name)):
         return os.path.join(application_path, theme_name)
     else:
-        try:
-            return os.path.join(RESOURCES_DIR, theme_name)
-        except:
-            return os.path.join(RESOURCES_DIR, "boiiiwd_theme.json")
+        try: return os.path.join(RESOURCES_DIR, theme_name)
+        except: return os.path.join(RESOURCES_DIR, "boiiiwd_theme.json")
 
 # theme initialization
 ctk.set_appearance_mode(check_config("appearance", "Dark"))  # Modes: "System" (standard), "Dark", "Light"

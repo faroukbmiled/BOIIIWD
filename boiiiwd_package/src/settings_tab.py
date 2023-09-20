@@ -216,10 +216,8 @@ class SettingsTab(ctk.CTkFrame):
                 pass
 
     def enable_save_button(self, *args):
-        try:
-            self.save_button.configure(state='normal')
-        except:
-            pass
+        try: self.save_button.configure(state='normal')
+        except: pass
 
     def save_settings(self):
         self.save_button.configure(state='disabled')

@@ -223,8 +223,7 @@ class BOIIIWD(ctk.CTk):
             self.settings_tab.load_settings("reset_on_fail", "10")
             self.settings_tab.load_settings("show_fails", "on")
             self.settings_tab.load_settings("skip_already_installed", "on")
-        except:
-            pass
+        except: pass
 
         if not check_steamcmd():
             self.show_steam_warning_message()
@@ -367,7 +366,7 @@ class BOIIIWD(ctk.CTk):
         self.library_tab.grid_remove()
 
     def show_library_widgets(self):
-        self.title("BOIII Workshop Downloader - Library")
+        self.title("BOIII Workshop Downloader - Library  ➜  Loading... ⏳")
         status = self.library_tab.load_items(self.edit_destination_folder.get())
         self.library_tab.grid(row=0, rowspan=3, column=1, padx=(0, 20), pady=(20, 20), sticky="nsew")
         self.title(f"BOIII Workshop Downloader - Library  ➜  {status}")

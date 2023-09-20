@@ -133,12 +133,11 @@ class UpdateWindow(ctk.CTkToplevel):
                     os.remove(fr"{zip_path}")
                 self.label_download.configure(text="Update cancelled.")
                 self.progress_bar.set(0.0)
-                # there's a better solution ill implement it later
-                try:
-                    main_app.app.attributes('-alpha', 1.0)
-                except:
-                    pass
+
+                try: main_app.app.attributes('-alpha', 1.0)
+                except: pass
                 show_message("Cancelled!", "Update cancelled by user", icon="warning")
+
         except Exception as e:
             self.progress_bar.set(0.0)
             self.label_download.configure(text="Update failed")
