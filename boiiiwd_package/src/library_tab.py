@@ -331,7 +331,19 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         if mode_type:
                             text_to_add += f" | Mode: {mode_type}"
                         text_to_add += f" | ID: {workshop_id} | Size: {size}"
-                        date_added = datetime.now().strftime("%d %b, %Y @ %I:%M%p")
+
+                        creation_timestamp = None
+                        for ff_file in zone_path.glob("*.ff"):
+                            if ff_file.exists():
+                                creation_timestamp = ff_file.stat().st_ctime
+                                break
+
+                        if creation_timestamp is not None:
+                            date_added = datetime.fromtimestamp(creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
+                        else:
+                            creation_timestamp = zone_path.stat().st_ctime
+                            date_added = datetime.fromtimestamp(creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
+
                         items_file = os.path.join(application_path, LIBRARY_FILE)
 
                         item_info = {
