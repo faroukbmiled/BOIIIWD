@@ -42,7 +42,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         button = ctk.CTkButton(self, text="Remove", width=60, height=24, fg_color="#3d3f42")
         button_view = ctk.CTkButton(self, text="Details", width=55, height=24, fg_color="#3d3f42")
         button.configure(command=lambda: self.remove_item(item, folder, workshop_id))
-        button_view.configure(command=lambda: self.show_map_info(workshop_id, invalid_warn))
+        button_view.configure(command=lambda: self.show_map_info(workshop_id, folder ,invalid_warn))
         button_view_tooltip = CTkToolTip(button_view, message="Opens up a window that shows basic details")
         button_tooltip = CTkToolTip(button, message="Removes the map/mod from your game")
         label.grid(row=len(self.label_list) + 1, column=0, pady=(0, 10), padx=(5, 10), sticky="w")
@@ -393,9 +393,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.no_items_label.configure(text="")
         self.no_items_label.forget()
 
-    # i know i know ,please make a pull request i cant be bother
     @if_internet_available
-    def show_map_info(self, workshop, invalid_warn=False):
+    def show_map_info(self, workshop, folder, invalid_warn=False):
         for button_view in self.button_view_list:
             button_view.configure(state="disabled")
 
@@ -467,7 +466,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 image_size = image.size
 
                 self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created,
-                                        date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id, invalid_warn)
+                                        date_updated, stars_image, stars_image_size, ratings_text,
+                                        url, workshop_id, invalid_warn, folder)
 
             except Exception as e:
                 show_message("Error", f"Failed to fetch map information.\nError: {e}", icon="cancel")
@@ -479,7 +479,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
         info_thread.start()
 
     def toplevel_info_window(self, map_name, map_mod_type, map_size, image, image_size,
-                             date_created ,date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id, invalid_warn):
+                             date_created ,date_updated, stars_image, stars_image_size, ratings_text,
+                             url, workshop_id, invalid_warn, folder):
         def main_thread():
             try:
                 items_file = os.path.join(application_path, LIBRARY_FILE)
@@ -549,6 +550,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 date_updated_label = ctk.CTkLabel(info_frame, text=f"Downloaded at: {down_date}")
                 date_updated_label.grid(row=5, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
+                folder_name = ctk.CTkLabel(info_frame, text=f"Folder name: {os.path.basename(folder)}")
+                folder_name.grid(row=6, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+
                 stars_image_label = ctk.CTkLabel(stars_frame)
                 stars_width, stars_height = stars_image_size
                 stars_image_widget = ctk.CTkImage(stars_image, size=(int(stars_width), int(stars_height)))
@@ -613,8 +617,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         def main_thread():
             if show_message(f"{to_update_len} Item updates available", f"{to_update_len} Workshop Items have an update, Would you like to open the item updater window?", icon="info", _return=True):
                 main_app.app.after(1, self.update_items_window)
-            else:
-                return
+            else: return
         main_app.app.after(0, main_thread)
         self.update_button.configure(state="normal", width=65, height=20)
         self.update_tooltip.configure(message='Check items for updates')

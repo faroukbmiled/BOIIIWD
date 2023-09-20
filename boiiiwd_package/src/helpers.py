@@ -1,13 +1,13 @@
-import socket
 import src.shared_vars as main_app
 from src.imports import *
 
 # Start helper functions
 
 #testing app offline
-def guard(*args, **kwargs):
-    pass
-socket.socket = guard
+# import socket
+# def guard(*args, **kwargs):
+#     pass
+# socket.socket = guard
 
 def check_config(name, fallback=None):
     config = configparser.ConfigParser()
