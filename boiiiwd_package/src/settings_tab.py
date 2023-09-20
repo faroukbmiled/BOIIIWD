@@ -1,47 +1,9 @@
+from src.update_window import check_for_updates_func
 from src.imports import *
 from src.helpers import *
 
 import src.shared_vars as shared
 
-def check_for_updates_func(window, ignore_up_todate=False):
-    try:
-        latest_version = get_latest_release_version()
-        current_version = VERSION
-        int_latest_version = int(latest_version.replace("v", "").replace(".", ""))
-        int_current_version = int(current_version.replace("v", "").replace(".", ""))
-
-        if latest_version and int_latest_version > int_current_version:
-            msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1), sound=True)
-
-            result = msg_box.get()
-
-            if result == "View":
-                webbrowser.open(f"https://github.com/{GITHUB_REPO}/releases/latest")
-
-            from src.update_window import UpdateWindow
-            if result == "Yes":
-                update_window = UpdateWindow(window, LATEST_RELEASE_URL)
-                update_window.start_update()
-
-            if result == "No":
-                return
-
-        elif int_latest_version < int_current_version:
-            if ignore_up_todate:
-                return
-            msg_box = CTkMessagebox(title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="Ok", sound=True)
-            result = msg_box.get()
-        elif int_latest_version == int_current_version:
-            if ignore_up_todate:
-                return
-            msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok", sound=True)
-            result = msg_box.get()
-
-        else:
-            show_message("Error!", "An error occured while checking for updates!\nCheck your internet and try again")
-
-    except Exception as e:
-        show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
 
 class SettingsTab(ctk.CTkFrame):
     def __init__(self, master=None):
@@ -210,7 +172,7 @@ class SettingsTab(ctk.CTkFrame):
                     if response == "No":
                         return
                     elif response == "Ok":
-                        os.system(f"notepad {os.path.join(cwd(), 'config.ini')}")
+                        os.system(f"notepad {os.path.join(application_path, 'config.ini')}")
                     else:
                         return
                 self.after(0, callback)
@@ -398,7 +360,7 @@ class SettingsTab(ctk.CTkFrame):
                 return 0
 
         if setting == "theme":
-            if os.path.exists(os.path.join(cwd(), "boiiiwd_theme.json")):
+            if os.path.exists(os.path.join(application_path, "boiiiwd_theme.json")):
                 return "Custom"
             if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_theme.json":
                 return "Default"
@@ -419,11 +381,11 @@ class SettingsTab(ctk.CTkFrame):
                 return 0
 
     def boiiiwd_custom_theme(self, disable_only=None):
-        file_to_rename = os.path.join(cwd(), "boiiiwd_theme.json")
+        file_to_rename = os.path.join(application_path, "boiiiwd_theme.json")
         if os.path.exists(file_to_rename):
             timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
             new_name = f"boiiiwd_theme_{timestamp}.json"
-            os.rename(file_to_rename, os.path.join(cwd(), new_name))
+            os.rename(file_to_rename, os.path.join(application_path, new_name))
 
             if not disable_only:
                 show_message("Preset file renamed", "Custom preset disabled, file has been renmaed\n* Restart the app to take effect", icon="info")
@@ -431,9 +393,9 @@ class SettingsTab(ctk.CTkFrame):
             if disable_only:
                 return
             try:
-                shutil.copy(os.path.join(RESOURCES_DIR, check_config("theme", "boiiiwd_theme.json")), os.path.join(cwd(), "boiiiwd_theme.json"))
+                shutil.copy(os.path.join(RESOURCES_DIR, check_config("theme", "boiiiwd_theme.json")), os.path.join(application_path, "boiiiwd_theme.json"))
             except:
-                shutil.copy(os.path.join(RESOURCES_DIR, "boiiiwd_theme.json"), os.path.join(cwd(), "boiiiwd_theme.json"))
+                shutil.copy(os.path.join(RESOURCES_DIR, "boiiiwd_theme.json"), os.path.join(application_path, "boiiiwd_theme.json"))
             show_message("Preset file created", "You can now edit boiiiwd_theme.json in the current directory to your liking\n* Edits will apply next time you open boiiiwd\n* Program will always take boiiiwd_theme.json as the first theme option if found\n* Click on this button again to disable your custom theme or just rename boiiiwd_theme.json", icon="info")
 
     def settings_check_for_updates(self):
@@ -587,7 +549,7 @@ class SettingsTab(ctk.CTkFrame):
 
                                 if os.path.exists(json_file_path):
                                     mod_type = extract_json_data(json_file_path, "Type")
-                                    items_file = os.path.join(cwd(), LIBRARY_FILE)
+                                    items_file = os.path.join(application_path, LIBRARY_FILE)
 
                                     if shared.app.library_tab.item_exists_in_file(items_file, workshop_id):
                                         get_folder_name = shared.app.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")

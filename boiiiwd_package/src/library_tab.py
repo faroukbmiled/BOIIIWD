@@ -207,7 +207,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
         folders_to_process = [mods_folder, maps_folder]
 
-        items_file = os.path.join(cwd(), LIBRARY_FILE)
+        items_file = os.path.join(application_path, LIBRARY_FILE)
 
         for folder_path in folders_to_process:
             for zone_path in folder_path.glob("**/zone"):
@@ -331,7 +331,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                             text_to_add += f" | Mode: {mode_type}"
                         text_to_add += f" | ID: {workshop_id} | Size: {size}"
                         date_added = datetime.now().strftime("%d %b, %Y @ %I:%M%p")
-                        items_file = os.path.join(cwd(), LIBRARY_FILE)
+                        items_file = os.path.join(application_path, LIBRARY_FILE)
 
                         item_info = {
                             "id": workshop_id,
@@ -347,7 +347,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
             show_message("Error updating json file", f"Error while updating library json file\n{e}")
 
     def remove_item(self, item, folder, id):
-        items_file = os.path.join(cwd(), LIBRARY_FILE)
+        items_file = os.path.join(application_path, LIBRARY_FILE)
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
             if item == label.cget("text"):
                 self.added_folders.remove(os.path.basename(folder))
@@ -480,7 +480,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                              date_created ,date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id, invalid_warn):
         def main_thread():
             try:
-                items_file = os.path.join(cwd(), LIBRARY_FILE)
+                items_file = os.path.join(application_path, LIBRARY_FILE)
                 top = ctk.CTkToplevel(self)
                 if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
                     top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
@@ -655,7 +655,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         def check_for_update():
             lib_data = None
 
-            if not os.path.exists(os.path.join(cwd(), LIBRARY_FILE)):
+            if not os.path.exists(os.path.join(application_path, LIBRARY_FILE)):
                 show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct boiii path!, you also need to have at lease 1 item!")
                 return
 

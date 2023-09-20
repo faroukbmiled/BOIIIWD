@@ -1,61 +1,20 @@
+from src.update_window import check_for_updates_func
 from src.helpers import *
 
 from src.library_tab import LibraryTab
 from src.settings_tab import SettingsTab
-from src.update_window import UpdateWindow
 
-
-def check_for_updates_func(window, ignore_up_todate=False):
-    try:
-        latest_version = get_latest_release_version()
-        current_version = VERSION
-        int_latest_version = int(latest_version.replace("v", "").replace(".", ""))
-        int_current_version = int(current_version.replace("v", "").replace(".", ""))
-
-        if latest_version and int_latest_version > int_current_version:
-            msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1), sound=True)
-
-            result = msg_box.get()
-
-            if result == "View":
-                webbrowser.open(f"https://github.com/{GITHUB_REPO}/releases/latest")
-
-            if result == "Yes":
-                update_window = UpdateWindow(window, LATEST_RELEASE_URL)
-                update_window.start_update()
-
-            if result == "No":
-                return
-
-        elif int_latest_version < int_current_version:
-            if ignore_up_todate:
-                return
-            msg_box = CTkMessagebox(title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="Ok", sound=True)
-            result = msg_box.get()
-        elif int_latest_version == int_current_version:
-            if ignore_up_todate:
-                return
-            msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok", sound=True)
-            result = msg_box.get()
-
-        else:
-            show_message("Error!", "An error occured while checking for updates!\nCheck your internet and try again")
-
-    except Exception as e:
-        show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
 
 class BOIIIWD(ctk.CTk):
     def __init__(self):
         super().__init__()
-        global master_win
-        master_win = self
         # self.app_instance = BOIIIWD()
 
         # configure window
         self.title("boiii Workshop Downloader - Main")
 
         try:
-            geometry_file = os.path.join(cwd(), "boiiiwd_dont_touch.conf")
+            geometry_file = os.path.join(application_path, "boiiiwd_dont_touch.conf")
             if os.path.isfile(geometry_file):
                 with open(geometry_file, "r") as conf:
                     self.geometry(conf.read())
@@ -466,7 +425,7 @@ class BOIIIWD(ctk.CTk):
     def load_configs(self):
         if os.path.exists(CONFIG_FILE_PATH):
             destination_folder = check_config("DestinationFolder", "")
-            steamcmd_path = check_config("SteamCMDPath", os.getcwd())
+            steamcmd_path = check_config("SteamCMDPath", application_path)
             new_appearance_mode = check_config("appearance", "Dark")
             new_scaling = check_config("scaling", 1.0)
             self.edit_destination_folder.delete(0, "end")
@@ -489,7 +448,7 @@ class BOIIIWD(ctk.CTk):
             scaling_int = math.trunc(scaling_float)
             self.settings_tab.scaling_optionemenu.set(f"{scaling_int}%")
             self.edit_steamcmd_path.delete(0, "end")
-            self.edit_steamcmd_path.insert(0, cwd())
+            self.edit_steamcmd_path.insert(0, application_path)
             create_default_config()
 
     def help_queue_text_func(self, event=None):
@@ -557,11 +516,11 @@ class BOIIIWD(ctk.CTk):
 
     def download_steamcmd(self):
         self.edit_steamcmd_path.delete(0, "end")
-        self.edit_steamcmd_path.insert(0, cwd())
+        self.edit_steamcmd_path.insert(0, application_path)
         save_config("DestinationFolder" ,self.edit_destination_folder.get())
         save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
         steamcmd_url = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip"
-        steamcmd_zip_path = os.path.join(cwd(), "steamcmd.zip")
+        steamcmd_zip_path = os.path.join(application_path, "steamcmd.zip")
 
         try:
             response = requests.get(steamcmd_url)
@@ -571,7 +530,7 @@ class BOIIIWD(ctk.CTk):
                 zip_file.write(response.content)
 
             with zipfile.ZipFile(steamcmd_zip_path, "r") as zip_ref:
-                zip_ref.extractall(cwd())
+                zip_ref.extractall(application_path)
 
             if check_steamcmd():
                 os.remove(fr"{steamcmd_zip_path}")
@@ -1229,7 +1188,7 @@ class BOIIIWD(ctk.CTk):
                     if os.path.exists(json_file_path):
                         self.label_speed.configure(text="Installing...")
                         mod_type = extract_json_data(json_file_path, "Type")
-                        items_file = os.path.join(cwd(), LIBRARY_FILE)
+                        items_file = os.path.join(application_path, LIBRARY_FILE)
                         if self.library_tab.item_exists_in_file(items_file, workshop_id):
                             get_folder_name = self.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
                             if get_folder_name:
@@ -1488,7 +1447,7 @@ class BOIIIWD(ctk.CTk):
                 if os.path.exists(json_file_path):
                     self.label_speed.configure(text="Installing...")
                     mod_type = extract_json_data(json_file_path, "Type")
-                    items_file = os.path.join(cwd(), LIBRARY_FILE)
+                    items_file = os.path.join(application_path, LIBRARY_FILE)
                     if self.library_tab.item_exists_in_file(items_file, workshop_id):
                         get_folder_name = self.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
                         if get_folder_name:
@@ -1593,7 +1552,3 @@ class BOIIIWD(ctk.CTk):
         self.after(50, self.status_text.configure(text=f"Status: Standby!"))
         self.after(1, self.label_speed.configure(text=f"Awaiting Download!"))
         self.skip_boutton.grid_remove()
-
-# if __name__ == "__main__":
-#     app = BOIIIWD()
-#     app.mainloop()

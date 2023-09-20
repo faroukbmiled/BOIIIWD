@@ -1,12 +1,7 @@
+import src.shared_vars as main_app
 from src.imports import *
 
 # Start helper functions
-def cwd():
-    if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)
-    else:
-        return os.path.dirname(os.path.abspath(__file__))
-
 def check_config(name, fallback=None):
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_PATH)
@@ -23,8 +18,8 @@ def save_config(name, value):
         config.write(config_file)
 
 def check_custom_theme(theme_name):
-    if os.path.exists(os.path.join(cwd(), theme_name)):
-        return os.path.join(cwd(), theme_name)
+    if os.path.exists(os.path.join(application_path, theme_name)):
+        return os.path.join(application_path, theme_name)
     else:
         try:
             return os.path.join(RESOURCES_DIR, theme_name)
@@ -191,7 +186,7 @@ def convert_speed(speed_bytes):
 def create_default_config():
     config = configparser.ConfigParser()
     config["Settings"] = {
-        "SteamCMDPath": cwd(),
+        "SteamCMDPath": application_path,
         "DestinationFolder": "",
         "checkforupdtes": "on",
         "console": "off"
@@ -202,7 +197,7 @@ def create_default_config():
 def get_steamcmd_path():
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_PATH)
-    return config.get("Settings", "SteamCMDPath", fallback=cwd())
+    return config.get("Settings", "SteamCMDPath", fallback=application_path)
 
 def extract_json_data(json_path, key):
     with open(json_path, 'r') as json_file:
@@ -254,8 +249,7 @@ def show_message(title, message, icon="warning", _return=False, option_1="No", o
     else:
         def callback():
             CTkMessagebox(title=title, message=message, icon=icon, sound=True)
-        from src.main import master_win
-        master_win.after(0, callback)
+        main_app.app.after(0, callback)
 
 def launch_boiii_func(path):
     procname = "boiii.exe"
