@@ -513,6 +513,7 @@ class BOIIIWD(ctk.CTk):
         link = "https://steamcommunity.com/app/311210/workshop/"
         webbrowser.open(link)
 
+    @if_internet_available
     def download_steamcmd(self):
         self.edit_steamcmd_path.delete(0, "end")
         self.edit_steamcmd_path.insert(0, application_path)
@@ -554,6 +555,7 @@ class BOIIIWD(ctk.CTk):
             show_message("Error", "Failed to extract SteamCMD. The downloaded file might be corrupted.", icon="cancel")
             os.remove(fr"{steamcmd_zip_path}")
 
+    @if_internet_available
     def show_map_info(self):
         def show_map_thread():
             workshop_id = self.edit_workshop_id.get().strip()
@@ -627,7 +629,7 @@ class BOIIIWD(ctk.CTk):
                 image_size = image.size
 
                 self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created ,
-                                          date_updated, stars_image, stars_image_size, ratings_text, url)
+                                        date_updated, stars_image, stars_image_size, ratings_text, url)
 
             except requests.exceptions.RequestException as e:
                 show_message("Error", f"Failed to fetch map information.\nError: {e}", icon="cancel")
@@ -904,6 +906,7 @@ class BOIIIWD(ctk.CTk):
                 return
         self.after(0, callback)
 
+    @if_internet_available
     def download_map(self, update=False):
         self.is_downloading = False
         self.fail_threshold = 0

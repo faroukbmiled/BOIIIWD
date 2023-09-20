@@ -218,10 +218,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     curr_folder_name = zone_path.parent.name
 
                     workshop_id = extract_json_data(json_path, "PublisherID") or "None"
-                    name = re.sub(r'\^\w+', '', extract_json_data(json_path, "Title"))
+                    name = re.sub(r'\^\w+', '', extract_json_data(json_path, "Title")) or "None"
                     name = name[:45] + "..." if len(name) > 45 else name
-                    item_type = extract_json_data(json_path, "Type")
-                    folder_name = extract_json_data(json_path, "FolderName")
+                    item_type = extract_json_data(json_path, "Type") or "None"
+                    folder_name = extract_json_data(json_path, "FolderName") or "None"
                     folder_size_bytes = get_folder_size(zone_path.parent)
                     size = convert_bytes_to_readable(folder_size_bytes)
                     total_size += folder_size_bytes
@@ -394,6 +394,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.no_items_label.forget()
 
     # i know i know ,please make a pull request i cant be bother
+    @if_internet_available
     def show_map_info(self, workshop, invalid_warn=False):
         for button_view in self.button_view_list:
             button_view.configure(state="disabled")
@@ -468,7 +469,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created,
                                         date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id, invalid_warn)
 
-            except requests.exceptions.RequestException as e:
+            except Exception as e:
                 show_message("Error", f"Failed to fetch map information.\nError: {e}", icon="cancel")
                 for button_view in self.button_view_list:
                     button_view.configure(state="normal")
@@ -597,10 +598,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     button_view.configure(state="normal")
         self.after(0, main_thread)
 
+    @if_internet_available
     def check_for_updates(self, on_launch=False):
-        if not is_internet_available():
-            show_message("Error!", "Internet connection is not available. Please check your internet connection and try again.")
-            return
         self.after(1, self.update_button.configure(state="disabled"))
         self.update_tooltip.configure(message='Still loading please wait...')
         cevent = Event()

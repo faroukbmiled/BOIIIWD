@@ -1,7 +1,14 @@
+import socket
 import src.shared_vars as main_app
 from src.imports import *
 
 # Start helper functions
+
+#testing app offline
+def guard(*args, **kwargs):
+    pass
+socket.socket = guard
+
 def check_config(name, fallback=None):
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_PATH)
@@ -68,17 +75,19 @@ def create_update_script(current_exe, new_exe, updater_folder, program_name):
 
     return script_path
 
-def is_internet_available():
-    try:
-        requests.get("https://www.google.com", timeout=3)
-        return True
-    except:
-        return False
+def if_internet_available(func):
+    def wrapper(*args, **kwargs):
+        try:
+            requests.get("https://www.google.com", timeout=3)
+            return func(*args, **kwargs)
+        except:
+            show_message("Offline", "No internet connection. Please check your internet connection and try again.")
+            return
 
+    return wrapper
+
+@if_internet_available
 def check_for_updates_func(window, ignore_up_todate=False):
-    if not is_internet_available():
-        show_message("Error!", "Internet connection is not available. Please check your internet connection and try again.")
-        return
     try:
         latest_version = get_latest_release_version()
         current_version = VERSION
@@ -154,6 +163,7 @@ def initialize_steam(master):
         show_message("Error!", "An error occurred please check your paths and try again.", icon="cancel")
     master.attributes('-alpha', 1.0)
 
+@if_internet_available
 def valid_id(workshop_id):
     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
     response = requests.get(url)
