@@ -2,7 +2,7 @@ from src.update_window import check_for_updates_func
 from src.imports import *
 from src.helpers import *
 
-import src.shared_vars as shared
+import src.shared_vars as main_app
 
 
 class SettingsTab(ctk.CTkFrame):
@@ -549,18 +549,18 @@ class SettingsTab(ctk.CTkFrame):
                                     mod_type = extract_json_data(json_file_path, "Type")
                                     items_file = os.path.join(application_path, LIBRARY_FILE)
 
-                                    if shared.app.library_tab.item_exists_in_file(items_file, workshop_id):
-                                        get_folder_name = shared.app.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
+                                    if main_app.app.library_tab.item_exists_in_file(items_file, workshop_id):
+                                        get_folder_name = main_app.app.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
                                         if get_folder_name:
                                             folder_name = get_folder_name
                                         else:
                                             try:
-                                                folder_name = extract_json_data(json_file_path, shared.app.settings_tab.folder_options.get())
+                                                folder_name = extract_json_data(json_file_path, main_app.app.settings_tab.folder_options.get())
                                             except:
                                                 folder_name = extract_json_data(json_file_path, "publisherID")
                                     else:
                                         try:
-                                            folder_name = extract_json_data(json_file_path, shared.app.settings_tab.folder_options.get())
+                                            folder_name = extract_json_data(json_file_path, main_app.app.settings_tab.folder_options.get())
                                         except:
                                             folder_name = extract_json_data(json_file_path, "publisherID")
 
@@ -586,7 +586,7 @@ class SettingsTab(ctk.CTkFrame):
                                         remove_tree(os.path.join(map_folder, workshop_id))
 
                             if subfolders:
-                                shared.app.show_complete_message(message=f"All items were moved\nYou can run the game now!\nPS: You have to restart the game\n(pressing launch will launch/restarts)")
+                                main_app.app.show_complete_message(message=f"All items were moved\nYou can run the game now!\nPS: You have to restart the game\n(pressing launch will launch/restarts)")
 
                         finally:
                             if cut_var.get():
@@ -604,18 +604,18 @@ class SettingsTab(ctk.CTkFrame):
                 progress_color = get_button_state_colors(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")), "progress_bar_fill_color")
                 progress_bar.configure(progress_color=progress_color)
                 steam_folder_entry.insert(1, check_config("steam_folder", ""))
-                boiii_folder_entry.insert(1, shared.app.edit_destination_folder.get())
+                boiii_folder_entry.insert(1, main_app.app.edit_destination_folder.get())
                 button_BOIII_browse.configure(command=open_BOIII_browser)
                 button_steam_browse.configure(command=open_steam_browser)
                 copy_button.configure(command=start_copy_operation)
                 cut_check.configure(command = lambda: check_status(cut_var, copy_var))
                 copy_check.configure(command = lambda: check_status(copy_var, cut_var))
-                shared.app.create_context_menu(steam_folder_entry)
-                shared.app.create_context_menu(boiii_folder_entry)
+                main_app.app.create_context_menu(steam_folder_entry)
+                main_app.app.create_context_menu(boiii_folder_entry)
                 copy_var.set(True)
                 progress_bar.set(0)
 
             except Exception as e:
                 show_message("Error", f"{e}", icon="cancel")
 
-        shared.app.after(0, main_thread)
+        main_app.app.after(0, main_thread)

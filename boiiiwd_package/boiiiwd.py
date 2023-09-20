@@ -1,4 +1,4 @@
-import src.shared_vars as shared_vars
+import src.shared_vars as main_app
 
 if __name__ == "__main__":
-    shared_vars.app.mainloop()
+    main_app.app.mainloop()

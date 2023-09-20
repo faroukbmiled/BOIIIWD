@@ -1,7 +1,8 @@
 from src.imports import *
 from src.helpers import *
 
-import src.shared_vars as shared
+import src.shared_vars as main_app
+
 
 class LibraryTab(ctk.CTkScrollableFrame):
     def __init__(self, master, **kwargs):
@@ -217,7 +218,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     curr_folder_name = zone_path.parent.name
 
                     workshop_id = extract_json_data(json_path, "PublisherID")
-                    name = extract_json_data(json_path, "Title").replace(">", "").replace("^", "")
+                    name = re.sub(r'\^\w+', '', extract_json_data(json_path, "Title"))
                     name = name[:45] + "..." if len(name) > 45 else name
                     item_type = extract_json_data(json_path, "Type")
                     folder_name = extract_json_data(json_path, "FolderName")
@@ -377,8 +378,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.added_items.clear()
         self.added_folders.clear()
         self.ids_added.clear()
-        status = self.load_items(shared.app.edit_destination_folder.get().strip())
-        shared.app.title(f"BOIII Workshop Downloader - Library  ➜  {status}")
+        status = self.load_items(main_app.app.edit_destination_folder.get().strip())
+        main_app.app.title(f"BOIII Workshop Downloader - Library  ➜  {status}")
 
     def view_item(self, workshop_id):
         url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
@@ -499,13 +500,13 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
                         if check_item_date(down_date, date_updated):
                             if show_message("There is an update.", "Press download to redownload!", icon="info", _return=True, option_1="No", option_2="Download"):
-                                if shared.app.is_downloading:
+                                if main_app.app.is_downloading:
                                     show_message("Error", "Please wait for the current download to finish or stop it then restart.", icon="cancel")
                                     return
-                                shared.app.edit_workshop_id.delete(0, "end")
-                                shared.app.edit_workshop_id.insert(0, workshop_id)
-                                shared.app.main_button_event()
-                                shared.app.download_map(update=True)
+                                main_app.app.edit_workshop_id.delete(0, "end")
+                                main_app.app.edit_workshop_id.insert(0, workshop_id)
+                                main_app.app.main_button_event()
+                                main_app.app.download_map(update=True)
                                 top.destroy()
                                 return
                         else:
@@ -612,10 +613,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
     def items_update_message(self, to_update_len):
         def main_thread():
             if show_message(f"{to_update_len} Item updates available", f"{to_update_len} Workshop Items have an update, Would you like to open the item updater window?", icon="info", _return=True):
-                shared.app.after(1, self.update_items_window)
+                main_app.app.after(1, self.update_items_window)
             else:
                 return
-        shared.app.after(0, main_thread)
+        main_app.app.after(0, main_thread)
         self.update_button.configure(state="normal", width=65, height=20)
         self.update_tooltip.configure(message='Check items for updates')
         return
@@ -744,25 +745,25 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
             def update_btn_fun():
                 if len(selected_id_list) == 1:
-                    if shared.app.is_downloading:
+                    if main_app.app.is_downloading:
                         show_message("Error", "Please wait for the current download to finish or stop it then start.", icon="cancel")
                         return
-                    shared.app.edit_workshop_id.delete(0, "end")
-                    shared.app.edit_workshop_id.insert(0, selected_id_list[0])
-                    shared.app.main_button_event()
-                    shared.app.download_map(update=True)
+                    main_app.app.edit_workshop_id.delete(0, "end")
+                    main_app.app.edit_workshop_id.insert(0, selected_id_list[0])
+                    main_app.app.main_button_event()
+                    main_app.app.download_map(update=True)
                     top.destroy()
                     return
 
                 elif len(selected_id_list) > 1:
-                    if shared.app.is_downloading:
+                    if main_app.app.is_downloading:
                         show_message("Error", "Please wait for the current download to finish or stop it then start.", icon="cancel")
                         return
                     comma_separated_ids = ",".join(selected_id_list)
-                    shared.app.queuetextarea.delete("1.0", "end")
-                    shared.app.queuetextarea.insert("1.0", comma_separated_ids)
-                    shared.app.queue_button_event()
-                    shared.app.download_map(update=True)
+                    main_app.app.queuetextarea.delete("1.0", "end")
+                    main_app.app.queuetextarea.insert("1.0", comma_separated_ids)
+                    main_app.app.queue_button_event()
+                    main_app.app.download_map(update=True)
                     top.destroy()
                     return
 
