@@ -46,7 +46,7 @@ class SettingsTab(ctk.CTkFrame):
         self.console_var.trace_add("write", self.enable_save_button)
         self.checkbox_show_console = ctk.CTkSwitch(left_frame, text="Console (On Download)", variable=self.console_var)
         self.checkbox_show_console.grid(row=1, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.checkbox_show_console_tooltip = ctk_tooltip.CTkToolTip(self.checkbox_show_console, message="Toggle SteamCMD console\nPlease don't close the Console If you want to stop press the Stop button")
+        self.checkbox_show_console_tooltip = CTkToolTip(self.checkbox_show_console, message="Toggle SteamCMD console\nPlease don't close the Console If you want to stop press the Stop button")
         self.console_var.set(self.load_settings("console"))
 
         # Show continuous checkbox
@@ -54,7 +54,7 @@ class SettingsTab(ctk.CTkFrame):
         self.continuous_var.trace_add("write", self.enable_save_button)
         self.checkbox_continuous = ctk.CTkSwitch(left_frame, text="Continuous Download", variable=self.continuous_var)
         self.checkbox_continuous.grid(row=2, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.checkbox_continuous_tooltip = ctk_tooltip.CTkToolTip(self.checkbox_continuous, message="This will make sure that the download restarts and resumes! until it finishes if steamcmd crashes randomly (it will not redownload from the start)")
+        self.checkbox_continuous_tooltip = CTkToolTip(self.checkbox_continuous, message="This will make sure that the download restarts and resumes! until it finishes if steamcmd crashes randomly (it will not redownload from the start)")
         self.continuous_var.set(self.load_settings("continuous_download"))
 
         # clean on finish checkbox
@@ -62,7 +62,7 @@ class SettingsTab(ctk.CTkFrame):
         self.clean_checkbox_var.trace_add("write", self.enable_save_button)
         self.clean_checkbox = ctk.CTkSwitch(left_frame, text="Clean on finish", variable=self.clean_checkbox_var)
         self.clean_checkbox.grid(row=3, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.clean_checkbox_tooltip = ctk_tooltip.CTkToolTip(self.clean_checkbox, message="Cleans the map that have been downloaded and installed from steamcmd's steamapps folder ,to save space")
+        self.clean_checkbox_tooltip = CTkToolTip(self.clean_checkbox, message="Cleans the map that have been downloaded and installed from steamcmd's steamapps folder ,to save space")
         self.clean_checkbox_var.set(self.load_settings("clean_on_finish", "on"))
 
         # Show estimated_progress checkbox
@@ -70,7 +70,7 @@ class SettingsTab(ctk.CTkFrame):
         self.estimated_progress_var.trace_add("write", self.enable_save_button)
         self.estimated_progress_cb = ctk.CTkSwitch(left_frame, text="Estimated Progress Bar", variable=self.estimated_progress_var)
         self.estimated_progress_cb.grid(row=4, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.estimated_progress_var_tooltip = ctk_tooltip.CTkToolTip(self.estimated_progress_cb, message="This will change how to progress bar works by estimating how long the download will take\
+        self.estimated_progress_var_tooltip = CTkToolTip(self.estimated_progress_cb, message="This will change how to progress bar works by estimating how long the download will take\
             \nThis is not accurate ,it's better than with it off which is calculating the downloaded folder size which steamcmd dumps the full size rigth mostly")
         self.estimated_progress_var.set(self.load_settings("estimated_progress", "on"))
 
@@ -79,7 +79,7 @@ class SettingsTab(ctk.CTkFrame):
         self.show_fails_var.trace_add("write", self.enable_save_button)
         self.show_fails_cb = ctk.CTkSwitch(left_frame, text="Show fails (on top of progress bar)", variable=self.show_fails_var)
         self.show_fails_cb.grid(row=5, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.show_fails_tooltip = ctk_tooltip.CTkToolTip(self.show_fails_cb, message="Display how many times steamcmd has failed/crashed\nIf the number is getting high quickly then try pressing Reset SteamCMD and try again, otherwise its fine")
+        self.show_fails_tooltip = CTkToolTip(self.show_fails_cb, message="Display how many times steamcmd has failed/crashed\nIf the number is getting high quickly then try pressing Reset SteamCMD and try again, otherwise its fine")
         self.estimated_progress_var.set(self.load_settings("show_fails", "on"))
 
         # Show skip_already_installed maps checkbox
@@ -87,7 +87,7 @@ class SettingsTab(ctk.CTkFrame):
         self.skip_already_installed_var.trace_add("write", self.enable_save_button)
         self.skip_already_installed_ch = ctk.CTkSwitch(left_frame, text="Skip already installed maps", variable=self.skip_already_installed_var)
         self.skip_already_installed_ch.grid(row=6, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.skip_already_installed_ch_tooltip = ctk_tooltip.CTkToolTip(self.skip_already_installed_ch, message="If on it will not download installed maps,\nthis can miss sometimes if you remove maps manually and not from library tab while the app is running")
+        self.skip_already_installed_ch_tooltip = CTkToolTip(self.skip_already_installed_ch, message="If on it will not download installed maps,\nthis can miss sometimes if you remove maps manually and not from library tab while the app is running")
         self.skip_already_installed_var.set(self.load_settings("skip_already_installed", "on"))
 
         # check items for update on launch
@@ -95,7 +95,7 @@ class SettingsTab(ctk.CTkFrame):
         self.check_items_var.trace_add("write", self.enable_save_button)
         self.check_items_ch = ctk.CTkSwitch(left_frame, text="Check Library items on launch", variable=self.check_items_var)
         self.check_items_ch.grid(row=7, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.check_items_tooltip = ctk_tooltip.CTkToolTip(self.check_items_ch, message="This will show a window on launch of items that have pending updates -> you can open it manually from library tab")
+        self.check_items_tooltip = CTkToolTip(self.check_items_ch, message="This will show a window on launch of items that have pending updates -> you can open it manually from library tab")
         self.check_items_var.set(self.load_settings("check_items", "off"))
 
         # Resetr steam on many fails
@@ -105,7 +105,7 @@ class SettingsTab(ctk.CTkFrame):
         self.reset_steamcmd_on_fail_text.grid(row=8, column=1, padx=20, pady=(10, 0), sticky="nw")
         self.reset_steamcmd_on_fail = ctk.CTkOptionMenu(left_frame, values=["5", "10", "20", "30", "40", "Custom", "Disable"], variable=self.reset_steamcmd_on_fail_var, command=self.reset_steamcmd_on_fail_func)
         self.reset_steamcmd_on_fail.grid(row=8, column=1, padx=(190, 0), pady=(10, 0), sticky="nw")
-        self.reset_steamcmd_on_fail_tooltip = ctk_tooltip.CTkToolTip(self.reset_steamcmd_on_fail, message="This actually fixes steamcmd when its crashing way too much")
+        self.reset_steamcmd_on_fail_tooltip = CTkToolTip(self.reset_steamcmd_on_fail, message="This actually fixes steamcmd when its crashing way too much")
         self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "10"))
 
         # item folder naming
@@ -126,11 +126,11 @@ class SettingsTab(ctk.CTkFrame):
 
         self.reset_steamcmd = ctk.CTkButton(right_frame, text="Reset SteamCMD", command=self.settings_reset_steamcmd)
         self.reset_steamcmd.grid(row=3, column=1, padx=20, pady=(20, 0), sticky="n")
-        self.reset_steamcmd_tooltip = ctk_tooltip.CTkToolTip(self.reset_steamcmd, message="This will remove steamapps folder + all the maps that are potentioaly corrupted\nor not so use at ur own risk (could fix some issues as well)")
+        self.reset_steamcmd_tooltip = CTkToolTip(self.reset_steamcmd, message="This will remove steamapps folder + all the maps that are potentioaly corrupted\nor not so use at ur own risk (could fix some issues as well)")
 
         self.steam_to_boiii = ctk.CTkButton(right_frame, text="Steam to boiii", command=self.from_steam_to_boiii_toplevel)
         self.steam_to_boiii.grid(row=5, column=1, padx=20, pady=(20, 0), sticky="n")
-        self.steam_to_boiii_tooltip = ctk_tooltip.CTkToolTip(self.steam_to_boiii, message="Moves/copies maps and mods from steam to boiii (opens up a window)")
+        self.steam_to_boiii_tooltip = CTkToolTip(self.steam_to_boiii, message="Moves/copies maps and mods from steam to boiii (opens up a window)")
 
         # appearance
         self.appearance_mode_label = ctk.CTkLabel(right_frame, text="Appearance Mode:", anchor="n")

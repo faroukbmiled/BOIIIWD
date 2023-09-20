@@ -23,8 +23,8 @@ from CTkMessagebox import CTkMessagebox
 from PIL import Image
 
 # Use CTkToolTip and CTkListbox from my repo originally by Akascape (https://github.com/Akascape)
-from .CTkListbox import ctk_listbox
-from .CTkToolTip import ctk_tooltip
+from .CTkListbox.ctk_listbox import CTkListbox
+from .CTkToolTip.ctk_tooltip import CTkToolTip
 
 
 if getattr(sys, 'frozen', False):

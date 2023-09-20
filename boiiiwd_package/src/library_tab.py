@@ -24,8 +24,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.update_button = ctk.CTkButton(self, image=ctk.CTkImage(Image.open(update_button_image)), command=self.check_for_updates, width=65, height=20,
                                            text="", fg_color="transparent")
         self.update_button.grid(row=0, column=1, padx=(0, 20), pady=(10, 20), sticky="en")
-        self.update_tooltip = ctk_tooltip.CTkToolTip(self.update_button, message="Check items for updates", topmost=True)
-        filter_tooltip = ctk_tooltip.CTkToolTip(self.filter_refresh_button, message="Refresh library", topmost=True)
+        self.update_tooltip = CTkToolTip(self.update_button, message="Check items for updates", topmost=True)
+        filter_tooltip = CTkToolTip(self.filter_refresh_button, message="Refresh library", topmost=True)
         self.label_list = []
         self.button_list = []
         self.button_view_list = []
@@ -42,8 +42,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
         button_view = ctk.CTkButton(self, text="Details", width=55, height=24, fg_color="#3d3f42")
         button.configure(command=lambda: self.remove_item(item, folder, workshop_id))
         button_view.configure(command=lambda: self.show_map_info(workshop_id, invalid_warn))
-        button_view_tooltip = ctk_tooltip.CTkToolTip(button_view, message="Opens up a window that shows basic details")
-        button_tooltip = ctk_tooltip.CTkToolTip(button, message="Removes the map/mod from your game")
+        button_view_tooltip = CTkToolTip(button_view, message="Opens up a window that shows basic details")
+        button_tooltip = CTkToolTip(button, message="Removes the map/mod from your game")
         label.grid(row=len(self.label_list) + 1, column=0, pady=(0, 10), padx=(5, 10), sticky="w")
         button.grid(row=len(self.button_list) + 1, column=1, pady=(0, 10), padx=(50, 10), sticky="e")
         button_view.grid(row=len(self.button_view_list) + 1, column=1, pady=(0, 10), padx=(10, 75), sticky="w")
@@ -57,7 +57,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         label.bind("<Button-2>", lambda event: self.open_folder_location(folder, event))
         label.bind("<Button-3>", lambda event, label=label: self.copy_to_clipboard(label, folder, event))
         if invalid_warn:
-            label_warn = ctk_tooltip.CTkToolTip(label, message="Duplicated or Blocked item (Search item id in search)")
+            label_warn = CTkToolTip(label, message="Duplicated or Blocked item (Search item id in search)")
 
     def on_label_hover(self, label, enter):
         if enter:
@@ -569,7 +569,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
                 update_btn = ctk.CTkButton(buttons_frame, text="Update", command=check_for_updates, width=130)
                 update_btn.grid(row=0, column=1, padx=(10, 20), pady=(10, 10), sticky="n")
-                update_btn_tooltip = ctk_tooltip.CTkToolTip(update_btn, message="Checks and installs updates of the current selected item (redownload!)", topmost=True)
+                update_btn_tooltip = CTkToolTip(update_btn, message="Checks and installs updates of the current selected item (redownload!)", topmost=True)
 
                 view_button = ctk.CTkButton(buttons_frame, text="Close", command=close_window, width=130)
                 view_button.grid(row=0, column=2, padx=(10, 20), pady=(10, 10), sticky="n")
@@ -694,7 +694,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
             cevent = Event()
             self.select_all_bool = False
 
-            listbox = ctk_listbox.CTkListbox(top, multiple_selection=True)
+            listbox = CTkListbox(top, multiple_selection=True)
             listbox.grid(row=0, column=0, sticky="nsew")
 
             update_button = ctk.CTkButton(top, text="Update")

@@ -143,7 +143,7 @@ class BOIIIWD(ctk.CTk):
 
         self.button_browse = ctk.CTkButton(master=self.optionsframe, text="Workshop", command=self.open_browser, width=10)
         self.button_browse.grid(row=2, column=5, padx=(0, 20), pady=(0, 10), sticky="en")
-        self.button_browse_tooltip = ctk_tooltip.CTkToolTip(self.button_browse, message="Will open steam workshop for boiii in your browser")
+        self.button_browse_tooltip = CTkToolTip(self.button_browse, message="Will open steam workshop for boiii in your browser")
 
         self.info_button = ctk.CTkButton(master=self.optionsframe, text="Details", command=self.show_map_info, width=10)
         self.info_button.grid(row=2, column=5, padx=(0, 20), pady=(0, 10), sticky="wn")
@@ -190,9 +190,9 @@ class BOIIIWD(ctk.CTk):
         self.sidebar_queue.configure(text="Queue 🚧", command=self.queue_button_event)
         sidebar_settings_button_image = os.path.join(RESOURCES_DIR, "sett10.png")
         self.sidebar_settings.configure(command=self.settings_button_event, text="", image=ctk.CTkImage(Image.open(sidebar_settings_button_image), size=(int(35), int(35))), fg_color="transparent", width=45, height=45)
-        self.sidebar_settings_tooltip = ctk_tooltip.CTkToolTip(self.sidebar_settings, message="Settings")
-        self.sidebar_library_tooltip = ctk_tooltip.CTkToolTip(self.sidebar_library, message="Experimental")
-        self.sidebar_queue_tooltip = ctk_tooltip.CTkToolTip(self.sidebar_queue, message="Experimental")
+        self.sidebar_settings_tooltip = CTkToolTip(self.sidebar_settings, message="Settings")
+        self.sidebar_library_tooltip = CTkToolTip(self.sidebar_library, message="Experimental")
+        self.sidebar_queue_tooltip = CTkToolTip(self.sidebar_queue, message="Experimental")
         self.bind("<Configure>", self.save_window_size)
 
         # context_menus

@@ -353,7 +353,7 @@ def get_item_name(id):
 
 # you gotta use my modded CTkToolTip originaly by Akascape
 def show_noti(widget ,message, event=None, noti_dur=3.0, topmost=False):
-    ctk_tooltip.CTkToolTip(widget, message=message, is_noti=True, noti_event=event, noti_dur=noti_dur, topmost=topmost)
+    CTkToolTip(widget, message=message, is_noti=True, noti_event=event, noti_dur=noti_dur, topmost=topmost)
 
 def check_item_date(down_date, date_updated):
     current_year = datetime.now().year
