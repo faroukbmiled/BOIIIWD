@@ -252,12 +252,12 @@ class LibraryTab(ctk.CTkScrollableFrame):
                             except: pass
                             self.item_block_list.add(curr_folder_name)
                             image_path = b_mod_img if item_type == "mod" else b_map_img
-                            text_to_add = re.sub(r'ID:\s+\d+', f'Folder: {curr_folder_name}', text_to_add)
+                            text_to_add = re.sub(r'ID:\s+(?:\d+|None)', f'Folder: {curr_folder_name}', text_to_add)
                             text_to_add += " | ⚠️"
                         elif (curr_folder_name not in self.added_folders and (workshop_id in self.ids_added or workshop_id == "None")):
                             try: self.remove_item_by_option(items_file, curr_folder_name, "folder_name")
                             except: pass
-                            text_to_add = re.sub(r'ID:\s+\d+', f'Folder: {curr_folder_name}', text_to_add)
+                            text_to_add = re.sub(r'ID:\s+(?:\d+|None)', f'Folder: {curr_folder_name}', text_to_add)
                             image_path = b_mod_img if item_type == "mod" else b_map_img
                             text_to_add += " | ⚠️"
 
