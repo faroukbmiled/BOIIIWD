@@ -1,3 +1,4 @@
+from src.CTkToolTip import ctk_tooltip
 from src.imports import *
 from src.helpers import *
 
@@ -528,8 +529,6 @@ class LibraryTab(ctk.CTkScrollableFrame):
                              url, workshop_id, invalid_warn, folder, offline_date=None):
         def main_thread():
             try:
-                threshold_width = 1000
-                threshold_height = 1000
                 items_file = os.path.join(application_path, LIBRARY_FILE)
                 top = ctk.CTkToplevel(self)
                 if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
@@ -597,7 +596,14 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 date_created_label = ctk.CTkLabel(info_frame, text=f"Posted: {date_created}")
                 date_created_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-                date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated if not invalid_warn else 'None'}")
+                if date_updated != "Not updated" and date_updated != "Offline":
+                    date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}  🔗")
+                    date_updated_label_tooltip = CTkToolTip(date_updated_label, message="View changelogs", topmost=True)
+                    date_updated_label.configure(cursor="hand2")
+                    date_updated_label.bind("<Button-1>", lambda e:
+                        webbrowser.open(f"https://steamcommunity.com/sharedfiles/filedetails/changelog/{workshop_id}"))
+                else:
+                    date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
                 date_updated_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
                 date_updated_label = ctk.CTkLabel(info_frame, text=f"Downloaded at: {down_date}")
@@ -618,7 +624,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
                 image_label = ctk.CTkLabel(image_frame)
                 width, height = image_size
-                if width > threshold_width or height > threshold_height:
+                # preview image is too big if offlinr, // to round floats
+                if width > 1000 or height > 1000:
                     width = width // 2
                     height = height // 2
 
