@@ -180,6 +180,7 @@ class SettingsTab(ctk.CTkFrame):
                 show_message("Couldn't open config.ini" ,"you can do so by yourself and change reset_on_fail value to whatever you want")
         else:
             return
+
     def theme_options_func(self, option: str):
         if option == "Default":
             self.boiiiwd_custom_theme(disable_only=True)

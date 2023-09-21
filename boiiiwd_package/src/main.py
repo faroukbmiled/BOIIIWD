@@ -11,7 +11,7 @@ class BOIIIWD(ctk.CTk):
         # self.app_instance = BOIIIWD()
 
         # configure window
-        self.title("boiii Workshop Downloader - Main")
+        self.title("BOIII Workshop Downloader - Main")
 
         try:
             geometry_file = os.path.join(application_path, "boiiiwd_dont_touch.conf")

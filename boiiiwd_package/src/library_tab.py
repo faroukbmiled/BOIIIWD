@@ -380,6 +380,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 self.remove_item_by_option(items_file, id)
 
     def refresh_items(self):
+        main_app.app.title("BOIII Workshop Downloader - Library  ➜  Loading... ⏳")
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
             label.destroy()
             button.destroy()
