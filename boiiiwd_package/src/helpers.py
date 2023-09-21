@@ -76,6 +76,12 @@ def create_update_script(current_exe, new_exe, updater_folder, program_name):
     return script_path
 
 def if_internet_available(func):
+    if func == "return":
+        try:
+            requests.get("https://www.google.com", timeout=3)
+            return True
+        except:
+            return False
     def wrapper(*args, **kwargs):
         try:
             requests.get("https://www.google.com", timeout=3)

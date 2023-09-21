@@ -406,13 +406,13 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.no_items_label.configure(text="")
         self.no_items_label.forget()
 
-    @if_internet_available
     def show_map_info(self, workshop, folder, invalid_warn=False):
         for button_view in self.button_view_list:
             button_view.configure(state="disabled")
 
         def show_map_thread():
             workshop_id = workshop
+            online = if_internet_available("return")
 
             if not workshop_id.isdigit():
                 try:
@@ -423,86 +423,126 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 except:
                     show_message("Warning", "Not a valid Workshop ID.")
                     return
-            try:
-                url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
-                response = requests.get(url)
-                response.raise_for_status()
-                content = response.text
-
-                soup = BeautifulSoup(content, "html.parser")
-
+            if online:
                 try:
-                    map_mod_type = soup.find("div", class_="rightDetailsBlock").text.strip()
-                    map_name = soup.find("div", class_="workshopItemTitle").text.strip()
-                    map_size = map_size = get_workshop_file_size(workshop_id, raw=True)
-                    details_stats_container = soup.find("div", class_="detailsStatsContainerRight")
-                    details_stat_elements = details_stats_container.find_all("div", class_="detailsStatRight")
-                    date_created = details_stat_elements[1].text.strip()
-                    try:
-                        ratings = soup.find('div', class_='numRatings')
-                        ratings_text = ratings.get_text()
-                    except:
-                        ratings = "Not found"
-                        ratings_text= "Not enough ratings"
-                    try:
-                        date_updated = details_stat_elements[2].text.strip()
-                    except:
-                        date_updated = "Not updated"
-                    stars_div = soup.find("div", class_="fileRatingDetails")
-                    starts = stars_div.find("img")["src"]
-                except:
-                    show_message("Warning", "Not a valid Workshop ID\nCouldn't get information.")
-                    for button_view in self.button_view_list:
-                        button_view.configure(state="normal")
-                    return
+                    url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
+                    response = requests.get(url)
+                    response.raise_for_status()
+                    content = response.text
 
-                try:
-                    preview_image_element = soup.find("img", id="previewImage")
-                    workshop_item_image_url = preview_image_element["src"]
-                except:
+                    soup = BeautifulSoup(content, "html.parser")
+
                     try:
-                        preview_image_element = soup.find("img", id="previewImageMain")
-                        workshop_item_image_url = preview_image_element["src"]
-                    except Exception as e:
-                        show_message("Warning", f"Failed to get preview image ,probably wrong link/id if not please open an issue on github.\n{e}")
+                        map_mod_type = soup.find("div", class_="rightDetailsBlock").text.strip()
+                        map_name = soup.find("div", class_="workshopItemTitle").text.strip()
+                        map_size = map_size = get_workshop_file_size(workshop_id, raw=True)
+                        details_stats_container = soup.find("div", class_="detailsStatsContainerRight")
+                        details_stat_elements = details_stats_container.find_all("div", class_="detailsStatRight")
+                        date_created = details_stat_elements[1].text.strip()
+                        try:
+                            ratings = soup.find('div', class_='numRatings')
+                            ratings_text = ratings.get_text()
+                        except:
+                            ratings = "Not found"
+                            ratings_text= "Not enough ratings"
+                        try:
+                            date_updated = details_stat_elements[2].text.strip()
+                        except:
+                            date_updated = "Not updated"
+                        stars_div = soup.find("div", class_="fileRatingDetails")
+                        starts = stars_div.find("img")["src"]
+                    except:
+                        show_message("Warning", "Not a valid Workshop ID\nCouldn't get information.")
                         for button_view in self.button_view_list:
                             button_view.configure(state="normal")
                         return
 
-                starts_image_response = requests.get(starts)
-                stars_image = Image.open(io.BytesIO(starts_image_response.content))
-                stars_image_size = stars_image.size
+                    try:
+                        preview_image_element = soup.find("img", id="previewImage")
+                        workshop_item_image_url = preview_image_element["src"]
+                    except:
+                        try:
+                            preview_image_element = soup.find("img", id="previewImageMain")
+                            workshop_item_image_url = preview_image_element["src"]
+                        except Exception as e:
+                            show_message("Warning", f"Failed to get preview image ,probably wrong link/id if not please open an issue on github.\n{e}")
+                            for button_view in self.button_view_list:
+                                button_view.configure(state="normal")
+                            return
 
-                image_response = requests.get(workshop_item_image_url)
-                image_response.raise_for_status()
-                image = Image.open(io.BytesIO(image_response.content))
-                image_size = image.size
+                    starts_image_response = requests.get(starts)
+                    stars_image = Image.open(io.BytesIO(starts_image_response.content))
+                    stars_image_size = stars_image.size
 
-                self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created,
-                                        date_updated, stars_image, stars_image_size, ratings_text,
-                                        url, workshop_id, invalid_warn, folder)
+                    image_response = requests.get(workshop_item_image_url)
+                    image_response.raise_for_status()
+                    image = Image.open(io.BytesIO(image_response.content))
+                    image_size = image.size
 
-            except Exception as e:
-                show_message("Error", f"Failed to fetch map information.\nError: {e}", icon="cancel")
-                for button_view in self.button_view_list:
-                    button_view.configure(state="normal")
-                return
+                    self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created,
+                                            date_updated, stars_image, stars_image_size, ratings_text,
+                                            url, workshop_id, invalid_warn, folder)
+
+                except Exception as e:
+                    show_message("Error", f"Failed to fetch map information.\nError: {e}", icon="cancel")
+                    for button_view in self.button_view_list:
+                        button_view.configure(state="normal")
+                    return
+            else:
+                json_path = Path(folder) / "zone" / "workshop.json"
+                for ff_file in json_path.parent.glob("*.ff"):
+                    if ff_file.exists():
+                        creation_timestamp = ff_file.stat().st_ctime
+                        break
+                if json_path.exists():
+                    workshop_id = extract_json_data(json_path, "PublisherID") or "None"
+                    name = re.sub(r'\^\w+', '', extract_json_data(json_path, "Title")) or "None"
+                    map_name = name[:45] + "..." if len(name) > 45 else name
+                    map_mod_type = extract_json_data(json_path, "Type") or "None"
+                    folder_size_bytes = get_folder_size(json_path.parent.parent)
+                    map_size = convert_bytes_to_readable(folder_size_bytes)
+                    preview_iamge = json_path.parent / "previewimage.png"
+                    if preview_iamge.exists():
+                        image = Image.open(preview_iamge)
+                    else:
+                        image = Image.open(os.path.join(RESOURCES_DIR, "ryuk.png"))
+                    image_size = image.size
+                    offline_date = datetime.fromtimestamp(creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
+                    date_updated = "Offline"
+                    date_created = "Offline"
+                    stars_image = Image.open(os.path.join(RESOURCES_DIR, "ryuk.png"))
+                    stars_image_size = stars_image.size
+                    ratings_text = "Offline"
+                    url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
+
+                    self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created,
+                                            date_updated, stars_image, stars_image_size, ratings_text,
+                                            url, workshop_id, invalid_warn, folder, offline_date)
+
 
         info_thread = threading.Thread(target=show_map_thread)
         info_thread.start()
 
     def toplevel_info_window(self, map_name, map_mod_type, map_size, image, image_size,
                              date_created ,date_updated, stars_image, stars_image_size, ratings_text,
-                             url, workshop_id, invalid_warn, folder):
+                             url, workshop_id, invalid_warn, folder, offline_date=None):
         def main_thread():
             try:
+                threshold_width = 1000
+                threshold_height = 1000
                 items_file = os.path.join(application_path, LIBRARY_FILE)
                 top = ctk.CTkToplevel(self)
                 if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
                     top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
                 top.title("Map/Mod Information")
                 top.attributes('-topmost', 'true')
-                down_date = self.get_item_by_id(items_file, workshop_id, 'date')
+                size_text = "Size (Workshop):"
+
+                if offline_date:
+                    down_date = offline_date
+                    size_text = "Size (On Disk):"
+                else:
+                    down_date = self.get_item_by_id(items_file, workshop_id, 'date')
 
                 def close_window():
                     top.destroy()
@@ -551,13 +591,13 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}")
                 type_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-                size_label = ctk.CTkLabel(info_frame, text=f"Size (Workshop): {map_size}")
+                size_label = ctk.CTkLabel(info_frame, text=f"{size_text} {map_size}")
                 size_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
                 date_created_label = ctk.CTkLabel(info_frame, text=f"Posted: {date_created}")
                 date_created_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-                date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
+                date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated if not invalid_warn else 'None'}")
                 date_updated_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
                 date_updated_label = ctk.CTkLabel(info_frame, text=f"Downloaded at: {down_date}")
@@ -578,6 +618,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
                 image_label = ctk.CTkLabel(image_frame)
                 width, height = image_size
+                if width > threshold_width or height > threshold_height:
+                    width = width // 2
+                    height = height // 2
+
                 image_widget = ctk.CTkImage(image, size=(int(width), int(height)))
                 image_label.configure(image=image_widget, text="")
                 image_label.pack(expand=True, fill="both", padx=(10, 20), pady=(10, 10))
