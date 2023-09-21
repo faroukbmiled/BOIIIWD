@@ -492,10 +492,14 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     return
             else:
                 json_path = Path(folder) / "zone" / "workshop.json"
+                creation_timestamp = None
                 for ff_file in json_path.parent.glob("*.ff"):
                     if ff_file.exists():
                         creation_timestamp = ff_file.stat().st_ctime
                         break
+                if not creation_timestamp:
+                    creation_timestamp = json_path.parent.stat().st_ctime
+
                 if json_path.exists():
                     workshop_id = extract_json_data(json_path, "PublisherID") or "None"
                     name = re.sub(r'\^\w+', '', extract_json_data(json_path, "Title")) or "None"
@@ -520,6 +524,11 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created,
                                             date_updated, stars_image, stars_image_size, ratings_text,
                                             url, workshop_id, invalid_warn, folder, offline_date)
+                else:
+                    show_message("Warning", "Couldn't get offline information, Please connect to internet and try again")
+                    for button_view in self.button_view_list:
+                        button_view.configure(state="normal")
+                    return
 
 
         info_thread = threading.Thread(target=show_map_thread)
