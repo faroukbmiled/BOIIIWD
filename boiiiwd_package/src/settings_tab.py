@@ -412,7 +412,7 @@ class SettingsTab(ctk.CTkFrame):
                 zone_path = os.path.join(folder_path, folder_name, "zone")
                 if not os.path.isdir(zone_path):
                     continue
-                if zone_path in main_app.app.library_tab.item_block_list:
+                if folder_name in main_app.app.library_tab.item_block_list:
                     continue
                 json_path = os.path.join(zone_path, "workshop.json")
                 if os.path.exists(json_path):

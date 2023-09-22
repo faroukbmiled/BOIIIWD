@@ -254,7 +254,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     mod_count += 1 if item_type == "mod" else 0
                     if curr_folder_name not in self.added_folders:
                         image_path = mod_img if item_type == "mod" else map_img
-                        if not (str(curr_folder_name).strip() == str(workshop_id).strip() or str(curr_folder_name).strip() == str(folder_name).strip()):
+                        if not (str(curr_folder_name).strip() == str(workshop_id).strip() or str(curr_folder_name).strip() == str(folder_name).strip()
+                                or str(curr_folder_name).strip() == f"{folder_name}_{workshop_id}"):
                             try: self.remove_item_by_option(items_file, curr_folder_name, "folder_name")
                             except: pass
                             self.item_block_list.add(curr_folder_name)
@@ -300,7 +301,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
                         # keep here cuz of item_exists_in_file() testing
                         self.added_folders.add(curr_folder_name)
-                        if not workshop_id in self.ids_added:
+                        # added that cuz it sometimes can add blocked ids first
+                        # and legit ids will be blocked cuz theyll be added to "ids_added"
+                        if not workshop_id in self.ids_added and curr_folder_name not in self.item_block_list:
                             self.ids_added.add(workshop_id)
 
         if not self.file_cleaned and os.path.exists(items_file):
@@ -607,10 +610,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 # fillers
                 name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}")
                 name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
-                
+
                 id_label = ctk.CTkLabel(info_frame, text=f"ID: {workshop_id}")
                 id_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
-                
+
                 folder_name = ctk.CTkLabel(info_frame, text=f"Folder: {os.path.basename(folder)}")
                 folder_name.grid(row=1, column=1, columnspan=2, sticky="w", padx=20, pady=5)
 
@@ -672,7 +675,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 if invalid_warn:
                     update_btn.configure(text="Update", state="disabled")
                     update_btn_tooltip.configure(message="Disabled due to item being blocked or duplicated")
-                    
+
                 if not workshop_id.isdigit():
                     view_button.configure(text="View", state="disabled")
                     view_button_tooltip.configure(message="Not a valid Workshop ID")
