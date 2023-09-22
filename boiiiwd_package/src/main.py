@@ -629,7 +629,7 @@ class BOIIIWD(ctk.CTk):
                 image_size = image.size
 
                 self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created ,
-                                        date_updated, stars_image, stars_image_size, ratings_text, url)
+                                        date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id)
 
             except requests.exceptions.RequestException as e:
                 show_message("Error", f"Failed to fetch map information.\nError: {e}", icon="cancel")
@@ -639,7 +639,7 @@ class BOIIIWD(ctk.CTk):
         info_thread.start()
 
     def toplevel_info_window(self, map_name, map_mod_type, map_size, image, image_size,
-                             date_created ,date_updated, stars_image, stars_image_size, ratings_text, url):
+                             date_created ,date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id):
         def main_thread():
             top = ctk.CTkToplevel(self)
             top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
@@ -680,7 +680,15 @@ class BOIIIWD(ctk.CTk):
             date_created_label = ctk.CTkLabel(info_frame, text=f"Posted: {date_created}")
             date_created_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-            date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
+            if date_updated != "Not updated":
+                date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated} 🔗")
+                date_updated_label_tooltip = CTkToolTip(date_updated_label, message="View changelogs", topmost=True)
+                date_updated_label.configure(cursor="hand2")
+                date_updated_label.bind("<Button-1>", lambda e:
+                    webbrowser.open(f"https://steamcommunity.com/sharedfiles/filedetails/changelog/{workshop_id}"))
+            else:
+                date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
+
             date_updated_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
             stars_image_label = ctk.CTkLabel(stars_frame)

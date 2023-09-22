@@ -1,4 +1,5 @@
 from src.update_window import check_for_updates_func
+from src.library_tab import LibraryTab as LT
 from src.imports import *
 from src.helpers import *
 
@@ -113,7 +114,8 @@ class SettingsTab(ctk.CTkFrame):
         self.folder_options_label_var.trace_add("write", self.enable_save_button)
         self.folder_options_label = ctk.CTkLabel(left_frame, text="Items Folder Naming:", anchor="nw")
         self.folder_options_label.grid(row=10, column=1, padx=20, pady=(10, 0), sticky="nw")
-        self.folder_options = ctk.CTkOptionMenu(left_frame, values=["PublisherID", "FolderName"], variable=self.folder_options_label_var)
+        self.folder_options = ctk.CTkOptionMenu(left_frame, values=["PublisherID", "FolderName"], command=self.change_folder_naming,
+                                                variable=self.folder_options_label_var)
         self.folder_options.grid(row=10, column=1, padx=(150, 0), pady=(3, 0), sticky="nw")
         self.folder_options.set(value=self.load_settings("folder_naming", "PublisherID"))
 
@@ -399,6 +401,49 @@ class SettingsTab(ctk.CTkFrame):
 
     def settings_check_for_updates(self):
         check_for_updates_func(self, ignore_up_todate=False)
+
+    def rename_all_folders(self, option):
+        boiiiFolder = main_app.app.edit_destination_folder.get()
+        maps_folder = Path(boiiiFolder) / "mods"
+        mods_folder = Path(boiiiFolder) / "usermaps"
+        folders_to_process = [mods_folder, maps_folder]
+        processed_names = set()
+        for folder_path in folders_to_process:
+            for zone_path in folder_path.glob("**/zone"):
+                if zone_path.parent.name in main_app.app.library_tab.item_block_list:
+                    continue
+                json_path = zone_path / "workshop.json"
+                if json_path.exists():
+                    folder_to_rename = zone_path.parent
+                    new_folder_name = extract_json_data(json_path, option)
+                    while new_folder_name in processed_names:
+                        new_folder_name += f"_{extract_json_data(json_path, 'PublisherID')}"
+                    folder_to_rename.rename(os.path.join(folder_path, new_folder_name))
+                    processed_names.add(new_folder_name)
+        return new_folder_name
+
+    def change_folder_naming(self, option):
+        main_app.app.title("BOIII Workshop Downloader - Settings  ➜  Loading... ⏳")
+        try:
+            if os.path.exists(main_app.app.edit_destination_folder.get()):
+                lib = main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
+                if not "No items" in lib:
+                    if show_message("Renaming", "Would you like to rename all your exisiting item folders now?", _return=True):
+                        main_app.app.title("BOIII Workshop Downloader - Settings  ➜  Renaming... ⏳")
+                        try :self.rename_all_folders(option)
+                        except Exception as er: show_message("Error!", f"Error occured when renaming\n{er}"); return
+                        show_message("Done", "All folders have been renamed")
+                    else:
+                        show_message("Heads up!", "Only newly downloaded items will be affected", icon="info")
+                else:
+                    show_message("Warning -> Check boiii path", f"You don't have any items yet ,from now on item's folders will be named as their {option}")
+            else:
+                show_message("Warning -> Check boiii path", f"You don't have any items yet ,from now on item's folders will be named as their {option}")
+        except Exception as e:
+            show_message("Error", f"Error occured \n{e}")
+        finally:
+            main_app.app.title("BOIII Workshop Downloader - Settings")
+            self.save_settings()
 
     def load_on_switch_screen(self):
         self.check_updates_var.set(self.load_settings("checkforupdtes"))

@@ -36,6 +36,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.item_block_list = set()
         self.added_folders = set()
         self.ids_added = set()
+        self.refresh_next_time = False
 
     def add_item(self, item, image=None, workshop_id=None, folder=None, invalid_warn=False):
         label = ctk.CTkLabel(self, text=item, image=image, compound="left", padx=5, anchor="w")
@@ -195,7 +196,14 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 button_view_list.grid_remove()
                 button.grid_remove()
 
-    def load_items(self, boiiiFolder):
+    def load_items(self, boiiiFolder, dont_add=False):
+        if self.refresh_next_time and not dont_add:
+            self.refresh_next_time = False
+            self.refresh_items()
+
+        if dont_add:
+            self.refresh_next_time = True
+
         maps_folder = Path(boiiiFolder) / "mods"
         mods_folder = Path(boiiiFolder) / "usermaps"
         mod_img = os.path.join(RESOURCES_DIR, "mod_image.png")
@@ -262,9 +270,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
                             text_to_add += " | ⚠️"
 
                         self.added_items.add(text_to_add)
-                        if image_path is b_mod_img or image_path is b_map_img:
+                        if image_path is b_mod_img or image_path is b_map_img and not dont_add:
                             self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), workshop_id=workshop_id, folder=zone_path.parent, invalid_warn=True)
-                        else:
+                        elif not dont_add:
                             self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), workshop_id=workshop_id, folder=zone_path.parent)
                         id_found, folder_found = self.item_exists_in_file(items_file, workshop_id, curr_folder_name)
                         item_info = {
@@ -381,7 +389,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 self.button_view_list.remove(button_view_list)
                 self.remove_item_by_option(items_file, id)
 
-    def refresh_items(self):
+    def refresh_items(self, skip_load=False):
         main_app.app.title("BOIII Workshop Downloader - Library  ➜  Loading... ⏳")
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
             label.destroy()
@@ -393,8 +401,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.added_items.clear()
         self.added_folders.clear()
         self.ids_added.clear()
-        status = self.load_items(main_app.app.edit_destination_folder.get().strip())
-        main_app.app.title(f"BOIII Workshop Downloader - Library  ➜  {status}")
+        if not skip_load:
+            status = self.load_items(main_app.app.edit_destination_folder.get().strip())
+            main_app.app.title(f"BOIII Workshop Downloader - Library  ➜  {status}")
 
     def view_item(self, workshop_id):
         url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
