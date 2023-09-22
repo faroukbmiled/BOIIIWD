@@ -598,15 +598,21 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 # fillers
                 name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}")
                 name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                
+                id_label = ctk.CTkLabel(info_frame, text=f"ID: {workshop_id}")
+                id_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                
+                folder_name = ctk.CTkLabel(info_frame, text=f"Folder: {os.path.basename(folder)}")
+                folder_name.grid(row=1, column=1, columnspan=2, sticky="w", padx=20, pady=5)
 
                 type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}")
-                type_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                type_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
                 size_label = ctk.CTkLabel(info_frame, text=f"{size_text} {map_size}")
-                size_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                size_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
                 date_created_label = ctk.CTkLabel(info_frame, text=f"Posted: {date_created}")
-                date_created_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                date_created_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
                 if date_updated != "Not updated" and date_updated != "Offline":
                     date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}  🔗")
@@ -616,13 +622,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         webbrowser.open(f"https://steamcommunity.com/sharedfiles/filedetails/changelog/{workshop_id}"))
                 else:
                     date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
-                date_updated_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
-
-                date_updated_label = ctk.CTkLabel(info_frame, text=f"Downloaded at: {down_date}")
                 date_updated_label.grid(row=5, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-                folder_name = ctk.CTkLabel(info_frame, text=f"Folder name: {os.path.basename(folder)}")
-                folder_name.grid(row=6, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                date_updated_label = ctk.CTkLabel(info_frame, text=f"Downloaded at: {down_date}")
+                date_updated_label.grid(row=6, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
                 stars_image_label = ctk.CTkLabel(stars_frame)
                 stars_width, stars_height = stars_image_size
@@ -636,7 +639,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
                 image_label = ctk.CTkLabel(image_frame)
                 width, height = image_size
-                # preview image is too big if offlinr, // to round floats
+                # preview image is too big if offline, // to round floats
                 if width > 1000 or height > 1000:
                     width = width // 2
                     height = height // 2
@@ -646,19 +649,24 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 image_label.pack(expand=True, fill="both", padx=(10, 20), pady=(10, 10))
 
                 # Buttons
-                close_button = ctk.CTkButton(buttons_frame, text="View", command=view_map_mod, width=130)
-                close_button.grid(row=0, column=0, padx=(20, 20), pady=(10, 10), sticky="n")
+                view_button = ctk.CTkButton(buttons_frame, text="View", command=view_map_mod, width=130)
+                view_button.grid(row=0, column=0, padx=(20, 20), pady=(10, 10), sticky="n")
+                view_button_tooltip = CTkToolTip(view_button, message="View Workshop", topmost=True)
 
                 update_btn = ctk.CTkButton(buttons_frame, text="Update", command=check_for_updates, width=130)
                 update_btn.grid(row=0, column=1, padx=(10, 20), pady=(10, 10), sticky="n")
                 update_btn_tooltip = CTkToolTip(update_btn, message="Checks and installs updates of the current selected item (redownload!)", topmost=True)
 
-                view_button = ctk.CTkButton(buttons_frame, text="Close", command=close_window, width=130)
-                view_button.grid(row=0, column=2, padx=(10, 20), pady=(10, 10), sticky="n")
+                close_button = ctk.CTkButton(buttons_frame, text="Close", command=close_window, width=130)
+                close_button.grid(row=0, column=2, padx=(10, 20), pady=(10, 10), sticky="n")
 
                 if invalid_warn:
                     update_btn.configure(text="Update", state="disabled")
                     update_btn_tooltip.configure(message="Disabled due to item being blocked or duplicated")
+                    
+                if not workshop_id.isdigit():
+                    view_button.configure(text="View", state="disabled")
+                    view_button_tooltip.configure(message="Not a valid Workshop ID")
 
                 top.grid_rowconfigure(0, weight=0)
                 top.grid_rowconfigure(1, weight=0)
