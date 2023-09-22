@@ -1,5 +1,4 @@
 from src.update_window import check_for_updates_func
-from src.library_tab import LibraryTab as LT
 from src.imports import *
 from src.helpers import *
 
@@ -404,23 +403,32 @@ class SettingsTab(ctk.CTkFrame):
 
     def rename_all_folders(self, option):
         boiiiFolder = main_app.app.edit_destination_folder.get()
-        maps_folder = Path(boiiiFolder) / "mods"
-        mods_folder = Path(boiiiFolder) / "usermaps"
+        maps_folder = os.path.join(boiiiFolder, "mods")
+        mods_folder = os.path.join(boiiiFolder, "usermaps")
         folders_to_process = [mods_folder, maps_folder]
         processed_names = set()
         for folder_path in folders_to_process:
-            for zone_path in folder_path.glob("**/zone"):
-                if zone_path.parent.name in main_app.app.library_tab.item_block_list:
+            for folder_name in os.listdir(folder_path):
+                zone_path = os.path.join(folder_path, folder_name, "zone")
+                if not os.path.isdir(zone_path):
                     continue
-                json_path = zone_path / "workshop.json"
-                if json_path.exists():
-                    folder_to_rename = zone_path.parent
+                if zone_path in main_app.app.library_tab.item_block_list:
+                    continue
+                json_path = os.path.join(zone_path, "workshop.json")
+                if os.path.exists(json_path):
+                    folder_to_rename = os.path.join(folder_path, folder_name)
                     new_folder_name = extract_json_data(json_path, option)
                     while new_folder_name in processed_names:
                         new_folder_name += f"_{extract_json_data(json_path, 'PublisherID')}"
-                    folder_to_rename.rename(os.path.join(folder_path, new_folder_name))
+                    new_path = os.path.join(folder_path, new_folder_name)
+
+                    while os.path.exists(new_path):
+                        publisher_id = extract_json_data(json_path, 'PublisherID')
+                        new_folder_name += f"_{publisher_id}"
+                        new_path = os.path.join(folder_path, new_folder_name)
+
+                    os.rename(folder_to_rename, new_path)
                     processed_names.add(new_folder_name)
-        return new_folder_name
 
     def change_folder_naming(self, option):
         main_app.app.title("BOIII Workshop Downloader - Settings  ➜  Loading... ⏳")
