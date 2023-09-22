@@ -602,8 +602,9 @@ class SettingsTab(ctk.CTkFrame):
                                 if os.path.exists(json_file_path):
                                     mod_type = extract_json_data(json_file_path, "Type")
                                     items_file = os.path.join(application_path, LIBRARY_FILE)
+                                    item_exixsts = main_app.app.library_tab.item_exists_in_file(items_file, workshop_id)
 
-                                    if main_app.app.library_tab.item_exists_in_file(items_file, workshop_id):
+                                    if item_exixsts:
                                         get_folder_name = main_app.app.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
                                         if get_folder_name:
                                             folder_name = get_folder_name
@@ -619,14 +620,19 @@ class SettingsTab(ctk.CTkFrame):
                                             folder_name = extract_json_data(json_file_path, "publisherID")
 
                                     if mod_type == "mod":
-                                        mods_folder = os.path.join(boiii_folder, "mods")
-                                        folder_name_path = os.path.join(mods_folder, folder_name, "zone")
+                                        path_folder = os.path.join(boiii_folder, "mods")
+                                        folder_name_path = os.path.join(path_folder, folder_name, "zone")
                                     elif mod_type == "map":
-                                        usermaps_folder = os.path.join(boiii_folder, "usermaps")
-                                        folder_name_path = os.path.join(usermaps_folder, folder_name, "zone")
+                                        path_folder = os.path.join(boiii_folder, "usermaps")
+                                        folder_name_path = os.path.join(path_folder, folder_name, "zone")
                                     else:
                                         show_message("Error", "Invalid workshop type in workshop.json, are you sure this is a map or a mod?.", icon="cancel")
                                         continue
+
+                                    if not item_exixsts:
+                                        while os.path.exists(os.path.join(path_folder, folder_name)):
+                                            folder_name += f"_{workshop_id}"
+                                            folder_name_path = os.path.join(path_folder, folder_name, "zone")
 
                                     os.makedirs(folder_name_path, exist_ok=True)
 
