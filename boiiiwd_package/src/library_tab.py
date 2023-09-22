@@ -214,9 +214,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
             for zone_path in folder_path.glob("**/zone"):
                 json_path = zone_path / "workshop.json"
                 if json_path.exists():
-                    # current folder name
-                    curr_folder_name = zone_path.parent.name
 
+                    curr_folder_name = zone_path.parent.name
                     workshop_id = extract_json_data(json_path, "PublisherID") or "None"
                     name = re.sub(r'\^\w+', '', extract_json_data(json_path, "Title")) or "None"
                     name = name[:45] + "..." if len(name) > 45 else name
@@ -415,17 +414,21 @@ class LibraryTab(ctk.CTkScrollableFrame):
         def show_map_thread():
             workshop_id = workshop
             online = if_internet_available("return")
+            valid_id = None
 
             if not workshop_id.isdigit():
                 try:
                     if extract_workshop_id(workshop_id).strip().isdigit():
                         workshop_id = extract_workshop_id(workshop_id).strip()
                     else:
-                        show_message("Warning", "Not a valid Workshop ID.")
+                        raise
                 except:
-                    show_message("Warning", "Not a valid Workshop ID.")
-                    return
-            if online:
+                    valid_id = False
+                    # show_message("Warning", "Not a valid Workshop ID.")
+                    for button_view in self.button_view_list:
+                        button_view.configure(state="normal")
+                    # return
+            if online and valid_id!=False:
                 try:
                     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
                     response = requests.get(url)
@@ -454,7 +457,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         stars_div = soup.find("div", class_="fileRatingDetails")
                         starts = stars_div.find("img")["src"]
                     except:
-                        show_message("Warning", "Not a valid Workshop ID\nCouldn't get information.")
+                        show_message("Warning", "Couldn't get information.")
                         for button_view in self.button_view_list:
                             button_view.configure(state="normal")
                         return
@@ -486,7 +489,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                                             url, workshop_id, invalid_warn, folder)
 
                 except Exception as e:
-                    show_message("Error", f"Failed to fetch map information.\nError: {e}", icon="cancel")
+                    show_message("Error", f"Failed to fetch information.\nError: {e}", icon="cancel")
                     for button_view in self.button_view_list:
                         button_view.configure(state="normal")
                     return
@@ -529,7 +532,6 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     for button_view in self.button_view_list:
                         button_view.configure(state="normal")
                     return
-
 
         info_thread = threading.Thread(target=show_map_thread)
         info_thread.start()
