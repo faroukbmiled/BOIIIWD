@@ -416,14 +416,14 @@ class SettingsTab(ctk.CTkFrame):
                     continue
                 json_path = os.path.join(zone_path, "workshop.json")
                 if os.path.exists(json_path):
+                    publisher_id = extract_json_data(json_path, 'PublisherID')
                     folder_to_rename = os.path.join(folder_path, folder_name)
                     new_folder_name = extract_json_data(json_path, option)
                     while new_folder_name in processed_names:
-                        new_folder_name += f"_{extract_json_data(json_path, 'PublisherID')}"
+                        new_folder_name += f"_{publisher_id}"
                     new_path = os.path.join(folder_path, new_folder_name)
 
                     while os.path.exists(new_path):
-                        publisher_id = extract_json_data(json_path, 'PublisherID')
                         new_folder_name += f"_{publisher_id}"
                         new_path = os.path.join(folder_path, new_folder_name)
 
