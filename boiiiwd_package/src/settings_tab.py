@@ -440,7 +440,6 @@ class SettingsTab(ctk.CTkFrame):
                         main_app.app.title("BOIII Workshop Downloader - Settings  ➜  Renaming... ⏳")
                         try :self.rename_all_folders(option)
                         except Exception as er: show_message("Error!", f"Error occured when renaming\n{er}"); return
-                        main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
                         show_message("Done!", "All folders have been renamed", icon="info")
                     else:
                         show_message("Heads up!", "Only newly downloaded items will be affected", icon="info")
@@ -451,7 +450,6 @@ class SettingsTab(ctk.CTkFrame):
         except Exception as e:
             show_message("Error", f"Error occured \n{e}")
         finally:
-            main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
             main_app.app.title("BOIII Workshop Downloader - Settings")
             self.save_settings()
 
