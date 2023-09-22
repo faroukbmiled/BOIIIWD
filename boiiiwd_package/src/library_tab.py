@@ -611,11 +611,11 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}")
                 name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-                id_label = ctk.CTkLabel(info_frame, text=f"ID: {workshop_id}")
+                id_label = ctk.CTkLabel(info_frame, text=f"ID: {workshop_id} | Folder: {os.path.basename(folder)}")
                 id_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-                folder_name = ctk.CTkLabel(info_frame, text=f"Folder: {os.path.basename(folder)}")
-                folder_name.grid(row=1, column=1, columnspan=2, sticky="w", padx=20, pady=5)
+                # folder_name = ctk.CTkLabel(info_frame, text=f"")
+                # folder_name.grid(row=1, column=1, columnspan=2, sticky="w", padx=20, pady=5)
 
                 type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}")
                 type_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
