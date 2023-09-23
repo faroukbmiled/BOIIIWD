@@ -650,6 +650,8 @@ class SettingsTab(ctk.CTkFrame):
                                     if cut_var.get():
                                         remove_tree(os.path.join(map_folder, workshop_id))
 
+                                    main_app.app.library_tab.update_item(main_app.app.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
+
                             if subfolders:
                                 main_app.app.show_complete_message(message=f"All items were moved\nYou can run the game now!\nPS: You have to restart the game\n(pressing launch will launch/restarts)")
 
