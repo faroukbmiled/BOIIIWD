@@ -707,7 +707,8 @@ class BOIIIWD(ctk.CTk):
 
             desc_threshold = 30
             shortened_description = f"{description[:desc_threshold]}... (View)" if len(description) > desc_threshold else description
-            description_lab = ctk.CTkLabel(info_frame, text=f"Description: {shortened_description.strip()}")
+            shortened_description = re.sub(r'\n', '', shortened_description).strip()
+            description_lab = ctk.CTkLabel(info_frame, text=f"Description: {shortened_description}")
             description_lab.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
             if len(description) > desc_threshold:
                 description_lab_tooltip = CTkToolTip(description_lab, message="View description", topmost=True)
