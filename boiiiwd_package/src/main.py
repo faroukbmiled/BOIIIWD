@@ -702,20 +702,24 @@ class BOIIIWD(ctk.CTk):
             buttons_frame.grid(row=3, column=0, columnspan=2, padx=20, pady=(0, 20), sticky="nsew")
 
             # fillers
-            name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}  (View...)")
+            name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}")
             name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
-            name_label_tooltip = CTkToolTip(name_label, message="View description", topmost=True)
-            name_label.configure(cursor="hand2")
-            name_label.bind("<Button-1>", lambda e: show_description(e))
+
+            shortened_description = f"{description[:30]}... (View)" if len(description) > 30 else description
+            description_lab = ctk.CTkLabel(info_frame, text=f"Description: {shortened_description.strip()}")
+            description_lab.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            description_lab_tooltip = CTkToolTip(description_lab, message="View description", topmost=True)
+            description_lab.configure(cursor="hand2")
+            description_lab.bind("<Button-1>", lambda e: show_description(e))
 
             type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}")
-            type_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            type_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
             size_label = ctk.CTkLabel(info_frame, text=f"Size: {map_size}")
-            size_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            size_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
             date_created_label = ctk.CTkLabel(info_frame, text=f"Posted: {date_created}")
-            date_created_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            date_created_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
             if date_updated != "Not updated":
                 date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated} 🔗")
@@ -726,7 +730,7 @@ class BOIIIWD(ctk.CTk):
             else:
                 date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
 
-            date_updated_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            date_updated_label.grid(row=5, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
             stars_image_label = ctk.CTkLabel(stars_frame)
             stars_width, stars_height = stars_image_size
