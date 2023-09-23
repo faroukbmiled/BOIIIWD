@@ -603,7 +603,7 @@ class BOIIIWD(ctk.CTk):
                     except:
                         date_updated = "Not updated"
                     try:
-                            description = soup.find('div', class_='workshopItemDescription').get_text()
+                            description = soup.find('div', class_='workshopItemDescription').get_text(separator='\n')
                     except:
                         description = "Not available"
 
@@ -705,10 +705,11 @@ class BOIIIWD(ctk.CTk):
             name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}")
             name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-            shortened_description = f"{description[:30]}... (View)" if len(description) > 30 else description
+            desc_threshold = 30
+            shortened_description = f"{description[:desc_threshold]}... (View)" if len(description) > desc_threshold else description
             description_lab = ctk.CTkLabel(info_frame, text=f"Description: {shortened_description.strip()}")
             description_lab.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
-            if len(description) > 30:
+            if len(description) > desc_threshold:
                 description_lab_tooltip = CTkToolTip(description_lab, message="View description", topmost=True)
                 description_lab.configure(cursor="hand2")
                 description_lab.bind("<Button-1>", lambda e: show_description(e))
