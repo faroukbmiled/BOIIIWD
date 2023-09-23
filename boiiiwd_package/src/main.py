@@ -667,8 +667,8 @@ class BOIIIWD(ctk.CTk):
 
                     description_window.attributes('-topmost', 'true')
                     description_window.title("Description")
-                    y_pos = event.y_root
-                    x_pos = event.x_root
+                    x_pos = event.x_root - 300
+                    y_pos = event.y_root - 200
                     calc_req_width = len(description) * 6 + 5
                     win_width = calc_req_width if calc_req_width < 500 else 500
                     description_window.geometry(f"{win_width + 5}x300+{x_pos}+{y_pos}")
