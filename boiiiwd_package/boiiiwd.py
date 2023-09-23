@@ -1,5 +1,4 @@
-from src import main
+import src.shared_vars as main_app
 
 if __name__ == "__main__":
-    app = main.BOIIIWD()
-    app.mainloop()
+    main_app.app.mainloop()

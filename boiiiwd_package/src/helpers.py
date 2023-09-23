@@ -1,18 +1,20 @@
+import src.shared_vars as main_app
 from src.imports import *
 
 # Start helper functions
-def cwd():
-    if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)
-    else:
-        return os.path.dirname(os.path.abspath(__file__))
+
+#testing app offline
+# import socket
+# def guard(*args, **kwargs):
+#     pass
+# socket.socket = guard
 
 def check_config(name, fallback=None):
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_PATH)
     if fallback:
         return config.get("Settings", name, fallback=fallback)
-    return config.get("Settings", name, fallback="on")
+    return config.get("Settings", name, fallback="")
 
 def save_config(name, value):
     config = configparser.ConfigParser()
@@ -23,13 +25,11 @@ def save_config(name, value):
         config.write(config_file)
 
 def check_custom_theme(theme_name):
-    if os.path.exists(os.path.join(cwd(), theme_name)):
-        return os.path.join(cwd(), theme_name)
+    if os.path.exists(os.path.join(application_path, theme_name)):
+        return os.path.join(application_path, theme_name)
     else:
-        try:
-            return os.path.join(RESOURCES_DIR, theme_name)
-        except:
-            return os.path.join(RESOURCES_DIR, "boiiiwd_theme.json")
+        try: return os.path.join(RESOURCES_DIR, theme_name)
+        except: return os.path.join(RESOURCES_DIR, "boiiiwd_theme.json")
 
 # theme initialization
 ctk.set_appearance_mode(check_config("appearance", "Dark"))  # Modes: "System" (standard), "Dark", "Light"
@@ -75,6 +75,64 @@ def create_update_script(current_exe, new_exe, updater_folder, program_name):
 
     return script_path
 
+def if_internet_available(func):
+    if func == "return":
+        try:
+            requests.get("https://www.google.com", timeout=3)
+            return True
+        except:
+            return False
+    def wrapper(*args, **kwargs):
+        try:
+            requests.get("https://www.google.com", timeout=3)
+            return func(*args, **kwargs)
+        except:
+            show_message("Offline", "No internet connection. Please check your internet connection and try again.")
+            return
+
+    return wrapper
+
+@if_internet_available
+def check_for_updates_func(window, ignore_up_todate=False):
+    try:
+        latest_version = get_latest_release_version()
+        current_version = VERSION
+        int_latest_version = int(latest_version.replace("v", "").replace(".", ""))
+        int_current_version = int(current_version.replace("v", "").replace(".", ""))
+
+        if latest_version and int_latest_version > int_current_version:
+            msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1), sound=True)
+
+            result = msg_box.get()
+
+            if result == "View":
+                webbrowser.open(f"https://github.com/{GITHUB_REPO}/releases/latest")
+
+            if result == "Yes":
+                from src.update_window import UpdateWindow
+                update_window = UpdateWindow(window, LATEST_RELEASE_URL)
+                update_window.start_update()
+
+            if result == "No":
+                return
+
+        elif int_latest_version < int_current_version:
+            if ignore_up_todate:
+                return
+            msg_box = CTkMessagebox(title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="Ok", sound=True)
+            result = msg_box.get()
+        elif int_latest_version == int_current_version:
+            if ignore_up_todate:
+                return
+            msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok", sound=True)
+            result = msg_box.get()
+
+        else:
+            show_message("Error!", "An error occured while checking for updates!\nCheck your internet and try again")
+
+    except Exception as e:
+        show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
+
 def extract_workshop_id(link):
     try:
         pattern = r'(?<=id=)(\d+)'
@@ -111,6 +169,7 @@ def initialize_steam(master):
         show_message("Error!", "An error occurred please check your paths and try again.", icon="cancel")
     master.attributes('-alpha', 1.0)
 
+@if_internet_available
 def valid_id(workshop_id):
     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
     response = requests.get(url)
@@ -141,7 +200,7 @@ def convert_speed(speed_bytes):
 def create_default_config():
     config = configparser.ConfigParser()
     config["Settings"] = {
-        "SteamCMDPath": cwd(),
+        "SteamCMDPath": application_path,
         "DestinationFolder": "",
         "checkforupdtes": "on",
         "console": "off"
@@ -152,7 +211,7 @@ def create_default_config():
 def get_steamcmd_path():
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_PATH)
-    return config.get("Settings", "SteamCMDPath", fallback=cwd())
+    return config.get("Settings", "SteamCMDPath", fallback=application_path)
 
 def extract_json_data(json_path, key):
     with open(json_path, 'r') as json_file:
@@ -204,8 +263,7 @@ def show_message(title, message, icon="warning", _return=False, option_1="No", o
     else:
         def callback():
             CTkMessagebox(title=title, message=message, icon=icon, sound=True)
-        from src.main import master_win
-        master_win.after(0, callback)
+        main_app.app.after(0, callback)
 
 def launch_boiii_func(path):
     procname = "boiii.exe"
@@ -271,11 +329,22 @@ def get_button_state_colors(file_path, state):
 
 def reset_steamcmd(no_warn=None):
     steamcmd_path = get_steamcmd_path()
-    steamcmd_steamapps = os.path.join(steamcmd_path, "steamapps")
-    if os.path.exists(steamcmd_steamapps):
-        remove_tree(steamcmd_steamapps, show_error=True)
-        if not no_warn:
-            show_message("Success!", "SteamCMD has been reset successfully!", icon="info")
+
+    directories_to_reset = ["steamapps", "dumps", "logs", "depotcache", "appcache","userdata",]
+
+    for directory in directories_to_reset:
+        directory_path = os.path.join(steamcmd_path, directory)
+        if os.path.exists(directory_path):
+            remove_tree(directory_path, show_error=True)
+
+    for root, _, files in os.walk(steamcmd_path):
+        for filename in files:
+            if filename.endswith((".old", ".crash")):
+                file_path = os.path.join(root, filename)
+                os.remove(file_path)
+
+    if not no_warn:
+        show_message("Success!", "SteamCMD has been reset successfully!", icon="info")
     else:
         if not no_warn:
             show_message("Warning!", "steamapps folder was not found, maybe already removed?", icon="warning")
@@ -298,7 +367,30 @@ def get_item_name(id):
     except:
         return False
 
-def show_noti(widget ,message, event=None, noti_dur=3.0):
-    CTkToolTip(widget, message=message, is_noti=True, noti_event=event, noti_dur=noti_dur)
+# you gotta use my modded CTkToolTip originaly by Akascape
+def show_noti(widget ,message, event=None, noti_dur=3.0, topmost=False):
+    CTkToolTip(widget, message=message, is_noti=True, noti_event=event, noti_dur=noti_dur, topmost=topmost)
+
+def check_item_date(down_date, date_updated):
+    current_year = datetime.now().year
+    date_format_with_year = "%d %b, %Y @ %I:%M%p"
+    date_format_with_added_year = "%d %b @ %I:%M%p, %Y"
+    try:
+        try:
+            download_datetime = datetime.strptime(down_date, date_format_with_year)
+        except ValueError:
+            download_datetime = datetime.strptime(down_date + f", {current_year}", date_format_with_added_year)
+
+        try:
+            upload_datetime = datetime.strptime(date_updated, date_format_with_year)
+        except ValueError:
+            upload_datetime = datetime.strptime(date_updated + f", {current_year}", date_format_with_added_year)
+
+        if upload_datetime >= download_datetime:
+            return True
+        elif upload_datetime < download_datetime:
+            return False
+    except:
+        return False
 
 # End helper functions

@@ -1,62 +1,21 @@
-from src.imports import *
-from src.helpers import show_message, cwd, check_config, check_custom_theme, get_button_state_colors, convert_speed, valid_id,\
-    save_config, check_steamcmd, is_steamcmd_initialized, get_steamcmd_path, reset_steamcmd, get_item_name, get_latest_release_version,\
-        get_workshop_file_size, extract_workshop_id, create_default_config, initialize_steam, launch_boiii_func, remove_tree, extract_json_data, convert_seconds, convert_bytes_to_readable
-from src.settings_tab import SettingsTab
+from turtle import title
+from src.update_window import check_for_updates_func
+from src.helpers import *
+
 from src.library_tab import LibraryTab
+from src.settings_tab import SettingsTab
 
-def check_for_updates_func(window, ignore_up_todate=False):
-    try:
-        latest_version = get_latest_release_version()
-        current_version = VERSION
-        int_latest_version = int(latest_version.replace("v", "").replace(".", ""))
-        int_current_version = int(current_version.replace("v", "").replace(".", ""))
-
-        if latest_version and int_latest_version > int_current_version:
-            msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1), sound=True)
-
-            result = msg_box.get()
-
-            if result == "View":
-                webbrowser.open(f"https://github.com/{GITHUB_REPO}/releases/latest")
-
-            from src.update_window import UpdateWindow
-            if result == "Yes":
-                update_window = UpdateWindow(window, LATEST_RELEASE_URL)
-                update_window.start_update()
-
-            if result == "No":
-                return
-
-        elif int_latest_version < int_current_version:
-            if ignore_up_todate:
-                return
-            msg_box = CTkMessagebox(title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="Ok", sound=True)
-            result = msg_box.get()
-        elif int_latest_version == int_current_version:
-            if ignore_up_todate:
-                return
-            msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok", sound=True)
-            result = msg_box.get()
-
-        else:
-            show_message("Error!", "An error occured while checking for updates!\nCheck your internet and try again")
-
-    except Exception as e:
-        show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
 
 class BOIIIWD(ctk.CTk):
     def __init__(self):
         super().__init__()
-        global master_win
-        master_win = self
         # self.app_instance = BOIIIWD()
 
         # configure window
         self.title("BOIII Workshop Downloader - Main")
 
         try:
-            geometry_file = os.path.join(cwd(), "boiiiwd_dont_touch.conf")
+            geometry_file = os.path.join(application_path, "boiiiwd_dont_touch.conf")
             if os.path.isfile(geometry_file):
                 with open(geometry_file, "r") as conf:
                     self.geometry(conf.read())
@@ -190,10 +149,10 @@ class BOIIIWD(ctk.CTk):
         self.info_button = ctk.CTkButton(master=self.optionsframe, text="Details", command=self.show_map_info, width=10)
         self.info_button.grid(row=2, column=5, padx=(0, 20), pady=(0, 10), sticky="wn")
 
-        self.label_destination_folder = ctk.CTkLabel(master=self.optionsframe, text="Enter Your BOIII folder:")
+        self.label_destination_folder = ctk.CTkLabel(master=self.optionsframe, text='Enter Your boiii folder:')
         self.label_destination_folder.grid(row=3, column=1, padx=20, pady=(0, 0), columnspan=4, sticky="ws")
 
-        self.edit_destination_folder = ctk.CTkEntry(master=self.optionsframe, placeholder_text="Your BOIII Instalation folder")
+        self.edit_destination_folder = ctk.CTkEntry(master=self.optionsframe, placeholder_text="Your boiii Instalation folder")
         self.edit_destination_folder.grid(row=4, column=1, padx=20, pady=(0, 25), columnspan=4, sticky="ewn")
 
         self.button_BOIII_browse = ctk.CTkButton(master=self.optionsframe, text="Select", command=self.open_BOIII_browser)
@@ -265,11 +224,14 @@ class BOIIIWD(ctk.CTk):
             self.settings_tab.load_settings("reset_on_fail", "10")
             self.settings_tab.load_settings("show_fails", "on")
             self.settings_tab.load_settings("skip_already_installed", "on")
-        except:
-            pass
+        except: pass
 
         if not check_steamcmd():
             self.show_steam_warning_message()
+
+        # items check for update, ill change all the variables to work this way at a later date
+        if self.settings_tab.check_items_var.get():
+            self.library_tab.check_for_updates(on_launch=True)
 
     def do_popup(self, event, frame):
         try: frame.tk_popup(event.x_root, event.y_root)
@@ -405,9 +367,10 @@ class BOIIIWD(ctk.CTk):
         self.library_tab.grid_remove()
 
     def show_library_widgets(self):
-        self.title("BOIII Workshop Downloader - Library")
-        self.library_tab.load_items(self.edit_destination_folder.get())
+        self.title("BOIII Workshop Downloader - Library  ➜  Loading... ⏳")
+        status = self.library_tab.load_items(self.edit_destination_folder.get())
         self.library_tab.grid(row=0, rowspan=3, column=1, padx=(0, 20), pady=(20, 20), sticky="nsew")
+        self.title(f"BOIII Workshop Downloader - Library  ➜  {status}")
 
     def show_queue_widgets(self):
         self.title("BOIII Workshop Downloader - Queue")
@@ -462,7 +425,7 @@ class BOIIIWD(ctk.CTk):
     def load_configs(self):
         if os.path.exists(CONFIG_FILE_PATH):
             destination_folder = check_config("DestinationFolder", "")
-            steamcmd_path = check_config("SteamCMDPath", os.getcwd())
+            steamcmd_path = check_config("SteamCMDPath", application_path)
             new_appearance_mode = check_config("appearance", "Dark")
             new_scaling = check_config("scaling", 1.0)
             self.edit_destination_folder.delete(0, "end")
@@ -485,7 +448,7 @@ class BOIIIWD(ctk.CTk):
             scaling_int = math.trunc(scaling_float)
             self.settings_tab.scaling_optionemenu.set(f"{scaling_int}%")
             self.edit_steamcmd_path.delete(0, "end")
-            self.edit_steamcmd_path.insert(0, cwd())
+            self.edit_steamcmd_path.insert(0, application_path)
             create_default_config()
 
     def help_queue_text_func(self, event=None):
@@ -521,7 +484,7 @@ class BOIIIWD(ctk.CTk):
             self.queuetextarea.configure(state="disabled")
 
     def open_BOIII_browser(self):
-        selected_folder = ctk.filedialog.askdirectory(title="Select BOIII Folder")
+        selected_folder = ctk.filedialog.askdirectory(title="Select boiii Folder")
         if selected_folder:
             self.edit_destination_folder.delete(0, "end")
             self.edit_destination_folder.insert(0, selected_folder)
@@ -551,13 +514,14 @@ class BOIIIWD(ctk.CTk):
         link = "https://steamcommunity.com/app/311210/workshop/"
         webbrowser.open(link)
 
+    @if_internet_available
     def download_steamcmd(self):
         self.edit_steamcmd_path.delete(0, "end")
-        self.edit_steamcmd_path.insert(0, cwd())
+        self.edit_steamcmd_path.insert(0, application_path)
         save_config("DestinationFolder" ,self.edit_destination_folder.get())
         save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
         steamcmd_url = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip"
-        steamcmd_zip_path = os.path.join(cwd(), "steamcmd.zip")
+        steamcmd_zip_path = os.path.join(application_path, "steamcmd.zip")
 
         try:
             response = requests.get(steamcmd_url)
@@ -567,7 +531,7 @@ class BOIIIWD(ctk.CTk):
                 zip_file.write(response.content)
 
             with zipfile.ZipFile(steamcmd_zip_path, "r") as zip_ref:
-                zip_ref.extractall(cwd())
+                zip_ref.extractall(application_path)
 
             if check_steamcmd():
                 os.remove(fr"{steamcmd_zip_path}")
@@ -592,6 +556,7 @@ class BOIIIWD(ctk.CTk):
             show_message("Error", "Failed to extract SteamCMD. The downloaded file might be corrupted.", icon="cancel")
             os.remove(fr"{steamcmd_zip_path}")
 
+    @if_internet_available
     def show_map_info(self):
         def show_map_thread():
             workshop_id = self.edit_workshop_id.get().strip()
@@ -613,8 +578,9 @@ class BOIIIWD(ctk.CTk):
                 self.after(1, lambda mid=workshop_id: self.label_file_size.configure(text=f"File size: {get_workshop_file_size(mid ,raw=True)}"))
 
             try:
+                headers = {'Cache-Control': 'no-cache'}
                 url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
-                response = requests.get(url)
+                response = requests.get(url, headers=headers)
                 response.raise_for_status()
                 content = response.text
 
@@ -637,6 +603,11 @@ class BOIIIWD(ctk.CTk):
                         date_updated = details_stat_elements[2].text.strip()
                     except:
                         date_updated = "Not updated"
+                    try:
+                            description = soup.find('div', class_='workshopItemDescription').get_text(separator='\n')
+                    except:
+                        description = "Not available"
+
                     stars_div = soup.find("div", class_="fileRatingDetails")
                     starts = stars_div.find("img")["src"]
                 except:
@@ -664,7 +635,7 @@ class BOIIIWD(ctk.CTk):
                 image_size = image.size
 
                 self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created ,
-                                          date_updated, stars_image, stars_image_size, ratings_text, url)
+                                        date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id, description)
 
             except requests.exceptions.RequestException as e:
                 show_message("Error", f"Failed to fetch map information.\nError: {e}", icon="cancel")
@@ -674,7 +645,8 @@ class BOIIIWD(ctk.CTk):
         info_thread.start()
 
     def toplevel_info_window(self, map_name, map_mod_type, map_size, image, image_size,
-                             date_created ,date_updated, stars_image, stars_image_size, ratings_text, url):
+                             date_created ,date_updated, stars_image, stars_image_size,
+                             ratings_text, url, workshop_id, description):
         def main_thread():
             top = ctk.CTkToplevel(self)
             top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
@@ -686,6 +658,34 @@ class BOIIIWD(ctk.CTk):
 
             def view_map_mod():
                 webbrowser.open(url)
+
+            def show_description(event):
+                def main_thread():
+                    description_window = ctk.CTkToplevel(None)
+
+                    if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
+                        description_window.after(210, lambda: description_window.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
+
+                    description_window.attributes('-topmost', 'true')
+                    description_window.title(f"Description - {map_name}")
+                    x_pos = event.x_root - 300
+                    y_pos = event.y_root - 200
+                    calc_req_width = len(description) * 6 + 5
+                    win_width = calc_req_width if calc_req_width < 500 else 500
+                    description_window.geometry(f"{win_width + 5}x300+{x_pos}+{y_pos}")
+
+                    if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_obsidian.json":
+                        description_label = ctk.CTkTextbox(description_window, activate_scrollbars=True, scrollbar_button_color="#5b6c7f")
+                    else:
+                        description_label = ctk.CTkTextbox(description_window, activate_scrollbars=True)
+                    description_label.insert("1.0", description)
+                    description_label.pack(fill=ctk.BOTH, expand=True, padx=(10, 10), pady=(10, 10))
+                    description_label.configure(state="disabled")
+
+                    self.create_context_menu(description_label, textbox=True)
+                    description_window.after(50, description_window.focus_set)
+
+                self.after(0, main_thread)
 
             # frames
             stars_frame = ctk.CTkFrame(top)
@@ -706,17 +706,37 @@ class BOIIIWD(ctk.CTk):
             name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}")
             name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
+            desc_threshold = 30
+            shortened_description = re.sub(r'\n', '', description).strip()
+            shortened_description = re.sub(r'([^a-zA-Z0-9\s:().])', '', shortened_description)
+            shortened_description = f"{shortened_description[:desc_threshold]}... (View)"\
+                                    if len(shortened_description) > desc_threshold else shortened_description
+            description_lab = ctk.CTkLabel(info_frame, text=f"Description: {shortened_description}")
+            description_lab.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            if len(description) > desc_threshold:
+                description_lab_tooltip = CTkToolTip(description_lab, message="View description", topmost=True)
+                description_lab.configure(cursor="hand2")
+                description_lab.bind("<Button-1>", lambda e: show_description(e))
+
             type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}")
-            type_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            type_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
             size_label = ctk.CTkLabel(info_frame, text=f"Size: {map_size}")
-            size_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            size_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
             date_created_label = ctk.CTkLabel(info_frame, text=f"Posted: {date_created}")
-            date_created_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            date_created_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-            date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
-            date_updated_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            if date_updated != "Not updated":
+                date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated} 🔗")
+                date_updated_label_tooltip = CTkToolTip(date_updated_label, message="View changelogs", topmost=True)
+                date_updated_label.configure(cursor="hand2")
+                date_updated_label.bind("<Button-1>", lambda e:
+                    webbrowser.open(f"https://steamcommunity.com/sharedfiles/filedetails/changelog/{workshop_id}"))
+            else:
+                date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
+
+            date_updated_label.grid(row=5, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
             stars_image_label = ctk.CTkLabel(stars_frame)
             stars_width, stars_height = stars_image_size
@@ -804,14 +824,16 @@ class BOIIIWD(ctk.CTk):
     # the real deal
     def run_steamcmd_command(self, command, map_folder, wsid, queue=None):
         steamcmd_path = get_steamcmd_path()
-        stdout = os.path.join(steamcmd_path, "logs", "workshop_log.txt")
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        stdout_path = os.path.join(steamcmd_path, "logs", "workshop_log.txt")
+        timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+
+        os.makedirs(os.path.dirname(stdout_path), exist_ok=True)
 
         try:
-            with open(stdout, 'w') as file:
+            with open(stdout_path, 'w') as file:
                 file.write('')
         except:
-            os.rename(stdout, os.path.join(map_folder, os.path.join(stdout, f"workshop_log_couldntremove_{timestamp}.txt")))
+            os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
 
         show_console = subprocess.CREATE_NO_WINDOW
         if self.settings_tab.console:
@@ -846,7 +868,7 @@ class BOIIIWD(ctk.CTk):
                 #wait for process
                 while True:
                     if not self.is_downloading:
-                        if self.check_steamcmd_stdout(stdout, wsid):
+                        if self.check_steamcmd_stdout(stdout_path, wsid):
                             start_time = time.time()
                             self.is_downloading = True
                     elapsed_time = time.time() - start_time
@@ -857,10 +879,10 @@ class BOIIIWD(ctk.CTk):
                 # print("Broken freeeee!")
                 self.is_downloading = False
                 try:
-                    with open(stdout, 'w') as file:
+                    with open(stdout_path, 'w') as file:
                         file.write('')
                 except:
-                    os.rename(stdout, os.path.join(map_folder, os.path.join(stdout, f"workshop_log_couldntremove_{timestamp}.txt")))
+                    os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
 
                 if not self.settings_tab.stopped:
                     self.settings_tab.steam_fail_counter = self.settings_tab.steam_fail_counter + 1
@@ -892,7 +914,7 @@ class BOIIIWD(ctk.CTk):
 
             while True:
                 if not self.is_downloading:
-                    if self.check_steamcmd_stdout(stdout, wsid):
+                    if self.check_steamcmd_stdout(stdout_path, wsid):
                         self.is_downloading = True
                 if process.poll() != None:
                     break
@@ -901,10 +923,10 @@ class BOIIIWD(ctk.CTk):
             # print("Broken freeeee!")
             self.is_downloading = False
             try:
-                with open(stdout, 'w') as file:
+                with open(stdout_path, 'w') as file:
                     file.write('')
             except:
-                os.rename(stdout, os.path.join(map_folder, os.path.join(stdout, f"workshop_log_couldntremove_{timestamp}.txt")))
+                os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
 
             if not os.path.exists(map_folder):
                 show_message("SteamCMD has terminated", "SteamCMD has been terminated\nAnd failed to download the map/mod, try again or enable continuous download in settings")
@@ -939,7 +961,8 @@ class BOIIIWD(ctk.CTk):
                 return
         self.after(0, callback)
 
-    def download_map(self):
+    @if_internet_available
+    def download_map(self, update=False):
         self.is_downloading = False
         self.fail_threshold = 0
         if not self.is_pressed:
@@ -948,15 +971,15 @@ class BOIIIWD(ctk.CTk):
             self.library_tab.load_items(self.edit_destination_folder.get())
             if self.queue_enabled:
                 self.item_skipped = False
-                start_down_thread = threading.Thread(target=self.queue_download_thread)
+                start_down_thread = threading.Thread(target=self.queue_download_thread, args=(update,))
                 start_down_thread.start()
             else:
-                start_down_thread = threading.Thread(target=self.download_thread)
+                start_down_thread = threading.Thread(target=self.download_thread, args=(update,))
                 start_down_thread.start()
         else:
             show_message("Warning", "Already pressed, Please wait.")
 
-    def queue_download_thread(self):
+    def queue_download_thread(self, update=None):
         self.stopped = False
         self.queue_stop_button = False
         try:
@@ -1032,18 +1055,19 @@ class BOIIIWD(ctk.CTk):
                 if any(workshop_id in item for item in self.library_tab.added_items):
                     self.already_installed.append(workshop_id)
 
-            if self.already_installed:
-                item_ids = ", ".join(self.already_installed)
-                if self.settings_tab.skip_already_installed:
-                    for item in self.already_installed:
-                        if item in items:
-                            items.remove(item)
-                    show_message("Heads up!, map/s skipped => skip is on in settings", f"These item IDs may already be installed and are skipped:\n{item_ids}", icon="info")
-                    if not any(isinstance(item, int) for item in items):
-                        self.stop_download()
-                        return
-                else:
-                    show_message("Heads up! map/s not skipped => skip is off in settings", f"These item IDs may already be installed:\n{item_ids}", icon="info")
+            if not update:
+                if self.already_installed:
+                    item_ids = ", ".join(self.already_installed)
+                    if self.settings_tab.skip_already_installed:
+                        for item in self.already_installed:
+                            if item in items:
+                                items.remove(item)
+                        show_message("Heads up!, map/s skipped => skip is on in settings", f"These item IDs may already be installed and are skipped:\n{item_ids}", icon="info")
+                        if not any(isinstance(item, int) for item in items):
+                            self.stop_download()
+                            return
+                    else:
+                        show_message("Heads up! map/s not skipped => skip is off in settings", f"These item IDs may already be installed:\n{item_ids}", icon="info")
 
             self.after(1, self.status_text.configure(text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)}"))
             start_time = time.time()
@@ -1210,6 +1234,7 @@ class BOIIIWD(ctk.CTk):
                     update_ui_thread.daemon = True
                     update_ui_thread.start()
                     update_ui_thread.join()
+
                     self.progress_text.configure(text="0%")
                     self.progress_bar.set(0.0)
 
@@ -1220,17 +1245,38 @@ class BOIIIWD(ctk.CTk):
                     if os.path.exists(json_file_path):
                         self.label_speed.configure(text="Installing...")
                         mod_type = extract_json_data(json_file_path, "Type")
-                        folder_name = extract_json_data(json_file_path, "FolderName")
+                        items_file = os.path.join(application_path, LIBRARY_FILE)
+                        item_exixsts = self.library_tab.item_exists_in_file(items_file, workshop_id)
+
+                        if item_exixsts:
+                            get_folder_name = self.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
+                            if get_folder_name:
+                                folder_name = get_folder_name
+                            else:
+                                try:
+                                    folder_name = extract_json_data(json_file_path, self.settings_tab.folder_options.get())
+                                except:
+                                    folder_name = extract_json_data(json_file_path, "publisherID")
+                        else:
+                            try:
+                                folder_name = extract_json_data(json_file_path, self.settings_tab.folder_options.get())
+                            except:
+                                folder_name = extract_json_data(json_file_path, "publisherID")
 
                         if mod_type == "mod":
-                            mods_folder = os.path.join(destination_folder, "mods")
-                            folder_name_path = os.path.join(mods_folder, folder_name, "zone")
+                            path_folder = os.path.join(destination_folder, "mods")
+                            folder_name_path = os.path.join(path_folder, folder_name, "zone")
                         elif mod_type == "map":
-                            usermaps_folder = os.path.join(destination_folder, "usermaps")
-                            folder_name_path = os.path.join(usermaps_folder, folder_name, "zone")
+                            path_folder = os.path.join(destination_folder, "usermaps")
+                            folder_name_path = os.path.join(path_folder, folder_name, "zone")
                         else:
                             show_message("Error", f"Invalid workshop type in workshop.json, are you sure this is a map or a mod?., skipping {workshop_id}...", icon="cancel")
                             return
+
+                        if not item_exixsts:
+                            while os.path.exists(os.path.join(path_folder, folder_name)):
+                                folder_name += f"_{workshop_id}"
+                                folder_name_path = os.path.join(path_folder, folder_name, "zone")
 
                         os.makedirs(folder_name_path, exist_ok=True)
 
@@ -1242,6 +1288,8 @@ class BOIIIWD(ctk.CTk):
                         if self.settings_tab.clean_on_finish:
                             remove_tree(map_folder)
                             remove_tree(download_folder)
+
+                        self.library_tab.update_item(self.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
 
                         if index == len(items) - 1:
                             self.after(1, self.status_text.configure(text=f"Status: Done! => Please press stop only if you see no popup window (rare bug)"))
@@ -1275,7 +1323,7 @@ class BOIIIWD(ctk.CTk):
             self.stop_download()
             self.is_pressed = False
 
-    def download_thread(self):
+    def download_thread(self, update=None):
         try:
             self.settings_tab.stopped = False
 
@@ -1332,12 +1380,13 @@ class BOIIIWD(ctk.CTk):
                 self.stop_download()
                 return
 
-            if any(workshop_id in item for item in self.library_tab.added_items):
-                if self.settings_tab.skip_already_installed:
-                    show_message("Heads up!, map skipped => Skip is on in settings", f"This item may already be installed, Stopping: {workshop_id}", icon="info")
-                    self.stop_download()
-                    return
-                show_message("Heads up! map not skipped => Skip is off in settings", f"This item may already be installed: {workshop_id}", icon="info")
+            if not update:
+                if any(workshop_id in item for item in self.library_tab.added_items):
+                    if self.settings_tab.skip_already_installed:
+                        show_message("Heads up!, map skipped => Skip is on in settings", f"This item may already be installed, Stopping: {workshop_id}", icon="info")
+                        self.stop_download()
+                        return
+                    show_message("Heads up! map not skipped => Skip is off in settings", f"This item may already be installed: {workshop_id}", icon="info")
 
             self.after(1, lambda mid=workshop_id: self.label_file_size.configure(text=f"File size: {get_workshop_file_size(mid ,raw=True)}"))
             download_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "downloads", "311210", workshop_id)
@@ -1462,18 +1511,39 @@ class BOIIIWD(ctk.CTk):
                 if os.path.exists(json_file_path):
                     self.label_speed.configure(text="Installing...")
                     mod_type = extract_json_data(json_file_path, "Type")
-                    folder_name = extract_json_data(json_file_path, "FolderName")
+                    items_file = os.path.join(application_path, LIBRARY_FILE)
+                    item_exixsts = self.library_tab.item_exists_in_file(items_file, workshop_id)
+
+                    if item_exixsts:
+                        get_folder_name = self.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
+                        if get_folder_name:
+                            folder_name = get_folder_name
+                        else:
+                            try:
+                                folder_name = extract_json_data(json_file_path, self.settings_tab.folder_options.get())
+                            except:
+                                folder_name = extract_json_data(json_file_path, "publisherID")
+                    else:
+                        try:
+                            folder_name = extract_json_data(json_file_path, self.settings_tab.folder_options.get())
+                        except:
+                            folder_name = extract_json_data(json_file_path, "publisherID")
 
                     if mod_type == "mod":
-                        mods_folder = os.path.join(destination_folder, "mods")
-                        folder_name_path = os.path.join(mods_folder, folder_name, "zone")
+                        path_folder = os.path.join(destination_folder, "mods")
+                        folder_name_path = os.path.join(path_folder, folder_name, "zone")
                     elif mod_type == "map":
-                        usermaps_folder = os.path.join(destination_folder, "usermaps")
-                        folder_name_path = os.path.join(usermaps_folder, folder_name, "zone")
+                        path_folder = os.path.join(destination_folder, "usermaps")
+                        folder_name_path = os.path.join(path_folder, folder_name, "zone")
                     else:
                         show_message("Error", "Invalid workshop type in workshop.json, are you sure this is a map or a mod?.", icon="cancel")
                         self.stop_download()
                         return
+
+                    if not item_exixsts:
+                        while os.path.exists(os.path.join(path_folder, folder_name)):
+                            folder_name += f"_{workshop_id}"
+                            folder_name_path = os.path.join(path_folder, folder_name, "zone")
 
                     os.makedirs(folder_name_path, exist_ok=True)
 
@@ -1486,6 +1556,7 @@ class BOIIIWD(ctk.CTk):
                         remove_tree(map_folder)
                         remove_tree(download_folder)
 
+                    self.library_tab.update_item(self.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
                     self.show_complete_message(message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)")
                     self.button_download.configure(state="normal")
                     self.button_stop.configure(state="disabled")

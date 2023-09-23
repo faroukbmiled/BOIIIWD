@@ -1,11 +1,49 @@
+import src.shared_vars as main_app
 from src.imports import *
-from src.helpers import show_message, check_config, check_custom_theme,\
-    get_button_state_colors, convert_bytes_to_readable, create_update_script
+from src.helpers import *
+
+
+def check_for_updates_func(window, ignore_up_todate=False):
+    try:
+        latest_version = get_latest_release_version()
+        current_version = VERSION
+        int_latest_version = int(latest_version.replace("v", "").replace(".", ""))
+        int_current_version = int(current_version.replace("v", "").replace(".", ""))
+
+        if latest_version and int_latest_version > int_current_version:
+            msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1), sound=True)
+
+            result = msg_box.get()
+
+            if result == "View":
+                webbrowser.open(f"https://github.com/{GITHUB_REPO}/releases/latest")
+
+            if result == "Yes":
+                update_window = UpdateWindow(window, LATEST_RELEASE_URL)
+                update_window.start_update()
+
+            if result == "No":
+                return
+
+        elif int_latest_version < int_current_version:
+            if ignore_up_todate:
+                return
+            msg_box = CTkMessagebox(title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="Ok", sound=True)
+            result = msg_box.get()
+        elif int_latest_version == int_current_version:
+            if ignore_up_todate:
+                return
+            msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok", sound=True)
+            result = msg_box.get()
+
+        else:
+            show_message("Error!", "An error occured while checking for updates!\nCheck your internet and try again")
+
+    except Exception as e:
+        show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
 
 class UpdateWindow(ctk.CTkToplevel):
     def __init__(self, master, update_url):
-        global master_win
-        master_win = master
         super().__init__(master)
         self.title("BOIIIWD Self-Updater")
         self.geometry("400x150")
@@ -42,7 +80,7 @@ class UpdateWindow(ctk.CTkToplevel):
 
     def update_progress_bar(self):
         try:
-            update_dir = os.path.join(os.getcwd(), UPDATER_FOLDER)
+            update_dir = os.path.join(application_path, UPDATER_FOLDER)
             response = requests.get(LATEST_RELEASE_URL, stream=True)
             response.raise_for_status()
             current_exe = sys.argv[0]
@@ -95,13 +133,11 @@ class UpdateWindow(ctk.CTkToplevel):
                     os.remove(fr"{zip_path}")
                 self.label_download.configure(text="Update cancelled.")
                 self.progress_bar.set(0.0)
-                # there's a better solution ill implement it later
-                global master_win
-                try:
-                    master_win.attributes('-alpha', 1.0)
-                except:
-                    pass
+
+                try: main_app.app.attributes('-alpha', 1.0)
+                except: pass
                 show_message("Cancelled!", "Update cancelled by user", icon="warning")
+
         except Exception as e:
             self.progress_bar.set(0.0)
             self.label_download.configure(text="Update failed")

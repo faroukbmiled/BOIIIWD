@@ -4,8 +4,8 @@ from distutils.sysconfig import get_python_lib
 site_packages_path = get_python_lib()
 
 NAME = "BOIIIWD"
-SCRIPT = "boiiiwd.py"
-ICON = "boiiiwd_package/ryuk.ico"
+SCRIPT = "boiiiwd_package/boiiiwd.py"
+ICON = "boiiiwd_package/resources/ryuk.ico"
 
 PyInstaller.__main__.run([
     "{}".format(SCRIPT),
@@ -15,7 +15,14 @@ PyInstaller.__main__.run([
     "--windowed",
     "--ascii",
     "--icon", f"{ICON}",
-    "--add-data", "boiiiwd_package/src/resources;resources",
+    "--add-data", "boiiiwd_package/resources;resources",
+    "--add-data", "boiiiwd_package/src;imports",
+    "--add-data", "boiiiwd_package/src;helpers",
+    "--add-data", "boiiiwd_package/src;shared_vars",
+    "--add-data", "boiiiwd_package/src;library_tab",
+    "--add-data", "boiiiwd_package/src;settings_tab",
+    "--add-data", "boiiiwd_package/src;update_window",
+    "--add-data", "boiiiwd_package/src;main",
     "--add-data", f"{site_packages_path}\customtkinter;customtkinter",
     "--add-data", f"{site_packages_path}\CTkMessagebox;CTkMessagebox",
     "--add-data", f"{site_packages_path}\CTkToolTip;CTkToolTip",
