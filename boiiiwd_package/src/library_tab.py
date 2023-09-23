@@ -592,14 +592,17 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         x_pos = event.x_root
                         calc_req_width = len(description) * 6 + 5
                         win_width = calc_req_width if calc_req_width < 500 else 500
-                        description_window.geometry(f"{win_width + 5}x200+{x_pos}+{y_pos}")
+                        description_window.geometry(f"{win_width + 5}x300+{x_pos}+{y_pos}")
 
-                        frame = ctk.CTkScrollableFrame(description_window)
-                        frame.pack(fill=ctk.BOTH, expand=True)
+                        if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_obsidian.json":
+                            description_label = ctk.CTkTextbox(description_window, activate_scrollbars=True, scrollbar_button_color="#5b6c7f")
+                        else:
+                            description_label = ctk.CTkTextbox(description_window, activate_scrollbars=True)
+                        description_label.insert("1.0", description)
+                        description_label.pack(fill=ctk.BOTH, expand=True, padx=(10, 10), pady=(10, 10))
+                        description_label.configure(state="disabled")
 
-                        description_label = ctk.CTkLabel(frame, text=description, wraplength=500, justify="left")
-                        description_label.grid(padx=(10, 10), pady=(10, 10), sticky="nwes")
-
+                        main_app.app.create_context_menu(description_label, textbox=True)
                         description_window.after(50, description_window.focus_set)
 
                     main_app.app.after(0, main_thread)

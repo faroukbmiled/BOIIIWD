@@ -602,6 +602,11 @@ class BOIIIWD(ctk.CTk):
                         date_updated = details_stat_elements[2].text.strip()
                     except:
                         date_updated = "Not updated"
+                    try:
+                            description = soup.find('div', class_='workshopItemDescription').get_text()
+                    except:
+                        description = "Not available"
+
                     stars_div = soup.find("div", class_="fileRatingDetails")
                     starts = stars_div.find("img")["src"]
                 except:
@@ -629,7 +634,7 @@ class BOIIIWD(ctk.CTk):
                 image_size = image.size
 
                 self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created ,
-                                        date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id)
+                                        date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id, description)
 
             except requests.exceptions.RequestException as e:
                 show_message("Error", f"Failed to fetch map information.\nError: {e}", icon="cancel")
@@ -639,7 +644,8 @@ class BOIIIWD(ctk.CTk):
         info_thread.start()
 
     def toplevel_info_window(self, map_name, map_mod_type, map_size, image, image_size,
-                             date_created ,date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id):
+                             date_created ,date_updated, stars_image, stars_image_size,
+                             ratings_text, url, workshop_id, description):
         def main_thread():
             top = ctk.CTkToplevel(self)
             top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
@@ -651,6 +657,34 @@ class BOIIIWD(ctk.CTk):
 
             def view_map_mod():
                 webbrowser.open(url)
+
+            def show_description(event):
+                def main_thread():
+                    description_window = ctk.CTkToplevel(None)
+
+                    if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
+                        description_window.after(210, lambda: description_window.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
+
+                    description_window.attributes('-topmost', 'true')
+                    description_window.title("Description")
+                    y_pos = event.y_root
+                    x_pos = event.x_root
+                    calc_req_width = len(description) * 6 + 5
+                    win_width = calc_req_width if calc_req_width < 500 else 500
+                    description_window.geometry(f"{win_width + 5}x300+{x_pos}+{y_pos}")
+
+                    if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_obsidian.json":
+                        description_label = ctk.CTkTextbox(description_window, activate_scrollbars=True, scrollbar_button_color="#5b6c7f")
+                    else:
+                        description_label = ctk.CTkTextbox(description_window, activate_scrollbars=True)
+                    description_label.insert("1.0", description)
+                    description_label.pack(fill=ctk.BOTH, expand=True, padx=(10, 10), pady=(10, 10))
+                    description_label.configure(state="disabled")
+
+                    self.create_context_menu(description_label, textbox=True)
+                    description_window.after(50, description_window.focus_set)
+
+                self.after(0, main_thread)
 
             # frames
             stars_frame = ctk.CTkFrame(top)
@@ -668,8 +702,11 @@ class BOIIIWD(ctk.CTk):
             buttons_frame.grid(row=3, column=0, columnspan=2, padx=20, pady=(0, 20), sticky="nsew")
 
             # fillers
-            name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}")
+            name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}  (View...)")
             name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            name_label_tooltip = CTkToolTip(name_label, message="View description", topmost=True)
+            name_label.configure(cursor="hand2")
+            name_label.bind("<Button-1>", lambda e: show_description(e))
 
             type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}")
             type_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
