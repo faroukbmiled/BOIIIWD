@@ -466,6 +466,11 @@ class LibraryTab(ctk.CTkScrollableFrame):
                             date_updated = details_stat_elements[2].text.strip()
                         except:
                             date_updated = "Not updated"
+                        try:
+                            description = soup.find('div', class_='workshopItemDescription').get_text()
+                        except:
+                            description = "Not available"
+
                         stars_div = soup.find("div", class_="fileRatingDetails")
                         starts = stars_div.find("img")["src"]
                     except:
@@ -498,7 +503,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
                     self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created,
                                             date_updated, stars_image, stars_image_size, ratings_text,
-                                            url, workshop_id, invalid_warn, folder)
+                                            url, workshop_id, invalid_warn, folder, description, online)
 
                 except Exception as e:
                     show_message("Error", f"Failed to fetch information.\nError: {e}", icon="cancel")
@@ -534,11 +539,12 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     stars_image = Image.open(os.path.join(RESOURCES_DIR, "ryuk.png"))
                     stars_image_size = stars_image.size
                     ratings_text = "Offline"
+                    description = re.sub(r'\^\w+', '', extract_json_data(json_path, "Description")) or "Not available"
                     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
 
                     self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created,
                                             date_updated, stars_image, stars_image_size, ratings_text,
-                                            url, workshop_id, invalid_warn, folder, offline_date)
+                                            url, workshop_id, invalid_warn, folder, description, online ,offline_date)
                 else:
                     show_message("Warning", "Couldn't get offline information, Please connect to internet and try again")
                     for button_view in self.button_view_list:
@@ -550,7 +556,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
     def toplevel_info_window(self, map_name, map_mod_type, map_size, image, image_size,
                              date_created ,date_updated, stars_image, stars_image_size, ratings_text,
-                             url, workshop_id, invalid_warn, folder, offline_date=None):
+                             url, workshop_id, invalid_warn, folder, description ,online,offline_date=None):
         def main_thread():
             try:
                 items_file = os.path.join(application_path, LIBRARY_FILE)
@@ -572,6 +578,31 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
                 def view_map_mod():
                     webbrowser.open(url)
+
+                def show_description(event):
+                    def main_thread():
+                        description_window = ctk.CTkToplevel(None)
+
+                        if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
+                            description_window.after(210, lambda: description_window.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
+
+                        description_window.attributes('-topmost', 'true')
+                        description_window.title("Description")
+                        y_pos = event.y_root
+                        x_pos = event.x_root
+                        calc_req_width = len(description) * 6 + 5
+                        win_width = calc_req_width if calc_req_width < 500 else 500
+                        description_window.geometry(f"{win_width + 5}x200+{x_pos}+{y_pos}")
+
+                        frame = ctk.CTkScrollableFrame(description_window)
+                        frame.pack(fill=ctk.BOTH, expand=True)
+
+                        description_label = ctk.CTkLabel(frame, text=description, wraplength=500, justify="left")
+                        description_label.grid(padx=(10, 10), pady=(10, 10), sticky="nwes")
+
+                        description_window.after(50, description_window.focus_set)
+
+                    main_app.app.after(0, main_thread)
 
                 def check_for_updates():
                     try:
@@ -608,8 +639,11 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 buttons_frame.grid(row=3, column=0, columnspan=2, padx=20, pady=(0, 20), sticky="nsew")
 
                 # fillers
-                name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}")
+                name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}  (View...)")
                 name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                name_label_tooltip = CTkToolTip(name_label, message="View description", topmost=True)
+                name_label.configure(cursor="hand2")
+                name_label.bind("<Button-1>", lambda e: show_description(e))
 
                 id_label = ctk.CTkLabel(info_frame, text=f"ID: {workshop_id} | Folder: {os.path.basename(folder)}")
                 id_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
@@ -672,6 +706,11 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 close_button = ctk.CTkButton(buttons_frame, text="Close", command=close_window, width=130)
                 close_button.grid(row=0, column=2, padx=(10, 20), pady=(10, 10), sticky="n")
 
+                if not online:
+                    view_button.configure(state="disabled")
+                    update_btn.configure(state="disabled")
+                    update_btn_tooltip.configure(message="Currently offline")
+                    view_button_tooltip.configure(message="Currently offline")
                 if invalid_warn:
                     update_btn.configure(text="Update", state="disabled")
                     update_btn_tooltip.configure(message="Disabled due to item being blocked or duplicated")

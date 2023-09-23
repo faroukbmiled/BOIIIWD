@@ -480,6 +480,8 @@ class SettingsTab(ctk.CTkFrame):
     def from_steam_to_boiii_toplevel(self):
         def main_thread():
             try:
+                # to make sure json file is up to date
+                main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
                 top = ctk.CTkToplevel(self)
                 if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
                     top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
