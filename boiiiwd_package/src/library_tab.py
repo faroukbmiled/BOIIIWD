@@ -540,6 +540,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     stars_image_size = stars_image.size
                     ratings_text = "Offline"
                     description = re.sub(r'\^\w+', '', extract_json_data(json_path, "Description")) or "Not available"
+                    description = re.sub(r'\[.*?\]', '', description)
                     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
 
                     self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created,
