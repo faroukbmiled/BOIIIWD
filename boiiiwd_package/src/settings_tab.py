@@ -360,25 +360,16 @@ class SettingsTab(ctk.CTkFrame):
                 return 0
 
         if setting == "theme":
-            if os.path.exists(os.path.join(application_path, "boiiiwd_theme.json")):
+            theme_config = check_config("theme", "boiiiwd_theme.json")
+            if os.path.exists(os.path.join(application_path, theme_config)):
                 return "Custom"
-            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_theme.json":
-                return "Default"
-            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_grey.json":
-                return "Grey"
-            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_blue.json":
-                return "Blue"
-            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_obsidian.json":
-                return "Obsidian"
-            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_ghost.json":
-                return "Ghost"
-            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_neonbanana.json":
-                return "NeonBanana"
+
+            match = re.match(r'boiiiwd_(\w+)\.json', theme_config)
+            if match:
+                theme_name = match.group(1).capitalize()
+                return theme_name
         else:
-            if check_config(setting, fallback) == "on":
-                return 1
-            else:
-                return 0
+            return 1 if check_config(setting, fallback) == "on" else 0
 
     def boiiiwd_custom_theme(self, disable_only=None):
         file_to_rename = os.path.join(application_path, "boiiiwd_theme.json")
