@@ -648,9 +648,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 shortened_description = f"{description[:30]}... (View)" if len(description) > 30 else description
                 description_lab = ctk.CTkLabel(info_frame, text=f"Description: {shortened_description.strip()}")
                 description_lab.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
-                description_lab_tooltip = CTkToolTip(description_lab, message="View description", topmost=True)
-                description_lab.configure(cursor="hand2")
-                description_lab.bind("<Button-1>", lambda e: show_description(e))
+                if len(description) > 30:
+                    description_lab_tooltip = CTkToolTip(description_lab, message="View description", topmost=True)
+                    description_lab.configure(cursor="hand2")
+                    description_lab.bind("<Button-1>", lambda e: show_description(e))
 
                 id_label = ctk.CTkLabel(info_frame, text=f"ID: {workshop_id} | Folder: {os.path.basename(folder)}")
                 id_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)

@@ -708,9 +708,10 @@ class BOIIIWD(ctk.CTk):
             shortened_description = f"{description[:30]}... (View)" if len(description) > 30 else description
             description_lab = ctk.CTkLabel(info_frame, text=f"Description: {shortened_description.strip()}")
             description_lab.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
-            description_lab_tooltip = CTkToolTip(description_lab, message="View description", topmost=True)
-            description_lab.configure(cursor="hand2")
-            description_lab.bind("<Button-1>", lambda e: show_description(e))
+            if len(description) > 30:
+                description_lab_tooltip = CTkToolTip(description_lab, message="View description", topmost=True)
+                description_lab.configure(cursor="hand2")
+                description_lab.bind("<Button-1>", lambda e: show_description(e))
 
             type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}")
             type_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
