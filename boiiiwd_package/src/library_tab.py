@@ -587,7 +587,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                             description_window.after(210, lambda: description_window.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
 
                         description_window.attributes('-topmost', 'true')
-                        description_window.title("Description")
+                        description_window.title(f"Description - {map_name}")
                         x_pos = event.x_root - 300
                         y_pos = event.y_root - 200
                         calc_req_width = len(description) * 6 + 5
