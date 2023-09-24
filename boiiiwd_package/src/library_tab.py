@@ -480,7 +480,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     soup = BeautifulSoup(content, "html.parser")
 
                     try:
-                        map_mod_type = soup.find("div", class_="rightDetailsBlock").text.strip()
+                        type_txt = soup.find("div", class_="rightDetailsBlock").text.strip()
+                        map_mod_type = type_txt if "File Size" not in type_txt else "Not specified"
                         map_name = soup.find("div", class_="workshopItemTitle").text.strip()
                         map_size = map_size = get_workshop_file_size(workshop_id, raw=True)
                         details_stats_container = soup.find("div", class_="detailsStatsContainerRight")
