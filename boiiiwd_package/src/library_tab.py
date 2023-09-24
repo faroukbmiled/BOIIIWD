@@ -245,7 +245,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
         items_file = os.path.join(application_path, LIBRARY_FILE)
         if not self.is_valid_json_format(items_file):
-            self.rename_invalid_json_file(items_file)
+            try: self.rename_invalid_json_file(items_file)
+            except: pass
 
         for folder_path in folders_to_process:
             for zone_path in folder_path.glob("**/zone"):
