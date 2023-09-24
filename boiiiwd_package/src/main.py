@@ -1,4 +1,3 @@
-from turtle import title
 from src.update_window import check_for_updates_func
 from src.helpers import *
 
@@ -13,11 +12,11 @@ class BOIIIWD(ctk.CTk):
         # configure window
         self.title("BOIII Workshop Downloader - Main")
 
+        window_info = get_window_size_from_registry()
         try:
-            geometry_file = os.path.join(application_path, "boiiiwd_dont_touch.conf")
-            if os.path.isfile(geometry_file):
-                with open(geometry_file, "r") as conf:
-                    self.geometry(conf.read())
+            if all(window_info):
+                width, height, x, y = window_info
+                self.geometry(f"{width}x{height}+{x}+{y}")
             else:
                 self.geometry(f"{920}x{560}")
         except:
@@ -195,7 +194,7 @@ class BOIIIWD(ctk.CTk):
         self.sidebar_settings_tooltip = CTkToolTip(self.sidebar_settings, message="Settings")
         self.sidebar_library_tooltip = CTkToolTip(self.sidebar_library, message="Experimental")
         self.sidebar_queue_tooltip = CTkToolTip(self.sidebar_queue, message="Experimental")
-        self.bind("<Configure>", self.save_window_size)
+        self.bind("<Configure>", lambda e: self.save_window_size_position())
 
         # context_menus
         self.create_context_menu(self.edit_workshop_id)
@@ -322,9 +321,14 @@ class BOIIIWD(ctk.CTk):
             if library:
                 self.library_tab.filter_items(self.cevent)
 
-    def save_window_size(self, event):
-        with open("boiiiwd_dont_touch.conf", "w") as conf:
-            conf.write(self.geometry())
+    def save_window_size_position(self):
+        geometry = self.geometry()
+        match = re.match(r"(\d+)x(\d+)\+(\d+)\+(\d+)", geometry)
+        if match:
+            width, height, x, y = map(int, match.groups())
+            save_window_size_to_registry(width, height, x, y)
+        else:
+            print("Invalid geometry format:", geometry)
 
     def on_closing(self):
         save_config("DestinationFolder" ,self.edit_destination_folder.get())

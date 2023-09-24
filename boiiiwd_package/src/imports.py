@@ -18,6 +18,7 @@ from tkinter import END, Event, Menu
 import customtkinter as ctk
 import psutil
 import requests
+import winreg
 from bs4 import BeautifulSoup
 from CTkMessagebox import CTkMessagebox
 from PIL import Image
@@ -41,4 +42,5 @@ LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/do
 LIBRARY_FILE = "boiiiwd_library.json"
 RESOURCES_DIR = os.path.join(os.path.dirname(__file__), '..', 'resources')
 UPDATER_FOLDER = "update"
+REGISTRY_KEY_PATH = r"Software\BOIIIWD"
 VERSION = "v0.3.1"
