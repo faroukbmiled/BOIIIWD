@@ -1,3 +1,4 @@
+from src import library_tab
 from src.update_window import check_for_updates_func
 from src.imports import *
 from src.helpers import *
@@ -183,29 +184,31 @@ class SettingsTab(ctk.CTkFrame):
             return
 
     def theme_options_func(self, option: str):
-        if option == "Default":
-            self.boiiiwd_custom_theme(disable_only=True)
-            save_config("theme", "boiiiwd_theme.json")
-        if option == "Blue":
-            self.boiiiwd_custom_theme(disable_only=True)
-            save_config("theme", "boiiiwd_blue.json")
-        if option == "Grey":
-            self.boiiiwd_custom_theme(disable_only=True)
-            save_config("theme", "boiiiwd_grey.json")
-        if option == "Ghost":
-            self.boiiiwd_custom_theme(disable_only=True)
-            save_config("theme", "boiiiwd_ghost.json")
-        if option == "Obsidian":
-            self.boiiiwd_custom_theme(disable_only=True)
-            save_config("theme", "boiiiwd_obsidian.json")
-        if option == "NeonBanana":
-            self.boiiiwd_custom_theme(disable_only=True)
-            save_config("theme", "boiiiwd_neonbanana.json")
+        theme_mapping = {
+            "Default": "boiiiwd_theme.json",
+            "Blue": "boiiiwd_blue.json",
+            "Grey": "boiiiwd_grey.json",
+            "Ghost": "boiiiwd_ghost.json",
+            "Obsidian": "boiiiwd_obsidian.json",
+            "NeonBanana": "boiiiwd_neonbanana.json",
+            "Custom": "boiiiwd_theme.json",
+        }
+
+        theme_file = theme_mapping.get(option)
+
         if option == "Custom":
             self.boiiiwd_custom_theme()
             save_config("theme", "boiiiwd_theme.json")
-        if not option == "Custom":
-            if show_message("Restart to take effect!", f"{option} theme has been set ,please restart to take effect", icon="info", _return=True, option_1="Ok", option_2="Restart"):
+            return
+
+        if theme_file:
+            self.boiiiwd_custom_theme(disable_only=True)
+            save_config("theme", theme_file)
+        else:
+            return
+
+        if option != "Custom":
+            if show_message("Restart to take effect!", f"{option} theme has been set, please restart to take effect", icon="info", _return=True, option_1="Ok", option_2="Restart"):
                 try:
                     p = psutil.Process(os.getpid())
                     for handler in p.open_files() + p.connections():
@@ -213,9 +216,7 @@ class SettingsTab(ctk.CTkFrame):
                 except Exception:
                     pass
                 python = sys.executable
-                os.execl(python, python, *sys.argv)
-            else:
-                pass
+            os.execl(python, python, *sys.argv)
 
     def enable_save_button(self, *args):
         try: self.save_button.configure(state='normal')
@@ -360,25 +361,16 @@ class SettingsTab(ctk.CTkFrame):
                 return 0
 
         if setting == "theme":
-            if os.path.exists(os.path.join(application_path, "boiiiwd_theme.json")):
+            theme_config = check_config("theme", "boiiiwd_theme.json")
+            if os.path.exists(os.path.join(application_path, theme_config)):
                 return "Custom"
-            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_theme.json":
-                return "Default"
-            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_grey.json":
-                return "Grey"
-            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_blue.json":
-                return "Blue"
-            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_obsidian.json":
-                return "Obsidian"
-            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_ghost.json":
-                return "Ghost"
-            if check_config("theme", "boiiiwd_theme.json") == "boiiiwd_neonbanana.json":
-                return "NeonBanana"
+
+            match = re.match(r'boiiiwd_(\w+)\.json', theme_config)
+            if match:
+                theme_name = match.group(1).capitalize()
+                return theme_name
         else:
-            if check_config(setting, fallback) == "on":
-                return 1
-            else:
-                return 0
+            return 1 if check_config(setting, fallback) == "on" else 0
 
     def boiiiwd_custom_theme(self, disable_only=None):
         file_to_rename = os.path.join(application_path, "boiiiwd_theme.json")
@@ -405,8 +397,21 @@ class SettingsTab(ctk.CTkFrame):
         boiiiFolder = main_app.app.edit_destination_folder.get()
         maps_folder = os.path.join(boiiiFolder, "mods")
         mods_folder = os.path.join(boiiiFolder, "usermaps")
-        folders_to_process = [mods_folder, maps_folder]
+
+        folders_to_process = []
+
+        if os.path.exists(mods_folder):
+            folders_to_process.append(mods_folder)
+
+        if os.path.exists(maps_folder):
+            folders_to_process.append(maps_folder)
+
+        if not os.path.exists(maps_folder) and not os.path.exists(mods_folder):
+            show_message("Warning -> Check boiii path", f"You don't have any items yet ,from now on item's folders will be named as their {option}")
+            return 0
+
         processed_names = set()
+
         for folder_path in folders_to_process:
             for folder_name in os.listdir(folder_path):
                 zone_path = os.path.join(folder_path, folder_name, "zone")
@@ -416,24 +421,35 @@ class SettingsTab(ctk.CTkFrame):
                     continue
 
                 json_path = os.path.join(zone_path, "workshop.json")
+                publisher_id = extract_json_data(json_path, 'PublisherID')
                 new_name = extract_json_data(json_path, option)
                 if folder_name == new_name:
                     continue
 
+                rename_flag = True
+
                 if os.path.exists(json_path):
-                    publisher_id = extract_json_data(json_path, 'PublisherID')
                     folder_to_rename = os.path.join(folder_path, folder_name)
                     new_folder_name = new_name
                     while new_folder_name in processed_names:
                         new_folder_name += f"_{publisher_id}"
+                        if folder_name == new_folder_name:
+                            rename_flag = False
+                            break
                     new_path = os.path.join(folder_path, new_folder_name)
 
                     while os.path.exists(new_path):
                         new_folder_name += f"_{publisher_id}"
+                        if folder_name == new_folder_name:
+                            rename_flag = False
+                            break
                         new_path = os.path.join(folder_path, new_folder_name)
 
-                    os.rename(folder_to_rename, new_path)
-                    processed_names.add(new_folder_name)
+                    if rename_flag:
+                        os.rename(folder_to_rename, new_path)
+                        processed_names.add(new_folder_name)
+
+        return 1
 
     def change_folder_naming(self, option):
         main_app.app.title("BOIII Workshop Downloader - Settings  ➜  Loading... ⏳")
@@ -443,9 +459,13 @@ class SettingsTab(ctk.CTkFrame):
                 if not "No items" in lib:
                     if show_message("Renaming", "Would you like to rename all your exisiting item folders now?", _return=True):
                         main_app.app.title("BOIII Workshop Downloader - Settings  ➜  Renaming... ⏳")
-                        try :self.rename_all_folders(option)
+                        try : ren_return = self.rename_all_folders(option)
                         except Exception as er: show_message("Error!", f"Error occured when renaming\n{er}"); return
-                        show_message("Done!", "All folders have been renamed", icon="info")
+                        if ren_return == 0:
+                            return 0
+                        else:
+                            show_message("Done!", "All folders have been renamed", icon="info")
+                            main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
                     else:
                         show_message("Heads up!", "Only newly downloaded items will be affected", icon="info")
                 else:
@@ -602,16 +622,17 @@ class SettingsTab(ctk.CTkFrame):
                                 show_message("No items found", f"No items found in \n{map_folder}")
                                 return
 
-                            for i, workshop_id in enumerate(subfolders, start=1):
-                                json_file_path = os.path.join(map_folder, workshop_id, "workshop.json")
+                            for i, dir_name in enumerate(subfolders, start=1):
+                                json_file_path = os.path.join(map_folder, dir_name, "workshop.json")
                                 copy_button.configure(text=f"Working on -> {i}/{total_folders}")
 
                                 if os.path.exists(json_file_path):
+                                    workshop_id = extract_json_data(json_file_path, "PublisherID")
                                     mod_type = extract_json_data(json_file_path, "Type")
                                     items_file = os.path.join(application_path, LIBRARY_FILE)
-                                    item_exixsts = main_app.app.library_tab.item_exists_in_file(items_file, workshop_id)
+                                    item_exists,_ = main_app.app.library_tab.item_exists_in_file(items_file, workshop_id)
 
-                                    if item_exixsts:
+                                    if item_exists:
                                         get_folder_name = main_app.app.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
                                         if get_folder_name:
                                             folder_name = get_folder_name
@@ -636,7 +657,7 @@ class SettingsTab(ctk.CTkFrame):
                                         show_message("Error", "Invalid workshop type in workshop.json, are you sure this is a map or a mod?.", icon="cancel")
                                         continue
 
-                                    if not item_exixsts:
+                                    if not item_exists:
                                         while os.path.exists(os.path.join(path_folder, folder_name)):
                                             folder_name += f"_{workshop_id}"
                                             folder_name_path = os.path.join(path_folder, folder_name, "zone")
@@ -644,17 +665,25 @@ class SettingsTab(ctk.CTkFrame):
                                     os.makedirs(folder_name_path, exist_ok=True)
 
                                     try:
-                                        copy_with_progress(os.path.join(map_folder, workshop_id), folder_name_path)
+                                        copy_with_progress(os.path.join(map_folder, dir_name), folder_name_path)
                                     except Exception as E:
                                         show_message("Error", f"Error copying files: {E}", icon="cancel")
                                         continue
 
                                     if cut_var.get():
-                                        remove_tree(os.path.join(map_folder, workshop_id))
+                                        remove_tree(os.path.join(map_folder, dir_name))
 
                                     main_app.app.library_tab.update_item(main_app.app.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
+                                else:
+                                    # if its last folder to check
+                                    if i == total_folders:
+                                        show_message("Error", f"workshop.json not found in {dir_name}", icon="cancel")
+                                        main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
+                                        return
+                                    continue
 
                             if subfolders:
+                                main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
                                 main_app.app.show_complete_message(message=f"All items were moved\nYou can run the game now!\nPS: You have to restart the game\n(pressing launch will launch/restarts)")
 
                         finally:

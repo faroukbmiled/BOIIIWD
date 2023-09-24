@@ -98,6 +98,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
         with open(items_file, "r") as f:
             items_data = json.load(f)
             for item_info in items_data:
+                if not folder_name and "id" in item_info and item_info["id"] == workshop_id:
+                    return True, False
+
                 if "id" in item_info and "folder_name" in item_info and "json_folder_name" in item_info:
                     if item_info["id"] == workshop_id and item_info["folder_name"] == folder_name:
                         if item_info["folder_name"] in self.added_folders:
@@ -178,10 +181,32 @@ class LibraryTab(ctk.CTkScrollableFrame):
             items_data = json.load(f)
 
         cleaned_items = [item for item in items_data if 'folder_name' in item and 'json_folder_name'
-                         in item and item['folder_name'] not in self.item_block_list and item['folder_name'] in self.added_folders]
+                         in item and item['folder_name'] not in self.item_block_list and item['folder_name']
+                         in self.added_folders and item['id'] in self.ids_added]
 
         with open(file, 'w') as file:
             json.dump(cleaned_items, file, indent=4)
+
+    def is_valid_json_format(self, file):
+        try:
+            with open(file, "r") as file:
+                data = json.load(file)
+            if not isinstance(data, list):
+                return False
+
+            for item in data:
+                if not all(key in item for key in ("id", "text", "date", "folder_name", "json_folder_name")):
+                    return False
+
+            return True
+        except:
+            return False
+
+    def rename_invalid_json_file(self, file_path):
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        base_name, ext = os.path.splitext(file_path)
+        new_file_path = f"{base_name}_{timestamp}{ext}"
+        os.rename(file_path, new_file_path)
 
     def filter_items(self, event):
         filter_text = self.filter_entry.get().lower()
@@ -200,8 +225,15 @@ class LibraryTab(ctk.CTkScrollableFrame):
         if self.refresh_next_time and not dont_add:
             self.refresh_next_time = False
             self.refresh_items()
+            return
 
         if dont_add:
+            self.label_list.clear()
+            self.button_list.clear()
+            self.button_view_list.clear()
+            self.added_items.clear()
+            self.added_folders.clear()
+            self.ids_added.clear()
             self.refresh_next_time = True
 
         maps_folder = Path(boiiiFolder) / "mods"
@@ -217,6 +249,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
         folders_to_process = [mods_folder, maps_folder]
 
         items_file = os.path.join(application_path, LIBRARY_FILE)
+        if not self.is_valid_json_format(items_file):
+            try: self.rename_invalid_json_file(items_file)
+            except: pass
 
         for folder_path in folders_to_process:
             for zone_path in folder_path.glob("**/zone"):
@@ -241,13 +276,13 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     creation_timestamp = None
                     for ff_file in zone_path.glob("*.ff"):
                         if ff_file.exists():
-                            creation_timestamp = ff_file.stat().st_ctime
+                            creation_timestamp = ff_file.stat().st_mtime
                             break
 
                     if creation_timestamp is not None:
                         date_added = datetime.fromtimestamp(creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
                     else:
-                        creation_timestamp = zone_path.stat().st_ctime
+                        creation_timestamp = zone_path.stat().st_mtime
                         date_added = datetime.fromtimestamp(creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
 
                     map_count += 1 if item_type == "map" else 0
@@ -347,13 +382,13 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         creation_timestamp = None
                         for ff_file in zone_path.glob("*.ff"):
                             if ff_file.exists():
-                                creation_timestamp = ff_file.stat().st_ctime
+                                creation_timestamp = ff_file.stat().st_mtime
                                 break
 
                         if creation_timestamp is not None:
                             date_added = datetime.fromtimestamp(creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
                         else:
-                            creation_timestamp = zone_path.stat().st_ctime
+                            creation_timestamp = zone_path.stat().st_mtime
                             date_added = datetime.fromtimestamp(creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
 
                         items_file = os.path.join(application_path, LIBRARY_FILE)
@@ -450,7 +485,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     soup = BeautifulSoup(content, "html.parser")
 
                     try:
-                        map_mod_type = soup.find("div", class_="rightDetailsBlock").text.strip()
+                        type_txt = soup.find("div", class_="rightDetailsBlock").text.strip()
+                        map_mod_type = type_txt if "File Size" not in type_txt else "Not specified"
                         map_name = soup.find("div", class_="workshopItemTitle").text.strip()
                         map_size = map_size = get_workshop_file_size(workshop_id, raw=True)
                         details_stats_container = soup.find("div", class_="detailsStatsContainerRight")
@@ -515,10 +551,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 creation_timestamp = None
                 for ff_file in json_path.parent.glob("*.ff"):
                     if ff_file.exists():
-                        creation_timestamp = ff_file.stat().st_ctime
+                        creation_timestamp = ff_file.stat().st_mtime
                         break
                 if not creation_timestamp:
-                    creation_timestamp = json_path.parent.stat().st_ctime
+                    creation_timestamp = json_path.parent.stat().st_mtime
 
                 if json_path.exists():
                     workshop_id = extract_json_data(json_path, "PublisherID") or "None"
@@ -540,6 +576,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     stars_image_size = stars_image.size
                     ratings_text = "Offline"
                     description = re.sub(r'\^\w+', '', extract_json_data(json_path, "Description")) or "Not available"
+                    description = re.sub(r'\[.*?\]', '', description)
                     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
 
                     self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created,

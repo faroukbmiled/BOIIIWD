@@ -587,7 +587,8 @@ class BOIIIWD(ctk.CTk):
                 soup = BeautifulSoup(content, "html.parser")
 
                 try:
-                    map_mod_type = soup.find("div", class_="rightDetailsBlock").text.strip()
+                    type_txt = soup.find("div", class_="rightDetailsBlock").text.strip()
+                    map_mod_type = type_txt if "File Size" not in type_txt else "Not specified"
                     map_name = soup.find("div", class_="workshopItemTitle").text.strip()
                     map_size = map_size = get_workshop_file_size(workshop_id, raw=True)
                     details_stats_container = soup.find("div", class_="detailsStatsContainerRight")
@@ -1246,9 +1247,9 @@ class BOIIIWD(ctk.CTk):
                         self.label_speed.configure(text="Installing...")
                         mod_type = extract_json_data(json_file_path, "Type")
                         items_file = os.path.join(application_path, LIBRARY_FILE)
-                        item_exixsts = self.library_tab.item_exists_in_file(items_file, workshop_id)
+                        item_exists,_ = self.library_tab.item_exists_in_file(items_file, workshop_id)
 
-                        if item_exixsts:
+                        if item_exists:
                             get_folder_name = self.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
                             if get_folder_name:
                                 folder_name = get_folder_name
@@ -1273,7 +1274,7 @@ class BOIIIWD(ctk.CTk):
                             show_message("Error", f"Invalid workshop type in workshop.json, are you sure this is a map or a mod?., skipping {workshop_id}...", icon="cancel")
                             return
 
-                        if not item_exixsts:
+                        if not item_exists:
                             while os.path.exists(os.path.join(path_folder, folder_name)):
                                 folder_name += f"_{workshop_id}"
                                 folder_name_path = os.path.join(path_folder, folder_name, "zone")
@@ -1512,9 +1513,9 @@ class BOIIIWD(ctk.CTk):
                     self.label_speed.configure(text="Installing...")
                     mod_type = extract_json_data(json_file_path, "Type")
                     items_file = os.path.join(application_path, LIBRARY_FILE)
-                    item_exixsts = self.library_tab.item_exists_in_file(items_file, workshop_id)
+                    item_exists,_ = self.library_tab.item_exists_in_file(items_file, workshop_id)
 
-                    if item_exixsts:
+                    if item_exists:
                         get_folder_name = self.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
                         if get_folder_name:
                             folder_name = get_folder_name
@@ -1540,7 +1541,7 @@ class BOIIIWD(ctk.CTk):
                         self.stop_download()
                         return
 
-                    if not item_exixsts:
+                    if not item_exists:
                         while os.path.exists(os.path.join(path_folder, folder_name)):
                             folder_name += f"_{workshop_id}"
                             folder_name_path = os.path.join(path_folder, folder_name, "zone")
