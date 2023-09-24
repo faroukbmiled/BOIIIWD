@@ -9,7 +9,6 @@ from src.settings_tab import SettingsTab
 class BOIIIWD(ctk.CTk):
     def __init__(self):
         super().__init__()
-        # self.app_instance = BOIIIWD()
 
         # configure window
         self.title("BOIII Workshop Downloader - Main")
@@ -20,9 +19,11 @@ class BOIIIWD(ctk.CTk):
                 with open(geometry_file, "r") as conf:
                     self.geometry(conf.read())
             else:
-                self.geometry(f"{910}x{560}")
+                self.geometry(f"{920}x{560}")
         except:
-            self.geometry(f"{910}x{560}")
+            self.geometry(f"{920}x{560}")
+
+        self.minsize(920, 560)
 
         if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
             self.wm_iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico"))
