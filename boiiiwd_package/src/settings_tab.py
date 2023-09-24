@@ -612,7 +612,7 @@ class SettingsTab(ctk.CTkFrame):
                                 return
 
                             for i, dir_name in enumerate(subfolders, start=1):
-                                json_file_path = os.path.join(map_folder, dir_name, "zone", "workshop.json")
+                                json_file_path = os.path.join(map_folder, dir_name, "workshop.json")
                                 copy_button.configure(text=f"Working on -> {i}/{total_folders}")
 
                                 if os.path.exists(json_file_path):
@@ -638,10 +638,10 @@ class SettingsTab(ctk.CTkFrame):
 
                                     if mod_type == "mod":
                                         path_folder = os.path.join(boiii_folder, "mods")
-                                        folder_name_path = os.path.join(path_folder, folder_name)
+                                        folder_name_path = os.path.join(path_folder, folder_name, "zone")
                                     elif mod_type == "map":
                                         path_folder = os.path.join(boiii_folder, "usermaps")
-                                        folder_name_path = os.path.join(path_folder, folder_name)
+                                        folder_name_path = os.path.join(path_folder, folder_name, "zone")
                                     else:
                                         show_message("Error", "Invalid workshop type in workshop.json, are you sure this is a map or a mod?.", icon="cancel")
                                         continue
@@ -649,7 +649,7 @@ class SettingsTab(ctk.CTkFrame):
                                     if not item_exixsts:
                                         while os.path.exists(os.path.join(path_folder, folder_name)):
                                             folder_name += f"_{workshop_id}"
-                                            folder_name_path = os.path.join(path_folder, folder_name)
+                                            folder_name_path = os.path.join(path_folder, folder_name, "zone")
 
                                     os.makedirs(folder_name_path, exist_ok=True)
 
