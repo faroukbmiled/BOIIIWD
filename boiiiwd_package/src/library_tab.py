@@ -224,13 +224,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
     def load_items(self, boiiiFolder, dont_add=False):
         if self.refresh_next_time and not dont_add:
             self.refresh_next_time = False
-            self.refresh_items()
-            return
+            status = self.refresh_items()
+            return status
 
         if dont_add:
-            self.label_list.clear()
-            self.button_list.clear()
-            self.button_view_list.clear()
             self.added_items.clear()
             self.added_folders.clear()
             self.ids_added.clear()
@@ -426,7 +423,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 self.button_view_list.remove(button_view_list)
                 self.remove_item_by_option(items_file, id)
 
-    def refresh_items(self, skip_load=False):
+    def refresh_items(self):
         main_app.app.title("BOIII Workshop Downloader - Library  ➜  Loading... ⏳")
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
             label.destroy()
@@ -438,9 +435,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.added_items.clear()
         self.added_folders.clear()
         self.ids_added.clear()
-        if not skip_load:
-            status = self.load_items(main_app.app.edit_destination_folder.get().strip())
-            main_app.app.title(f"BOIII Workshop Downloader - Library  ➜  {status}")
+        status = self.load_items(main_app.app.edit_destination_folder.get().strip())
+        main_app.app.title(f"BOIII Workshop Downloader - Library  ➜  {status}")
+        # main_app library event needs a return for status => when refresh_next_time is true
+        return status
 
     def view_item(self, workshop_id):
         url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
