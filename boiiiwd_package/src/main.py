@@ -974,7 +974,7 @@ class BOIIIWD(ctk.CTk):
         if not self.is_pressed:
             self.after(1, self.label_speed.configure(text=f"Loading..."))
             self.is_pressed = True
-            self.library_tab.load_items(self.edit_destination_folder.get())
+            self.library_tab.load_items(self.edit_destination_folder.get(), dont_add=True)
             if self.queue_enabled:
                 self.item_skipped = False
                 start_down_thread = threading.Thread(target=self.queue_download_thread, args=(update,))
