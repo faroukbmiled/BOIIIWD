@@ -1,3 +1,4 @@
+from src import library_tab
 from src.update_window import check_for_updates_func
 from src.imports import *
 from src.helpers import *
@@ -410,6 +411,7 @@ class SettingsTab(ctk.CTkFrame):
             return 0
 
         processed_names = set()
+
         for folder_path in folders_to_process:
             for folder_name in os.listdir(folder_path):
                 zone_path = os.path.join(folder_path, folder_name, "zone")
@@ -419,24 +421,33 @@ class SettingsTab(ctk.CTkFrame):
                     continue
 
                 json_path = os.path.join(zone_path, "workshop.json")
+                publisher_id = extract_json_data(json_path, 'PublisherID')
                 new_name = extract_json_data(json_path, option)
                 if folder_name == new_name:
                     continue
 
+                rename_flag = True
+
                 if os.path.exists(json_path):
-                    publisher_id = extract_json_data(json_path, 'PublisherID')
                     folder_to_rename = os.path.join(folder_path, folder_name)
                     new_folder_name = new_name
                     while new_folder_name in processed_names:
                         new_folder_name += f"_{publisher_id}"
+                        if folder_name == new_folder_name:
+                            rename_flag = False
+                            break
                     new_path = os.path.join(folder_path, new_folder_name)
 
                     while os.path.exists(new_path):
                         new_folder_name += f"_{publisher_id}"
+                        if folder_name == new_folder_name:
+                            rename_flag = False
+                            break
                         new_path = os.path.join(folder_path, new_folder_name)
 
-                    os.rename(folder_to_rename, new_path)
-                    processed_names.add(new_folder_name)
+                    if rename_flag:
+                        os.rename(folder_to_rename, new_path)
+                        processed_names.add(new_folder_name)
 
         return 1
 
@@ -619,9 +630,9 @@ class SettingsTab(ctk.CTkFrame):
                                     workshop_id = extract_json_data(json_file_path, "PublisherID")
                                     mod_type = extract_json_data(json_file_path, "Type")
                                     items_file = os.path.join(application_path, LIBRARY_FILE)
-                                    item_exixsts = main_app.app.library_tab.item_exists_in_file(items_file, workshop_id)
+                                    item_exists,_ = main_app.app.library_tab.item_exists_in_file(items_file, workshop_id)
 
-                                    if item_exixsts:
+                                    if item_exists:
                                         get_folder_name = main_app.app.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
                                         if get_folder_name:
                                             folder_name = get_folder_name
@@ -646,7 +657,7 @@ class SettingsTab(ctk.CTkFrame):
                                         show_message("Error", "Invalid workshop type in workshop.json, are you sure this is a map or a mod?.", icon="cancel")
                                         continue
 
-                                    if not item_exixsts:
+                                    if not item_exists:
                                         while os.path.exists(os.path.join(path_folder, folder_name)):
                                             folder_name += f"_{workshop_id}"
                                             folder_name_path = os.path.join(path_folder, folder_name, "zone")

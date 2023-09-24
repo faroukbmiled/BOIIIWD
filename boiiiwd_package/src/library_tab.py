@@ -98,6 +98,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
         with open(items_file, "r") as f:
             items_data = json.load(f)
             for item_info in items_data:
+                if not folder_name and "id" in item_info and item_info["id"] == workshop_id:
+                    return True, False
+
                 if "id" in item_info and "folder_name" in item_info and "json_folder_name" in item_info:
                     if item_info["id"] == workshop_id and item_info["folder_name"] == folder_name:
                         if item_info["folder_name"] in self.added_folders:
@@ -178,7 +181,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
             items_data = json.load(f)
 
         cleaned_items = [item for item in items_data if 'folder_name' in item and 'json_folder_name'
-                         in item and item['folder_name'] not in self.item_block_list and item['folder_name'] in self.added_folders]
+                         in item and item['folder_name'] not in self.item_block_list and item['folder_name']
+                         in self.added_folders and item['id'] in self.ids_added]
 
         with open(file, 'w') as file:
             json.dump(cleaned_items, file, indent=4)
@@ -221,6 +225,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         if self.refresh_next_time and not dont_add:
             self.refresh_next_time = False
             self.refresh_items()
+            return
 
         if dont_add:
             self.label_list.clear()
