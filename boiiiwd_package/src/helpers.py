@@ -393,4 +393,25 @@ def check_item_date(down_date, date_updated):
     except:
         return False
 
+def get_window_size_from_registry():
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, REGISTRY_KEY_PATH, 0, winreg.KEY_READ) as key:
+            width, _ = winreg.QueryValueEx(key, "WindowWidth")
+            height, _ = winreg.QueryValueEx(key, "WindowHeight")
+            x, _ = winreg.QueryValueEx(key, "WindowX")
+            y, _ = winreg.QueryValueEx(key, "WindowY")
+        return int(width), int(height), int(x), int(y)
+    except (FileNotFoundError, OSError, ValueError, FileNotFoundError):
+        return None, None, None, None
+
+def save_window_size_to_registry(width, height, x, y):
+    try:
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, REGISTRY_KEY_PATH) as key:
+            winreg.SetValueEx(key, "WindowWidth", 0, winreg.REG_SZ, str(width))
+            winreg.SetValueEx(key, "WindowHeight", 0, winreg.REG_SZ, str(height))
+            winreg.SetValueEx(key, "WindowX", 0, winreg.REG_SZ, str(x))
+            winreg.SetValueEx(key, "WindowY", 0, winreg.REG_SZ, str(y))
+    except Exception as e:
+        print(f"Error saving to registry: {e}")
+
 # End helper functions
