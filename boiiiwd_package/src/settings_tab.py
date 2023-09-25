@@ -362,8 +362,12 @@ class SettingsTab(ctk.CTkFrame):
 
         if setting == "theme":
             theme_config = check_config("theme", "boiiiwd_theme.json")
+
             if os.path.exists(os.path.join(application_path, theme_config)):
                 return "Custom"
+
+            if theme_config == "boiiiwd_theme.json":
+                return "Default"
 
             match = re.match(r'boiiiwd_(\w+)\.json', theme_config)
             if match:
