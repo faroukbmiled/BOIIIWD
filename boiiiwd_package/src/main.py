@@ -657,7 +657,9 @@ class BOIIIWD(ctk.CTk):
             top = ctk.CTkToplevel(self)
             top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
             top.title("Map/Mod Information")
-            top.attributes('-topmost', 'true')
+            _, _, x, y = get_window_size_from_registry()
+            top.geometry(f"+{x+50}+{y-50}")
+            # top.attributes('-topmost', 'true')
 
             def close_window():
                 top.destroy()
@@ -772,6 +774,7 @@ class BOIIIWD(ctk.CTk):
             top.grid_rowconfigure(2, weight=1)
             top.grid_columnconfigure(0, weight=1)
             top.grid_columnconfigure(1, weight=1)
+            top.after(10, top.focus_force)
 
         self.after(0, main_thread)
 

@@ -510,7 +510,9 @@ class SettingsTab(ctk.CTkFrame):
                 if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
                     top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
                 top.title("Steam to boiii -> Workshop items")
-                top.attributes('-topmost', 'true')
+                _, _, x, y = get_window_size_from_registry()
+                top.geometry(f"+{x}+{y}")
+                # top.attributes('-topmost', 'true')
                 top.resizable(False, False)
                 # Create input boxes
                 center_frame = ctk.CTkFrame(top)
@@ -716,6 +718,7 @@ class SettingsTab(ctk.CTkFrame):
                 main_app.app.create_context_menu(boiii_folder_entry)
                 copy_var.set(True)
                 progress_bar.set(0)
+                main_app.app.after(100, top.focus_force)
 
             except Exception as e:
                 show_message("Error", f"{e}", icon="cancel")
