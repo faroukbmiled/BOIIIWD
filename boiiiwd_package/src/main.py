@@ -757,8 +757,9 @@ class BOIIIWD(ctk.CTk):
             ratings.pack(side="right", padx=(10, 20), pady=(10, 10))
 
             image_label = ctk.CTkLabel(image_frame)
-            width, height = image_size
-            image_widget = ctk.CTkImage(image, size=(int(width), int(height)))
+            max_width = 300
+            i_width, i_height = tuple([int(max_width/image_size[0] * x)  for x in image_size])
+            image_widget = ctk.CTkImage(image, size=(int(i_width), int(i_height)))
             image_label.configure(image=image_widget, text="")
             image_label.pack(expand=True, fill="both", padx=(10, 20), pady=(10, 10))
 

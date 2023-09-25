@@ -744,13 +744,11 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 ratings.pack(side="right", padx=(10, 20), pady=(10, 10))
 
                 image_label = ctk.CTkLabel(image_frame)
-                width, height = image_size
+                max_width = 300
+                i_width, i_height = tuple([int(max_width/image_size[0] * x)  for x in image_size])
                 # preview image is too big if offline, // to round floats
-                if width > 1000 or height > 1000:
-                    width = width // 2
-                    height = height // 2
 
-                image_widget = ctk.CTkImage(image, size=(int(width), int(height)))
+                image_widget = ctk.CTkImage(image, size=(int(i_width), int(i_height)))
                 image_label.configure(image=image_widget, text="")
                 image_label.pack(expand=True, fill="both", padx=(10, 20), pady=(10, 10))
 
@@ -796,7 +794,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 top.after(10, top.focus_force)
                 for button_view in self.button_view_list:
                     button_view.configure(state="normal")
-        self.after(0, main_thread)
+        main_app.app.after(0, main_thread)
 
     @if_internet_available
     def check_for_updates(self, on_launch=False):
