@@ -659,6 +659,8 @@ class BOIIIWD(ctk.CTk):
             top.title("Map/Mod Information")
             _, _, x, y = get_window_size_from_registry()
             top.geometry(f"+{x+50}+{y-50}")
+            top.maxsize(450, 10000)
+            top.minsize(300, 500)
             # top.attributes('-topmost', 'true')
 
             def close_window():
@@ -720,7 +722,7 @@ class BOIIIWD(ctk.CTk):
             buttons_frame.grid(row=3, column=0, columnspan=2, padx=20, pady=(0, 20), sticky="nsew")
 
             # fillers
-            name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}", wraplength=350, justify="left")
+            name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}", wraplength=420, justify="left")
             name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
             desc_threshold = 30
