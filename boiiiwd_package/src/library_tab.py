@@ -488,6 +488,11 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     for button_view in self.button_view_list:
                         button_view.configure(state="normal")
                     # return
+
+            json_path = Path(folder) / "zone" / "workshop.json"
+            folder_size_bytes = get_folder_size(json_path.parent.parent)
+            map_size = convert_bytes_to_readable(folder_size_bytes)
+
             if online and valid_id!=False:
                 try:
                     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
@@ -501,7 +506,6 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         type_txt = soup.find("div", class_="rightDetailsBlock").text.strip()
                         map_mod_type = type_txt if "File Size" not in type_txt else "Not specified"
                         map_name = soup.find("div", class_="workshopItemTitle").text.strip()
-                        map_size = map_size = get_workshop_file_size(workshop_id, raw=True)
                         details_stats_container = soup.find("div", class_="detailsStatsContainerRight")
                         details_stat_elements = details_stats_container.find_all("div", class_="detailsStatRight")
                         date_created = details_stat_elements[1].text.strip()
@@ -560,7 +564,6 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         button_view.configure(state="normal")
                     return
             else:
-                json_path = Path(folder) / "zone" / "workshop.json"
                 creation_timestamp = None
                 for ff_file in json_path.parent.glob("*.ff"):
                     if ff_file.exists():
@@ -574,8 +577,6 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     name = re.sub(r'\^\w+', '', extract_json_data(json_path, "Title")) or "None"
                     map_name = name[:45] + "..." if len(name) > 45 else name
                     map_mod_type = extract_json_data(json_path, "Type") or "None"
-                    folder_size_bytes = get_folder_size(json_path.parent.parent)
-                    map_size = convert_bytes_to_readable(folder_size_bytes)
                     preview_iamge = json_path.parent / "previewimage.png"
                     if preview_iamge.exists():
                         image = Image.open(preview_iamge)
@@ -617,11 +618,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 _, _, x, y = get_window_size_from_registry()
                 top.geometry(f"+{x+50}+{y-50}")
                 # top.attributes('-topmost', 'true')
-                size_text = "Size (Workshop):"
 
                 if offline_date:
                     down_date = offline_date
-                    size_text = "Size (On Disk):"
                 else:
                     down_date = self.get_item_by_id(items_file, workshop_id, 'date')
 
@@ -715,7 +714,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}")
                 type_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
-                size_label = ctk.CTkLabel(info_frame, text=f"{size_text} {map_size}")
+                size_label = ctk.CTkLabel(info_frame, text=f"Size: {map_size}")
                 size_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
                 date_created_label = ctk.CTkLabel(info_frame, text=f"Posted: {date_created}")
