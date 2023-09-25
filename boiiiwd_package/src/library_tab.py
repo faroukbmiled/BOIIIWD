@@ -221,17 +221,14 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 button_view_list.grid_remove()
                 button.grid_remove()
 
-    def add_item_helper(self, text, image_path, workshop_id, folder, invalid_warn=True, item_type=None):
+    def add_item_helper(self, text, image_path, workshop_id, folder, invalid_warn=False, item_type=None):
         image = ctk.CTkImage(Image.open(image_path))
         self.add_item(text, image=image, workshop_id=workshop_id, folder=folder, invalid_warn=invalid_warn)
 
     # sort by type then alphabet (name), index 5 is type 0 is name/text
     def sorting_key(self, item):
-            item_type, item_name = item[5], item[0]
-            if item_type == "map":
-                return (0, item_name)
-            else:
-                return (1, item_name)
+        item_type, item_name = item[5], item[0]
+        return (0, item_name) if item_type == "map" else (1, item_name)
 
     def load_items(self, boiiiFolder, dont_add=False):
         if self.refresh_next_time and not dont_add:
