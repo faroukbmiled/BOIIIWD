@@ -650,7 +650,7 @@ class BOIIIWD(ctk.CTk):
         info_thread = threading.Thread(target=show_map_thread)
         info_thread.start()
 
-    def toplevel_info_window(self, map_name, map_mod_type, map_size, image, image_size,
+    def toplevel_info_window(self, map_name, map_mod_type_txt, map_size, image, image_size,
                              date_created ,date_updated, stars_image, stars_image_size,
                              ratings_text, url, workshop_id, description):
         def main_thread():
@@ -695,6 +695,15 @@ class BOIIIWD(ctk.CTk):
 
                 self.after(0, main_thread)
 
+            def show_full_text(event, widget, full_text):
+                widget_text = type_label.cget("text")
+                label_type = widget_text.split(':')[0]
+                # + 30 which is desc_threshold + 5 is the ... dots and a white space
+                if len(widget_text) == len(label_type) + 30 + 5:
+                    widget.configure(text=f"{label_type}: {full_text}")
+                else:
+                    widget.configure(text=f"{label_type}: {full_text[:30]}...")
+
             # frames
             stars_frame = ctk.CTkFrame(top)
             stars_frame.grid(row=0, column=0, columnspan=2, padx=20, pady=(20, 0), sticky="nsew")
@@ -711,11 +720,11 @@ class BOIIIWD(ctk.CTk):
             buttons_frame.grid(row=3, column=0, columnspan=2, padx=20, pady=(0, 20), sticky="nsew")
 
             # fillers
-            name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}")
+            name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}", wraplength=350, justify="left")
             name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
             desc_threshold = 30
-            shortened_description = re.sub(r'\n', '', description).strip()
+            shortened_description = re.sub(r'[\\/\n\r]', '', description).strip()
             shortened_description = re.sub(r'([^a-zA-Z0-9\s:().])', '', shortened_description)
             shortened_description = f"{shortened_description[:desc_threshold]}... (View)"\
                                     if len(shortened_description) > desc_threshold else shortened_description
@@ -726,10 +735,15 @@ class BOIIIWD(ctk.CTk):
                 description_lab.configure(cursor="hand2")
                 description_lab.bind("<Button-1>", lambda e: show_description(e))
 
-            type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}")
+            map_mod_type = map_mod_type_txt[:desc_threshold] + "..." if len(map_mod_type_txt) > desc_threshold else map_mod_type_txt
+            type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}", wraplength=350, justify="left")
             type_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            if len(map_mod_type) > desc_threshold:
+                type_label_tooltip = CTkToolTip(type_label, message="View all types", topmost=True)
+                type_label.configure(cursor="hand2")
+                type_label.bind("<Button-1>", lambda e: show_full_text(e, type_label, map_mod_type_txt))
 
-            size_label = ctk.CTkLabel(info_frame, text=f"Size: {map_size}")
+            size_label = ctk.CTkLabel(info_frame, text=f"Size (Workshop): {map_size}")
             size_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
 
             date_created_label = ctk.CTkLabel(info_frame, text=f"Posted: {date_created}")
