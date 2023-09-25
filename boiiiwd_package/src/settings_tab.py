@@ -509,7 +509,7 @@ class SettingsTab(ctk.CTkFrame):
                 top = ctk.CTkToplevel(self)
                 if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
                     top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
-                top.title("Steam to boiii -> Workshop items")
+                top.title("Steam to boiii")
                 _, _, x, y = get_window_size_from_registry()
                 top.geometry(f"+{x}+{y}")
                 # top.attributes('-topmost', 'true')
