@@ -221,6 +221,18 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 button_view_list.grid_remove()
                 button.grid_remove()
 
+    def add_item_helper(self, text, image_path, workshop_id, folder, invalid_warn=True, item_type=None):
+        image = ctk.CTkImage(Image.open(image_path))
+        self.add_item(text, image=image, workshop_id=workshop_id, folder=folder, invalid_warn=invalid_warn)
+
+    # sort by type then alphabet (name), index 5 is type 0 is name/text
+    def sorting_key(self, item):
+            item_type, item_name = item[5], item[0]
+            if item_type == "map":
+                return (0, item_name)
+            else:
+                return (1, item_name)
+
     def load_items(self, boiiiFolder, dont_add=False):
         if self.refresh_next_time and not dont_add:
             self.refresh_next_time = False
@@ -244,6 +256,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         total_size = 0
 
         folders_to_process = [mods_folder, maps_folder]
+        ui_items_to_add = []
 
         items_file = os.path.join(application_path, LIBRARY_FILE)
         if not self.is_valid_json_format(items_file):
@@ -303,9 +316,9 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
                         self.added_items.add(text_to_add)
                         if image_path is b_mod_img or image_path is b_map_img and not dont_add:
-                            self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), workshop_id=workshop_id, folder=zone_path.parent, invalid_warn=True)
+                            ui_items_to_add.append((text_to_add, image_path, workshop_id, zone_path.parent, True, item_type))
                         elif not dont_add:
-                            self.add_item(text_to_add, image=ctk.CTkImage(Image.open(image_path)), workshop_id=workshop_id, folder=zone_path.parent)
+                            ui_items_to_add.append((text_to_add, image_path, workshop_id, zone_path.parent, False, item_type))
                         id_found, folder_found = self.item_exists_in_file(items_file, workshop_id, curr_folder_name)
                         item_info = {
                                 "id": workshop_id,
@@ -337,6 +350,11 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         # and legit ids will be blocked cuz theyll be added to "ids_added"
                         if not workshop_id in self.ids_added and curr_folder_name not in self.item_block_list:
                             self.ids_added.add(workshop_id)
+
+        # sort items by type then alphabet
+        ui_items_to_add.sort(key=self.sorting_key)
+        for item in ui_items_to_add:
+            self.add_item_helper(*item)
 
         if not self.file_cleaned and os.path.exists(items_file):
             self.file_cleaned = True
