@@ -891,6 +891,9 @@ class BOIIIWD(ctk.CTk):
                     creationflags=show_console
                 )
 
+                if process.poll() is not None:
+                    continue
+
                 #wait for process
                 while True:
                     if not self.is_downloading:
@@ -898,7 +901,7 @@ class BOIIIWD(ctk.CTk):
                             start_time = time.time()
                             self.is_downloading = True
                     elapsed_time = time.time() - start_time
-                    if process.poll() != None:
+                    if process.poll() is not None:
                         break
                     time.sleep(1)
 
@@ -927,6 +930,7 @@ class BOIIIWD(ctk.CTk):
                             reset_steamcmd(no_warn=True)
                             self.settings_tab.steam_fail_counter = 0
                             self.fail_threshold = 0
+                continue
         else:
             process = subprocess.Popen(
                 [steamcmd_path + "\steamcmd.exe"] + command.split(),
@@ -942,7 +946,7 @@ class BOIIIWD(ctk.CTk):
                 if not self.is_downloading:
                     if self.check_steamcmd_stdout(stdout_path, wsid):
                         self.is_downloading = True
-                if process.poll() != None:
+                if process.poll() is not None:
                     break
                 time.sleep(1)
 
