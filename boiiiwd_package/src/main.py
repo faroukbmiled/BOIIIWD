@@ -723,7 +723,7 @@ class BOIIIWD(ctk.CTk):
 
             # fillers
             name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}", wraplength=420, justify="left")
-            name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
 
             desc_threshold = 30
             shortened_description = re.sub(r'[\\/\n\r]', '', description).strip()
@@ -731,7 +731,7 @@ class BOIIIWD(ctk.CTk):
             shortened_description = f"{shortened_description[:desc_threshold]}... (View)"\
                                     if len(shortened_description) > desc_threshold else shortened_description
             description_lab = ctk.CTkLabel(info_frame, text=f"Description: {shortened_description}")
-            description_lab.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            description_lab.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
             if len(description) > desc_threshold:
                 description_lab_tooltip = CTkToolTip(description_lab, message="View description", topmost=True)
                 description_lab.configure(cursor="hand2")
@@ -739,17 +739,17 @@ class BOIIIWD(ctk.CTk):
 
             map_mod_type = map_mod_type_txt[:desc_threshold] + "..." if len(map_mod_type_txt) > desc_threshold else map_mod_type_txt
             type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}", wraplength=350, justify="left")
-            type_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            type_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
             if len(map_mod_type) > desc_threshold:
                 type_label_tooltip = CTkToolTip(type_label, message="View all types", topmost=True)
                 type_label.configure(cursor="hand2")
                 type_label.bind("<Button-1>", lambda e: show_full_text(e, type_label, map_mod_type_txt))
 
             size_label = ctk.CTkLabel(info_frame, text=f"Size (Workshop): {map_size}")
-            size_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            size_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
 
             date_created_label = ctk.CTkLabel(info_frame, text=f"Posted: {date_created}")
-            date_created_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            date_created_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
 
             if date_updated != "Not updated":
                 date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated} 🔗")
@@ -760,7 +760,7 @@ class BOIIIWD(ctk.CTk):
             else:
                 date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
 
-            date_updated_label.grid(row=5, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            date_updated_label.grid(row=5, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
 
             stars_image_label = ctk.CTkLabel(stars_frame)
             stars_width, stars_height = stars_image_size
@@ -1024,6 +1024,8 @@ class BOIIIWD(ctk.CTk):
 
             text = self.queuetextarea.get("1.0", "end")
             items = []
+            items_ws_sizes = {}
+
             if "," in text:
                 items = [n.strip() for n in text.split(",")]
             else:
@@ -1071,6 +1073,7 @@ class BOIIIWD(ctk.CTk):
 
                 ws_file_size = get_workshop_file_size(workshop_id)
                 file_size = ws_file_size
+                items_ws_sizes[workshop_id] = ws_file_size
                 self.total_queue_size += ws_file_size
 
                 if file_size is None:
@@ -1085,11 +1088,19 @@ class BOIIIWD(ctk.CTk):
                 if self.already_installed:
                     item_ids = ", ".join(self.already_installed)
                     if self.settings_tab.skip_already_installed:
+                        skipped_items = []
                         for item in self.already_installed:
                             if item in items:
                                 items.remove(item)
-                        show_message("Heads up!, map/s skipped => skip is on in settings", f"These item IDs may already be installed and are skipped:\n{item_ids}", icon="info")
-                        if not any(isinstance(item, int) for item in items):
+                                skipped_items.append(item)
+                                self.total_queue_size -= items_ws_sizes[item]
+                        if skipped_items and items:
+                            show_message("Heads up! Maps skipped => Skip is on in settings",
+                                        f"These item IDs may already be installed and are skipped:\n{', '.join(skipped_items)}",
+                                        icon="info")
+                        if not items:
+                            show_message("Download stopped => Skip is on in settings", "All items have been skipped since they are already installed.",
+                                        icon="info")
                             self.stop_download()
                             return
                     else:
@@ -1149,8 +1160,8 @@ class BOIIIWD(ctk.CTk):
                                     prev_item_size = sum(os.path.getsize(os.path.join(prev_item_path, f)) for f in os.listdir(prev_item_path))
                                 elif os.path.exists(prev_item_path_2):
                                     prev_item_size = sum(os.path.getsize(os.path.join(prev_item_path_2, f)) for f in os.listdir(prev_item_path_2))
-                                else:
-                                    prev_item_size = get_workshop_file_size(previous_item)
+                                if prev_item_size == 0 or not prev_item_size or not os.path.exists(prev_item_path) or not os.path.exists(prev_item_path_2):
+                                    prev_item_size = items_ws_sizes[previous_item]
                                 if prev_item_size:
                                     self.total_queue_size -= prev_item_size
                             self.item_skipped = False

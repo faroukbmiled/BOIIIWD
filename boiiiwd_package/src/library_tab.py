@@ -25,6 +25,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.update_button = ctk.CTkButton(self, image=ctk.CTkImage(Image.open(update_button_image)), command=self.check_for_updates, width=65, height=20,
                                            text="", fg_color="transparent")
         self.update_button.grid(row=0, column=1, padx=(0, 20), pady=(10, 20), sticky="en")
+        self.update_button.configure(state="disabled")
         self.update_tooltip = CTkToolTip(self.update_button, message="Check items for updates", topmost=True)
         filter_tooltip = CTkToolTip(self.filter_refresh_button, message="Refresh library", topmost=True)
         self.label_list = []
@@ -362,8 +363,13 @@ class LibraryTab(ctk.CTkScrollableFrame):
         else:
             self.hide_no_items_message()
 
+        if all(item in self.item_block_list for item in self.added_folders):
+            self.show_no_items_message(only_up=True)
+
         if map_count > 0 or mod_count > 0:
             return f"Maps: {map_count} - Mods: {mod_count} - Total size: {convert_bytes_to_readable(total_size)}"
+
+        self.show_no_items_message(only_up=True)
         return "No items in current selected folder"
 
     def update_item(self, boiiiFolder, id, item_type, foldername):
@@ -459,11 +465,16 @@ class LibraryTab(ctk.CTkScrollableFrame):
         url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
         webbrowser.open(url)
 
-    def show_no_items_message(self):
+    def show_no_items_message(self, only_up=False):
+        self.update_button.configure(state="disabled")
+        self.update_tooltip.configure(message="Updater Disabled, No items found")
+        if only_up:
+            return
         self.no_items_label.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="n")
         self.no_items_label.configure(text="No items found in the selected folder. \nMake sure you have a mod/map downloaded and or have the right boiii folder selected.")
 
     def hide_no_items_message(self):
+        self.update_button.configure(state="normal")
         self.no_items_label.configure(text="")
         self.no_items_label.forget()
 
@@ -705,7 +716,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
                 # fillers
                 name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}", wraplength=420, justify="left")
-                name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
 
                 desc_threshold = 30
                 shortened_description = re.sub(r'[\\/\n\r]', '', description).strip()
@@ -713,28 +724,28 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 shortened_description = f"{shortened_description[:desc_threshold]}... (View)"\
                                         if len(shortened_description) > desc_threshold else shortened_description
                 description_lab = ctk.CTkLabel(info_frame, text=f"Description: {shortened_description}")
-                description_lab.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                description_lab.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
                 if len(description) > desc_threshold:
                     description_lab_tooltip = CTkToolTip(description_lab, message="View description", topmost=True)
                     description_lab.configure(cursor="hand2")
                     description_lab.bind("<Button-1>", lambda e: show_description(e))
 
                 id_label = ctk.CTkLabel(info_frame, text=f"ID: {workshop_id} | Folder: {os.path.basename(folder)}")
-                id_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                id_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
 
                 map_mod_type = map_mod_type_txt[:desc_threshold] + "..." if len(map_mod_type_txt) > desc_threshold else map_mod_type_txt
                 type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}", wraplength=350, justify="left")
-                type_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                type_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
                 if len(map_mod_type) > desc_threshold:
                     type_label_tooltip = CTkToolTip(type_label, message="View all types", topmost=True)
                     type_label.configure(cursor="hand2")
                     type_label.bind("<Button-1>", lambda e: show_full_text(e, type_label, map_mod_type_txt))
 
                 size_label = ctk.CTkLabel(info_frame, text=f"Size: {map_size}")
-                size_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                size_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
 
                 date_created_label = ctk.CTkLabel(info_frame, text=f"Posted: {date_created}")
-                date_created_label.grid(row=5, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                date_created_label.grid(row=5, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
 
                 if date_updated != "Not updated" and date_updated != "Offline":
                     date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}  🔗")
@@ -744,10 +755,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         webbrowser.open(f"https://steamcommunity.com/sharedfiles/filedetails/changelog/{workshop_id}"))
                 else:
                     date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
-                date_updated_label.grid(row=6, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                date_updated_label.grid(row=6, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
 
                 date_updated_label = ctk.CTkLabel(info_frame, text=f"Downloaded: {down_date}")
-                date_updated_label.grid(row=7, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+                date_updated_label.grid(row=7, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
 
                 stars_image_label = ctk.CTkLabel(stars_frame)
                 stars_width, stars_height = stars_image_size
@@ -866,19 +877,23 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 return
 
         def check_for_update():
-            lib_data = None
+            try:
+                lib_data = None
 
-            if not os.path.exists(os.path.join(application_path, LIBRARY_FILE)):
-                show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct boiii path!, you also need to have at lease 1 item!")
+                if not os.path.exists(os.path.join(application_path, LIBRARY_FILE)):
+                    show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct boiii path!, you also need to have at lease 1 item!")
+                    return
+
+                with open(LIBRARY_FILE, 'r') as file:
+                    lib_data = json.load(file)
+
+                for item in lib_data:
+                    item_id = item["id"]
+                    item_date = item["date"]
+                    if_id_needs_update(item_id, item_date, item["text"])
+            except:
+                show_message("Error checking for item updates!", "Please visit library tab at least once with the correct boiii path!, you also need to have at lease 1 item!")
                 return
-
-            with open(LIBRARY_FILE, 'r') as file:
-                lib_data = json.load(file)
-
-            for item in lib_data:
-                item_id = item["id"]
-                item_date = item["date"]
-                if_id_needs_update(item_id, item_date, item["text"])
 
         check_for_update()
 
