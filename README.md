@@ -22,7 +22,7 @@
 ## Usage (script):
 - ```pip install -r requirements.txt``` -> use my modified [CTkToolTip](./CTkToolTip) and [CTkListbox](./CTkListbox) for [v0.2.8](https://github.com/faroukbmiled/BOIIIWD/releases) and up
 - ```python boiiiwd_package\boiiiwd.py```
-- Slap in your workshop item link for example: "https://steamcommunity.com/sharedfiles/filedetails/?id=3011930738" or just the id 3011930738)
+- Slap in your workshop item link for example: "https://steamcommunity.com/sharedfiles/filedetails/?id=3011930738" or just the id 3011930738
 
 ## Features:
 - Improves steamcmd's stability while downloading
