@@ -650,14 +650,18 @@ class BOIIIWD(ctk.CTk):
         info_thread = threading.Thread(target=show_map_thread)
         info_thread.start()
 
-    def toplevel_info_window(self, map_name, map_mod_type, map_size, image, image_size,
+    def toplevel_info_window(self, map_name, map_mod_type_txt, map_size, image, image_size,
                              date_created ,date_updated, stars_image, stars_image_size,
                              ratings_text, url, workshop_id, description):
         def main_thread():
             top = ctk.CTkToplevel(self)
             top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
             top.title("Map/Mod Information")
-            top.attributes('-topmost', 'true')
+            _, _, x, y = get_window_size_from_registry()
+            top.geometry(f"+{x+50}+{y-50}")
+            top.maxsize(450, 10000)
+            top.minsize(300, 500)
+            # top.attributes('-topmost', 'true')
 
             def close_window():
                 top.destroy()
@@ -693,6 +697,15 @@ class BOIIIWD(ctk.CTk):
 
                 self.after(0, main_thread)
 
+            def show_full_text(event, widget, full_text):
+                widget_text = type_label.cget("text")
+                label_type = widget_text.split(':')[0]
+                # + 30 which is desc_threshold + 5 is the ... dots and a white space
+                if len(widget_text) == len(label_type) + 30 + 5:
+                    widget.configure(text=f"{label_type}: {full_text}")
+                else:
+                    widget.configure(text=f"{label_type}: {full_text[:30]}...")
+
             # frames
             stars_frame = ctk.CTkFrame(top)
             stars_frame.grid(row=0, column=0, columnspan=2, padx=20, pady=(20, 0), sticky="nsew")
@@ -709,29 +722,34 @@ class BOIIIWD(ctk.CTk):
             buttons_frame.grid(row=3, column=0, columnspan=2, padx=20, pady=(0, 20), sticky="nsew")
 
             # fillers
-            name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}")
-            name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            name_label = ctk.CTkLabel(info_frame, text=f"Name: {map_name}", wraplength=420, justify="left")
+            name_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
 
             desc_threshold = 30
-            shortened_description = re.sub(r'\n', '', description).strip()
+            shortened_description = re.sub(r'[\\/\n\r]', '', description).strip()
             shortened_description = re.sub(r'([^a-zA-Z0-9\s:().])', '', shortened_description)
             shortened_description = f"{shortened_description[:desc_threshold]}... (View)"\
                                     if len(shortened_description) > desc_threshold else shortened_description
             description_lab = ctk.CTkLabel(info_frame, text=f"Description: {shortened_description}")
-            description_lab.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            description_lab.grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
             if len(description) > desc_threshold:
                 description_lab_tooltip = CTkToolTip(description_lab, message="View description", topmost=True)
                 description_lab.configure(cursor="hand2")
                 description_lab.bind("<Button-1>", lambda e: show_description(e))
 
-            type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}")
-            type_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            map_mod_type = map_mod_type_txt[:desc_threshold] + "..." if len(map_mod_type_txt) > desc_threshold else map_mod_type_txt
+            type_label = ctk.CTkLabel(info_frame, text=f"Type: {map_mod_type}", wraplength=350, justify="left")
+            type_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
+            if len(map_mod_type) > desc_threshold:
+                type_label_tooltip = CTkToolTip(type_label, message="View all types", topmost=True)
+                type_label.configure(cursor="hand2")
+                type_label.bind("<Button-1>", lambda e: show_full_text(e, type_label, map_mod_type_txt))
 
-            size_label = ctk.CTkLabel(info_frame, text=f"Size: {map_size}")
-            size_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            size_label = ctk.CTkLabel(info_frame, text=f"Size (Workshop): {map_size}")
+            size_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
 
             date_created_label = ctk.CTkLabel(info_frame, text=f"Posted: {date_created}")
-            date_created_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            date_created_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
 
             if date_updated != "Not updated":
                 date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated} 🔗")
@@ -742,7 +760,7 @@ class BOIIIWD(ctk.CTk):
             else:
                 date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
 
-            date_updated_label.grid(row=5, column=0, columnspan=2, sticky="w", padx=20, pady=5)
+            date_updated_label.grid(row=5, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
 
             stars_image_label = ctk.CTkLabel(stars_frame)
             stars_width, stars_height = stars_image_size
@@ -755,8 +773,9 @@ class BOIIIWD(ctk.CTk):
             ratings.pack(side="right", padx=(10, 20), pady=(10, 10))
 
             image_label = ctk.CTkLabel(image_frame)
-            width, height = image_size
-            image_widget = ctk.CTkImage(image, size=(int(width), int(height)))
+            max_width = 300
+            i_width, i_height = tuple([int(max_width/image_size[0] * x)  for x in image_size])
+            image_widget = ctk.CTkImage(image, size=(int(i_width), int(i_height)))
             image_label.configure(image=image_widget, text="")
             image_label.pack(expand=True, fill="both", padx=(10, 20), pady=(10, 10))
 
@@ -772,6 +791,7 @@ class BOIIIWD(ctk.CTk):
             top.grid_rowconfigure(2, weight=1)
             top.grid_columnconfigure(0, weight=1)
             top.grid_columnconfigure(1, weight=1)
+            top.after(10, top.focus_force)
 
         self.after(0, main_thread)
 
@@ -871,6 +891,9 @@ class BOIIIWD(ctk.CTk):
                     creationflags=show_console
                 )
 
+                if process.poll() is not None:
+                    continue
+
                 #wait for process
                 while True:
                     if not self.is_downloading:
@@ -878,7 +901,7 @@ class BOIIIWD(ctk.CTk):
                             start_time = time.time()
                             self.is_downloading = True
                     elapsed_time = time.time() - start_time
-                    if process.poll() != None:
+                    if process.poll() is not None:
                         break
                     time.sleep(1)
 
@@ -907,6 +930,7 @@ class BOIIIWD(ctk.CTk):
                             reset_steamcmd(no_warn=True)
                             self.settings_tab.steam_fail_counter = 0
                             self.fail_threshold = 0
+                continue
         else:
             process = subprocess.Popen(
                 [steamcmd_path + "\steamcmd.exe"] + command.split(),
@@ -922,7 +946,7 @@ class BOIIIWD(ctk.CTk):
                 if not self.is_downloading:
                     if self.check_steamcmd_stdout(stdout_path, wsid):
                         self.is_downloading = True
-                if process.poll() != None:
+                if process.poll() is not None:
                     break
                 time.sleep(1)
 
@@ -1004,6 +1028,8 @@ class BOIIIWD(ctk.CTk):
 
             text = self.queuetextarea.get("1.0", "end")
             items = []
+            items_ws_sizes = {}
+
             if "," in text:
                 items = [n.strip() for n in text.split(",")]
             else:
@@ -1051,6 +1077,7 @@ class BOIIIWD(ctk.CTk):
 
                 ws_file_size = get_workshop_file_size(workshop_id)
                 file_size = ws_file_size
+                items_ws_sizes[workshop_id] = ws_file_size
                 self.total_queue_size += ws_file_size
 
                 if file_size is None:
@@ -1065,11 +1092,19 @@ class BOIIIWD(ctk.CTk):
                 if self.already_installed:
                     item_ids = ", ".join(self.already_installed)
                     if self.settings_tab.skip_already_installed:
+                        skipped_items = []
                         for item in self.already_installed:
                             if item in items:
                                 items.remove(item)
-                        show_message("Heads up!, map/s skipped => skip is on in settings", f"These item IDs may already be installed and are skipped:\n{item_ids}", icon="info")
-                        if not any(isinstance(item, int) for item in items):
+                                skipped_items.append(item)
+                                self.total_queue_size -= items_ws_sizes[item]
+                        if skipped_items and items:
+                            show_message("Heads up! Maps skipped => Skip is on in settings",
+                                        f"These item IDs may already be installed and are skipped:\n{', '.join(skipped_items)}",
+                                        icon="info")
+                        if not items:
+                            show_message("Download stopped => Skip is on in settings", "All items have been skipped since they are already installed.",
+                                        icon="info")
                             self.stop_download()
                             return
                     else:
@@ -1129,8 +1164,8 @@ class BOIIIWD(ctk.CTk):
                                     prev_item_size = sum(os.path.getsize(os.path.join(prev_item_path, f)) for f in os.listdir(prev_item_path))
                                 elif os.path.exists(prev_item_path_2):
                                     prev_item_size = sum(os.path.getsize(os.path.join(prev_item_path_2, f)) for f in os.listdir(prev_item_path_2))
-                                else:
-                                    prev_item_size = get_workshop_file_size(previous_item)
+                                if prev_item_size == 0 or not prev_item_size:
+                                    prev_item_size = items_ws_sizes[previous_item]
                                 if prev_item_size:
                                     self.total_queue_size -= prev_item_size
                             self.item_skipped = False

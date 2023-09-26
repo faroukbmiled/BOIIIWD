@@ -502,222 +502,219 @@ class SettingsTab(ctk.CTkFrame):
         reset_steamcmd()
 
     def from_steam_to_boiii_toplevel(self):
-        def main_thread():
-            try:
-                # to make sure json file is up to date
-                main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
-                top = ctk.CTkToplevel(self)
-                if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
-                    top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
-                top.title("Steam to boiii -> Workshop items")
-                top.attributes('-topmost', 'true')
-                top.resizable(False, False)
-                # Create input boxes
-                center_frame = ctk.CTkFrame(top)
-                center_frame.grid(row=0, column=0, padx=20, pady=20)
+        try:
+            # to make sure json file is up to date
+            main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
+            top = ctk.CTkToplevel(self)
+            if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
+                top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
+            top.title("Steam to boiii")
+            _, _, x, y = get_window_size_from_registry()
+            top.geometry(f"+{x}+{y}")
+            # top.attributes('-topmost', 'true')
+            top.resizable(False, False)
+            # Create input boxes
+            center_frame = ctk.CTkFrame(top)
 
-                # Create input boxes
-                steam_folder_label = ctk.CTkLabel(center_frame, text="Steam Folder:")
-                steam_folder_label.grid(row=0, column=0, padx=(20, 20), pady=(10, 0), sticky='w')
-                steam_folder_entry = ctk.CTkEntry(center_frame, width=225)
-                steam_folder_entry.grid(row=1, column=0, columnspan=2, padx=(0, 20), pady=(10, 10), sticky='nes')
-                button_steam_browse = ctk.CTkButton(center_frame, text="Select", width=10)
-                button_steam_browse.grid(row=1, column=2, padx=(0, 20), pady=(10, 10), sticky="wnes")
+            # Create input boxes
+            steam_folder_label = ctk.CTkLabel(center_frame, text="Steam Folder:")
+            steam_folder_entry = ctk.CTkEntry(center_frame, width=225)
+            button_steam_browse = ctk.CTkButton(center_frame, text="Select", width=10)
+            boiii_folder_label = ctk.CTkLabel(center_frame, text="boiii Folder:")
+            boiii_folder_entry = ctk.CTkEntry(center_frame, width=225)
+            button_BOIII_browse = ctk.CTkButton(center_frame, text="Select", width=10)
+            # Create option to choose between cut or copy
+            operation_label = ctk.CTkLabel(center_frame, text="Choose operation:")
+            copy_var = ctk.BooleanVar()
+            cut_var = ctk.BooleanVar()
+            copy_check = ctk.CTkCheckBox(center_frame, text="Copy", variable=copy_var)
+            cut_check = ctk.CTkCheckBox(center_frame, text="Cut", variable=cut_var)
 
-                boiii_folder_label = ctk.CTkLabel(center_frame, text="boiii Folder:")
-                boiii_folder_label.grid(row=2, column=0, padx=(20, 20), pady=(10, 0), sticky='w')
-                boiii_folder_entry = ctk.CTkEntry(center_frame, width=225)
-                boiii_folder_entry.grid(row=3, column=0, columnspan=2, padx=(0, 20), pady=(10, 10), sticky='nes')
-                button_BOIII_browse = ctk.CTkButton(center_frame, text="Select", width=10)
-                button_BOIII_browse.grid(row=3, column=2, padx=(0, 20), pady=(10, 10), sticky="wnes")
+            # Create progress bar
+            progress_bar = ctk.CTkProgressBar(center_frame, mode="determinate", height=20, corner_radius=7)
+            progress_text = ctk.CTkLabel(progress_bar, text="0%", font=("Helvetica", 12), fg_color="transparent", text_color="white", height=0, width=0, corner_radius=0)
+            copy_button = ctk.CTkButton(center_frame, text="Start (Copy)")
 
-                # Create option to choose between cut or copy
-                operation_label = ctk.CTkLabel(center_frame, text="Choose operation:")
-                operation_label.grid(row=4, column=0, padx=(20, 20), pady=(10, 10), sticky='wnes')
-                copy_var = ctk.BooleanVar()
-                cut_var = ctk.BooleanVar()
-                copy_check = ctk.CTkCheckBox(center_frame, text="Copy", variable=copy_var)
-                cut_check = ctk.CTkCheckBox(center_frame, text="Cut", variable=cut_var)
-                copy_check.grid(row=4, column=1, padx=(0, 10), pady=(10, 10), sticky='wnes')
-                cut_check.grid(row=4, column=2, padx=(0, 10), pady=(10, 10), sticky='nes')
+            # funcs
+            # had to use this shit again cuz of threading issues with widgets
+            def copy_with_progress(src, dst):
+                try:
+                    total_files = sum([len(files) for root, dirs, files in os.walk(src)])
+                    progress = 0
 
-                # Create progress bar
-                progress_bar = ctk.CTkProgressBar(center_frame, mode="determinate", height=20, corner_radius=7)
-                progress_bar.grid(row=5, column=0, columnspan=3, padx=(20, 20), pady=(10, 10), sticky='wnes')
-                progress_text = ctk.CTkLabel(progress_bar, text="0%", font=("Helvetica", 12), fg_color="transparent", text_color="white", height=0, width=0, corner_radius=0)
-                progress_text.place(relx=0.5, rely=0.5, anchor="center")
+                    def copy_progress(src, dst):
+                        nonlocal progress
+                        shutil.copy2(src, dst)
+                        progress += 1
+                        top.after(0, progress_text.configure(text=f"Copying files: {progress}/{total_files}"))
+                        value = (progress / total_files) * 100
+                        valuep = value / 100
+                        progress_bar.set(valuep)
 
-                copy_button = ctk.CTkButton(center_frame, text="Start (Copy)")
-                copy_button.grid(row=6, column=0, columnspan=3,padx=(20, 20), pady=(10, 10), sticky='wnes')
-
-                # funcs
-                # had to use this shit again cuz of threading issues with widgets
-                def copy_with_progress(src, dst):
                     try:
-                        total_files = sum([len(files) for root, dirs, files in os.walk(src)])
-                        progress = 0
+                        shutil.copytree(src, dst, dirs_exist_ok=True, copy_function=copy_progress)
+                    except Exception as E:
+                        show_message("Error", f"Error copying files: {E}", icon="cancel")
+                finally:
+                    top.after(0, progress_text.configure(text="0%"))
+                    top.after(0, progress_bar.set(0.0))
 
-                        def copy_progress(src, dst):
-                            nonlocal progress
-                            shutil.copy2(src, dst)
-                            progress += 1
-                            top.after(0, progress_text.configure(text=f"Copying files: {progress}/{total_files}"))
-                            value = (progress / total_files) * 100
-                            valuep = value / 100
-                            progress_bar.set(valuep)
+            def check_status(var, op_var):
+                if var.get():
+                    op_var.set(False)
+                if cut_var.get():
+                    copy_button.configure(text=f"Start (Cut)")
+                if copy_var.get():
+                    copy_button.configure(text=f"Start (Copy)")
 
-                        try:
-                            shutil.copytree(src, dst, dirs_exist_ok=True, copy_function=copy_progress)
-                        except Exception as E:
-                            show_message("Error", f"Error copying files: {E}", icon="cancel")
-                    finally:
-                        top.after(0, progress_text.configure(text="0%"))
-                        top.after(0, progress_bar.set(0.0))
+            def open_BOIII_browser():
+                selected_folder = ctk.filedialog.askdirectory(title="Select boiii Folder")
+                if selected_folder:
+                    boiii_folder_entry.delete(0, "end")
+                    boiii_folder_entry.insert(0, selected_folder)
 
-                def check_status(var, op_var):
-                    if var.get():
-                        op_var.set(False)
-                    if cut_var.get():
-                        copy_button.configure(text=f"Start (Cut)")
-                    if copy_var.get():
-                        copy_button.configure(text=f"Start (Copy)")
+            def open_steam_browser():
+                selected_folder = ctk.filedialog.askdirectory(title="Select Steam Folder (ex: C:\Program Files (x86)\Steam)")
+                if selected_folder:
+                    steam_folder_entry.delete(0, "end")
+                    steam_folder_entry.insert(0, selected_folder)
+                    save_config("steam_folder" ,steam_folder_entry.get())
 
-                def open_BOIII_browser():
-                    selected_folder = ctk.filedialog.askdirectory(title="Select boiii Folder")
-                    if selected_folder:
-                        boiii_folder_entry.delete(0, "end")
-                        boiii_folder_entry.insert(0, selected_folder)
+            def start_copy_operation():
+                def start_thread():
+                    try:
+                        if not cut_var.get() and not copy_var.get():
+                            show_message("Choose operation!", "Please choose an operation, Copy or Cut files from steam!")
+                            return
 
-                def open_steam_browser():
-                    selected_folder = ctk.filedialog.askdirectory(title="Select Steam Folder (ex: C:\Program Files (x86)\Steam)")
-                    if selected_folder:
-                        steam_folder_entry.delete(0, "end")
-                        steam_folder_entry.insert(0, selected_folder)
-                        save_config("steam_folder" ,steam_folder_entry.get())
+                        copy_button.configure(state="disabled")
+                        steam_folder = steam_folder_entry.get()
+                        ws_folder = os.path.join(steam_folder, "steamapps/workshop/content/311210")
+                        boiii_folder = boiii_folder_entry.get()
 
-                def start_copy_operation():
-                    def start_thread():
-                        try:
-                            if not cut_var.get() and not copy_var.get():
-                                show_message("Choose operation!", "Please choose an operation, Copy or Cut files from steam!")
-                                return
+                        if not os.path.exists(steam_folder) and not os.path.exists(ws_folder):
+                            show_message("Not found", "Either you have no items downloaded from Steam or wrong path, please recheck path (ex: C:\Program Files (x86)\Steam)")
+                            return
 
-                            copy_button.configure(state="disabled")
-                            steam_folder = steam_folder_entry.get()
-                            ws_folder = os.path.join(steam_folder, "steamapps/workshop/content/311210")
-                            boiii_folder = boiii_folder_entry.get()
+                        if not os.path.exists(boiii_folder):
+                            show_message("Not found", "boiii folder not found, please recheck path")
+                            return
 
-                            if not os.path.exists(steam_folder) and not os.path.exists(ws_folder):
-                                show_message("Not found", "Either you have no items downloaded from Steam or wrong path, please recheck path (ex: C:\Program Files (x86)\Steam)")
-                                return
+                        top.after(0, progress_text.configure(text="Loading..."))
 
-                            if not os.path.exists(boiii_folder):
-                                show_message("Not found", "boiii folder not found, please recheck path")
-                                return
+                        map_folder = os.path.join(ws_folder)
 
-                            top.after(0, progress_text.configure(text="Loading..."))
+                        subfolders = [f for f in os.listdir(map_folder) if os.path.isdir(os.path.join(map_folder, f))]
+                        total_folders = len(subfolders)
 
-                            map_folder = os.path.join(ws_folder)
+                        if not subfolders:
+                            show_message("No items found", f"No items found in \n{map_folder}")
+                            return
 
-                            subfolders = [f for f in os.listdir(map_folder) if os.path.isdir(os.path.join(map_folder, f))]
-                            total_folders = len(subfolders)
+                        for i, dir_name in enumerate(subfolders, start=1):
+                            json_file_path = os.path.join(map_folder, dir_name, "workshop.json")
+                            copy_button.configure(text=f"Working on -> {i}/{total_folders}")
 
-                            if not subfolders:
-                                show_message("No items found", f"No items found in \n{map_folder}")
-                                return
+                            if os.path.exists(json_file_path):
+                                workshop_id = extract_json_data(json_file_path, "PublisherID")
+                                mod_type = extract_json_data(json_file_path, "Type")
+                                items_file = os.path.join(application_path, LIBRARY_FILE)
+                                item_exists,_ = main_app.app.library_tab.item_exists_in_file(items_file, workshop_id)
 
-                            for i, dir_name in enumerate(subfolders, start=1):
-                                json_file_path = os.path.join(map_folder, dir_name, "workshop.json")
-                                copy_button.configure(text=f"Working on -> {i}/{total_folders}")
-
-                                if os.path.exists(json_file_path):
-                                    workshop_id = extract_json_data(json_file_path, "PublisherID")
-                                    mod_type = extract_json_data(json_file_path, "Type")
-                                    items_file = os.path.join(application_path, LIBRARY_FILE)
-                                    item_exists,_ = main_app.app.library_tab.item_exists_in_file(items_file, workshop_id)
-
-                                    if item_exists:
-                                        get_folder_name = main_app.app.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
-                                        if get_folder_name:
-                                            folder_name = get_folder_name
-                                        else:
-                                            try:
-                                                folder_name = extract_json_data(json_file_path, main_app.app.settings_tab.folder_options.get())
-                                            except:
-                                                folder_name = extract_json_data(json_file_path, "publisherID")
+                                if item_exists:
+                                    get_folder_name = main_app.app.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
+                                    if get_folder_name:
+                                        folder_name = get_folder_name
                                     else:
                                         try:
                                             folder_name = extract_json_data(json_file_path, main_app.app.settings_tab.folder_options.get())
                                         except:
                                             folder_name = extract_json_data(json_file_path, "publisherID")
-
-                                    if mod_type == "mod":
-                                        path_folder = os.path.join(boiii_folder, "mods")
-                                        folder_name_path = os.path.join(path_folder, folder_name, "zone")
-                                    elif mod_type == "map":
-                                        path_folder = os.path.join(boiii_folder, "usermaps")
-                                        folder_name_path = os.path.join(path_folder, folder_name, "zone")
-                                    else:
-                                        show_message("Error", "Invalid workshop type in workshop.json, are you sure this is a map or a mod?.", icon="cancel")
-                                        continue
-
-                                    if not item_exists:
-                                        while os.path.exists(os.path.join(path_folder, folder_name)):
-                                            folder_name += f"_{workshop_id}"
-                                            folder_name_path = os.path.join(path_folder, folder_name, "zone")
-
-                                    os.makedirs(folder_name_path, exist_ok=True)
-
-                                    try:
-                                        copy_with_progress(os.path.join(map_folder, dir_name), folder_name_path)
-                                    except Exception as E:
-                                        show_message("Error", f"Error copying files: {E}", icon="cancel")
-                                        continue
-
-                                    if cut_var.get():
-                                        remove_tree(os.path.join(map_folder, dir_name))
-
-                                    main_app.app.library_tab.update_item(main_app.app.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
                                 else:
-                                    # if its last folder to check
-                                    if i == total_folders:
-                                        show_message("Error", f"workshop.json not found in {dir_name}", icon="cancel")
-                                        main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
-                                        return
+                                    try:
+                                        folder_name = extract_json_data(json_file_path, main_app.app.settings_tab.folder_options.get())
+                                    except:
+                                        folder_name = extract_json_data(json_file_path, "publisherID")
+
+                                if mod_type == "mod":
+                                    path_folder = os.path.join(boiii_folder, "mods")
+                                    folder_name_path = os.path.join(path_folder, folder_name, "zone")
+                                elif mod_type == "map":
+                                    path_folder = os.path.join(boiii_folder, "usermaps")
+                                    folder_name_path = os.path.join(path_folder, folder_name, "zone")
+                                else:
+                                    show_message("Error", "Invalid workshop type in workshop.json, are you sure this is a map or a mod?.", icon="cancel")
                                     continue
 
-                            if subfolders:
-                                main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
-                                main_app.app.show_complete_message(message=f"All items were moved\nYou can run the game now!\nPS: You have to restart the game\n(pressing launch will launch/restarts)")
+                                if not item_exists:
+                                    while os.path.exists(os.path.join(path_folder, folder_name)):
+                                        folder_name += f"_{workshop_id}"
+                                        folder_name_path = os.path.join(path_folder, folder_name, "zone")
 
-                        finally:
-                            if cut_var.get():
-                                copy_button.configure(text=f"Start (Cut)")
-                            if copy_var.get():
-                                copy_button.configure(text=f"Start (Copy)")
-                            copy_button.configure(state="normal")
-                            top.after(0, progress_bar.set(0))
-                            top.after(0, progress_text.configure(text="0%"))
+                                os.makedirs(folder_name_path, exist_ok=True)
 
-                    # prevents app hanging
-                    threading.Thread(target=start_thread).start()
+                                try:
+                                    copy_with_progress(os.path.join(map_folder, dir_name), folder_name_path)
+                                except Exception as E:
+                                    show_message("Error", f"Error copying files: {E}", icon="cancel")
+                                    continue
 
-                # config
-                progress_color = get_button_state_colors(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")), "progress_bar_fill_color")
-                progress_bar.configure(progress_color=progress_color)
-                steam_folder_entry.insert(1, check_config("steam_folder", ""))
-                boiii_folder_entry.insert(1, main_app.app.edit_destination_folder.get())
-                button_BOIII_browse.configure(command=open_BOIII_browser)
-                button_steam_browse.configure(command=open_steam_browser)
-                copy_button.configure(command=start_copy_operation)
-                cut_check.configure(command = lambda: check_status(cut_var, copy_var))
-                copy_check.configure(command = lambda: check_status(copy_var, cut_var))
-                main_app.app.create_context_menu(steam_folder_entry)
-                main_app.app.create_context_menu(boiii_folder_entry)
-                copy_var.set(True)
-                progress_bar.set(0)
+                                if cut_var.get():
+                                    remove_tree(os.path.join(map_folder, dir_name))
 
-            except Exception as e:
-                show_message("Error", f"{e}", icon="cancel")
+                                main_app.app.library_tab.update_item(main_app.app.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
+                            else:
+                                # if its last folder to check
+                                if i == total_folders:
+                                    show_message("Error", f"workshop.json not found in {dir_name}", icon="cancel")
+                                    main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
+                                    return
+                                continue
 
-        main_app.app.after(0, main_thread)
+                        if subfolders:
+                            main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
+                            main_app.app.show_complete_message(message=f"All items were moved\nYou can run the game now!\nPS: You have to restart the game\n(pressing launch will launch/restarts)")
+
+                    finally:
+                        if cut_var.get():
+                            copy_button.configure(text=f"Start (Cut)")
+                        if copy_var.get():
+                            copy_button.configure(text=f"Start (Copy)")
+                        copy_button.configure(state="normal")
+                        top.after(0, progress_bar.set(0))
+                        top.after(0, progress_text.configure(text="0%"))
+
+                # prevents app hanging
+                threading.Thread(target=start_thread).start()
+
+            # config
+            center_frame.grid(row=0, column=0, padx=20, pady=20)
+            button_steam_browse.grid(row=1, column=2, padx=(0, 20), pady=(10, 10), sticky="wnes")
+            steam_folder_label.grid(row=0, column=0, padx=(20, 20), pady=(10, 0), sticky='w')
+            steam_folder_entry.grid(row=1, column=0, columnspan=2, padx=(0, 20), pady=(10, 10), sticky='nes')
+            boiii_folder_label.grid(row=2, column=0, padx=(20, 20), pady=(10, 0), sticky='w')
+            boiii_folder_entry.grid(row=3, column=0, columnspan=2, padx=(0, 20), pady=(10, 10), sticky='nes')
+            button_BOIII_browse.grid(row=3, column=2, padx=(0, 20), pady=(10, 10), sticky="wnes")
+            operation_label.grid(row=4, column=0, padx=(20, 20), pady=(10, 10), sticky='wnes')
+            copy_check.grid(row=4, column=1, padx=(0, 10), pady=(10, 10), sticky='wnes')
+            cut_check.grid(row=4, column=2, padx=(0, 10), pady=(10, 10), sticky='nes')
+            progress_bar.grid(row=5, column=0, columnspan=3, padx=(20, 20), pady=(10, 10), sticky='wnes')
+            progress_text.place(relx=0.5, rely=0.5, anchor="center")
+            copy_button.grid(row=6, column=0, columnspan=3,padx=(20, 20), pady=(10, 10), sticky='wnes')
+            progress_color = get_button_state_colors(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")), "progress_bar_fill_color")
+            progress_bar.configure(progress_color=progress_color)
+            steam_folder_entry.insert(1, check_config("steam_folder", ""))
+            boiii_folder_entry.insert(1, main_app.app.edit_destination_folder.get())
+            button_BOIII_browse.configure(command=open_BOIII_browser)
+            button_steam_browse.configure(command=open_steam_browser)
+            copy_button.configure(command=start_copy_operation)
+            cut_check.configure(command = lambda: check_status(cut_var, copy_var))
+            copy_check.configure(command = lambda: check_status(copy_var, cut_var))
+            main_app.app.create_context_menu(steam_folder_entry)
+            main_app.app.create_context_menu(boiii_folder_entry)
+            copy_var.set(True)
+            progress_bar.set(0)
+            top.after(120, top.focus_force)
+
+        except Exception as e:
+            show_message("Error", f"{e}", icon="cancel")
