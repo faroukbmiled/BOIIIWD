@@ -9,8 +9,8 @@
   </div>
   <!-- Right Side -->
   <div style="flex: 1; margin-left: 5px;">
-    <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/76f74154-b239-4b39-a2af-fd6c4ecb4043" width="400" />
-    <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/229f2e70-b32b-4911-9a82-586e6dd55ae9" width="400" />
+    <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/86c07cf2-b04b-42d0-ae06-8526bffafb34" width="400" />
+    <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/4c5877eb-81a7-4ae7-99db-3096ab57b12b" width="400" />
   </div>
 </div>
 
@@ -59,6 +59,7 @@ or <br>
 * Initializing SteamCMD for the first time could take some time depending on your internet speed <br>
 * New item update window: Right click on an item (mouse3) -> will open the item in the browser (Steam Workshop) <br>
 * BOIIIWD requires having "boiiiwd_library.json" in the app's directory for the new features to work -> clicking on the library tab will generate the JSON file (please don't touch it) <br>
+* [v0.3.1](https://github.com/faroukbmiled/BOIIIWD/releases) and up program will use windows registry to save window coordinates (height , width ,x_pos, y_pos)
 #### PS (Library tab): <br>
 * Mouse1 -> copy id <br>
 * Mouse2 (scroll wheel btn) -> Open item path in explorer <br>
