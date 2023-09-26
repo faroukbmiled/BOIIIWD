@@ -61,6 +61,7 @@ or <br>
 * BOIIIWD requires having "boiiiwd_library.json" in the app's directory for the new features to work -> clicking on the library tab will generate the JSON file (please don't touch it) <br>
 * [v0.3.1](https://github.com/faroukbmiled/BOIIIWD/releases) and up program will use windows registry to save window coordinates (height , width ,x_pos, y_pos)
 * For Item Updater to recognize your Item as a valid one is to have it named either "FolderName ,"PublisherID" or "FolderName_PublisherID" (taken from workshop.json from each item) -> Invalid items will have a warning icon in library and will not be checked for updates -> Downloading items from boiiiwd will be valid by default
+* Invalid items will still work in game but will not be checked for updates
   
 #### PS (Library tab): <br>
 * Mouse1 -> copy id <br>
