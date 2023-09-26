@@ -474,6 +474,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.no_items_label.configure(text="No items found in the selected folder. \nMake sure you have a mod/map downloaded and or have the right boiii folder selected.")
 
     def hide_no_items_message(self):
+        self.update_tooltip.configure(message="Check items for updates")
         self.update_button.configure(state="normal")
         self.no_items_label.configure(text="")
         self.no_items_label.forget()
