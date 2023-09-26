@@ -268,7 +268,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
                     curr_folder_name = zone_path.parent.name
                     workshop_id = extract_json_data(json_path, "PublisherID") or "None"
-                    name = re.sub(r'\^\w+', '', extract_json_data(json_path, "Title")) or "None"
+                    name = re.sub(r'\^\d', '', extract_json_data(json_path, "Title")) or "None"
                     name = name[:45] + "..." if len(name) > 45 else name
                     item_type = extract_json_data(json_path, "Type") or "None"
                     folder_name = extract_json_data(json_path, "FolderName") or "None"
