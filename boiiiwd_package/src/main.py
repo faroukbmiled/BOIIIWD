@@ -1160,7 +1160,7 @@ class BOIIIWD(ctk.CTk):
                                     prev_item_size = sum(os.path.getsize(os.path.join(prev_item_path, f)) for f in os.listdir(prev_item_path))
                                 elif os.path.exists(prev_item_path_2):
                                     prev_item_size = sum(os.path.getsize(os.path.join(prev_item_path_2, f)) for f in os.listdir(prev_item_path_2))
-                                if prev_item_size == 0 or not prev_item_size or not os.path.exists(prev_item_path) or not os.path.exists(prev_item_path_2):
+                                if prev_item_size == 0 or not prev_item_size:
                                     prev_item_size = items_ws_sizes[previous_item]
                                 if prev_item_size:
                                     self.total_queue_size -= prev_item_size
