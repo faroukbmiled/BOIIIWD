@@ -397,6 +397,7 @@ class SettingsTab(ctk.CTkFrame):
     def settings_check_for_updates(self):
         check_for_updates_func(self, ignore_up_todate=False)
 
+    # make this rename to {id}_duplicate as a fallback
     def rename_all_folders(self, option):
         boiiiFolder = main_app.app.edit_destination_folder.get()
         maps_folder = os.path.join(boiiiFolder, "mods")
@@ -436,14 +437,20 @@ class SettingsTab(ctk.CTkFrame):
                     folder_to_rename = os.path.join(folder_path, folder_name)
                     new_folder_name = new_name
                     while new_folder_name in processed_names:
-                        new_folder_name += f"_{publisher_id}"
+                        if option == "PublisherID":
+                            new_folder_name += f"_duplicated"
+                        else:
+                            new_folder_name += f"_{publisher_id}"
                         if folder_name == new_folder_name:
                             rename_flag = False
                             break
                     new_path = os.path.join(folder_path, new_folder_name)
 
                     while os.path.exists(new_path):
-                        new_folder_name += f"_{publisher_id}"
+                        if option == "PublishedID":
+                            new_folder_name += f"_duplicated"
+                        else:
+                            new_folder_name += f"_{publisher_id}"
                         if folder_name == new_folder_name:
                             rename_flag = False
                             break
