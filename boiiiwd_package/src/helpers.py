@@ -351,11 +351,9 @@ def check_item_date(down_date, date_updated):
         except ValueError:
             download_datetime = datetime.strptime(down_date + f", {current_year}", date_format_with_added_year)
 
-        date_updated_datetime = datetime.fromtimestamp(date_updated)
-
-        if date_updated_datetime >= download_datetime:
+        if date_updated >= download_datetime:
             return True
-        elif date_updated_datetime < download_datetime:
+        elif date_updated < download_datetime:
             return False
     except:
         return False
@@ -395,11 +393,25 @@ def item_steam_api(id):
         print(e)
         return False
 
-def get_item_date(data):
+def get_item_dates(ids):
     try:
-        time_updated = data["response"]["publishedfiledetails"][0]["time_updated"]
-        return time_updated
-    except:
-        return None
+        data = {
+            "itemcount": len(ids),
+        }
+        for i, id in enumerate(ids):
+            data[f"publishedfileids[{i}]"] = int(id)
+
+        info = requests.post(ITEM_INFO_API, data=data)
+        response_data = info.json()
+
+        if "response" in response_data:
+            item_details = response_data["response"]["publishedfiledetails"]
+            return {item["publishedfileid"]: item["time_updated"] for item in item_details}
+
+        return {}
+
+    except Exception as e:
+        print(e)
+        return {}
 
 # End helper functions

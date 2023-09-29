@@ -849,41 +849,40 @@ class LibraryTab(ctk.CTkScrollableFrame):
         # Needed to refresh item that needs updates
         self.to_update.clear()
 
-        def if_id_needs_update(item_id, item_date, text):
+        def if_ids_need_update(item_ids, item_dates, texts):
             try:
-                item_data = item_steam_api(item_id)
-                date_updated = get_item_date(item_data)
+                item_data = get_item_dates(item_ids)
 
-                if not date_updated:
-                    return False
+                for item_id, date_updated in item_data.items():
+                    item_date = item_dates[item_id]
+                    date_updated = datetime.fromtimestamp(date_updated)
 
-                if check_item_date(item_date, date_updated):
-                    self.to_update.add(text + f" | Updated: {date_updated}")
-                    return True
-                else:
-                    return False
+                    if check_item_date(item_date, date_updated):
+                        date_updated = date_updated.strftime("%d %b @ %I:%M%p, %Y")
+                        self.to_update.add(texts[item_id] + f" | Updated: {date_updated}")
 
             except Exception as e:
-                show_message("Error", f"Error occured\n{e}", icon="cancel")
-                return
+                show_message("Error", f"Error occurred\n{e}", icon="cancel")
 
         def check_for_update():
             try:
                 lib_data = None
 
                 if not os.path.exists(os.path.join(application_path, LIBRARY_FILE)):
-                    show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct boiii path!, you also need to have at lease 1 item!")
+                    show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct boiii path!, you also need to have at least 1 item!")
                     return
 
                 with open(LIBRARY_FILE, 'r') as file:
                     lib_data = json.load(file)
 
-                for item in lib_data:
-                    item_id = item["id"]
-                    item_date = item["date"]
-                    if_id_needs_update(item_id, item_date, item["text"])
+                item_ids = [item["id"] for item in lib_data]
+                item_dates = {item["id"]: item["date"] for item in lib_data}
+                texts = {item["id"]: item["text"] for item in lib_data}
+
+                if_ids_need_update(item_ids, item_dates, texts)
+
             except:
-                show_message("Error checking for item updates!", "Please visit library tab at least once with the correct boiii path!, you also need to have at lease 1 item!")
+                show_message("Error checking for item updates!", "Please visit the library tab at least once with the correct boiii path!, you also need to have at least 1 item!")
                 return
 
         check_for_update()
