@@ -256,7 +256,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         folders_to_process = [mods_folder, maps_folder]
         ui_items_to_add = []
 
-        items_file = os.path.join(application_path, LIBRARY_FILE)
+        items_file = os.path.join(APPLICATION_PATH, LIBRARY_FILE)
         if not self.is_valid_json_format(items_file):
             try: self.rename_invalid_json_file(items_file)
             except: pass
@@ -409,7 +409,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                             creation_timestamp = zone_path.stat().st_mtime
                             date_added = datetime.fromtimestamp(creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
 
-                        items_file = os.path.join(application_path, LIBRARY_FILE)
+                        items_file = os.path.join(APPLICATION_PATH, LIBRARY_FILE)
 
                         item_info = {
                             "id": workshop_id,
@@ -425,7 +425,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
             show_message("Error updating json file", f"Error while updating library json file\n{e}")
 
     def remove_item(self, item, folder, id):
-        items_file = os.path.join(application_path, LIBRARY_FILE)
+        items_file = os.path.join(APPLICATION_PATH, LIBRARY_FILE)
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
             if item == label.cget("text"):
                 self.added_folders.remove(os.path.basename(folder))
@@ -622,7 +622,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                              url, workshop_id, invalid_warn, folder, description ,online,offline_date=None):
         def main_thread():
             try:
-                items_file = os.path.join(application_path, LIBRARY_FILE)
+                items_file = os.path.join(APPLICATION_PATH, LIBRARY_FILE)
                 top = ctk.CTkToplevel(self)
                 if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
                     top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
@@ -868,11 +868,11 @@ class LibraryTab(ctk.CTkScrollableFrame):
             try:
                 lib_data = None
 
-                if not os.path.exists(os.path.join(application_path, LIBRARY_FILE)):
+                if not os.path.exists(os.path.join(APPLICATION_PATH, LIBRARY_FILE)):
                     show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct boiii path!, you also need to have at least 1 item!")
                     return
 
-                with open(LIBRARY_FILE, 'r') as file:
+                with open(os.path.join(APPLICATION_PATH, LIBRARY_FILE), 'r') as file:
                     lib_data = json.load(file)
 
                 item_ids = [item["id"] for item in lib_data]
@@ -905,7 +905,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
             top.title("Item updater - List of Items with Updates - Click to select 1 or more")
             longest_text_length = max(len(text) for text in self.to_update)
             window_width = longest_text_length * 6 + 5
-            top.geometry(f"{window_width}x450")
+            _, _, x, y = get_window_size_from_registry()
+            top.geometry(f"{window_width}x450+{x}+{y}")
             top.attributes('-topmost', 'true')
             top.resizable(True, True)
             selected_id_list = []

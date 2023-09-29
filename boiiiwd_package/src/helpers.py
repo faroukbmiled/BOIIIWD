@@ -25,8 +25,8 @@ def save_config(name, value):
         config.write(config_file)
 
 def check_custom_theme(theme_name):
-    if os.path.exists(os.path.join(application_path, theme_name)):
-        return os.path.join(application_path, theme_name)
+    if os.path.exists(os.path.join(APPLICATION_PATH, theme_name)):
+        return os.path.join(APPLICATION_PATH, theme_name)
     else:
         try: return os.path.join(RESOURCES_DIR, theme_name)
         except: return os.path.join(RESOURCES_DIR, "boiiiwd_theme.json")
@@ -190,7 +190,7 @@ def convert_speed(speed_bytes):
 def create_default_config():
     config = configparser.ConfigParser()
     config["Settings"] = {
-        "SteamCMDPath": application_path,
+        "SteamCMDPath": APPLICATION_PATH,
         "DestinationFolder": "",
         "checkforupdtes": "on",
         "console": "off"
@@ -201,7 +201,7 @@ def create_default_config():
 def get_steamcmd_path():
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_PATH)
-    return config.get("Settings", "SteamCMDPath", fallback=application_path)
+    return config.get("Settings", "SteamCMDPath", fallback=APPLICATION_PATH)
 
 def extract_json_data(json_path, key):
     with open(json_path, 'r') as json_file:

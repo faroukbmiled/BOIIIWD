@@ -81,7 +81,7 @@ class UpdateWindow(ctk.CTkToplevel):
 
     def update_progress_bar(self):
         try:
-            update_dir = os.path.join(application_path, UPDATER_FOLDER)
+            update_dir = os.path.join(APPLICATION_PATH, UPDATER_FOLDER)
             response = requests.get(LATEST_RELEASE_URL, stream=True)
             response.raise_for_status()
             current_exe = sys.argv[0]
