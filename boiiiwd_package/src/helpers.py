@@ -217,13 +217,26 @@ def convert_bytes_to_readable(size_in_bytes, no_symb=None):
         size_in_bytes /= 1024.0
 
 def get_workshop_file_size(workshop_id, raw=None):
-    data = item_steam_api(workshop_id)
+    url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}&searchtext="
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, "html.parser")
+    file_size_element = soup.find("div", class_="detailsStatRight")
+
     try:
-        file_size_in_bytes = data['response']['publishedfiledetails'][0]['file_size']
         if raw:
+            file_size_text = file_size_element.get_text(strip=True)
+            file_size_text = file_size_text.replace(",", "")
+            file_size_in_mb = float(file_size_text.replace(" MB", ""))
+            file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
             return convert_bytes_to_readable(file_size_in_bytes)
-        else:
+
+        if file_size_element:
+            file_size_text = file_size_element.get_text(strip=True)
+            file_size_text = file_size_text.replace(",", "")
+            file_size_in_mb = float(file_size_text.replace(" MB", ""))
+            file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
             return file_size_in_bytes
+        return None
     except:
         return None
 
