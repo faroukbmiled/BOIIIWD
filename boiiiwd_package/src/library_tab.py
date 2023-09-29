@@ -1,4 +1,3 @@
-from turtle import window_height
 from src.imports import *
 from src.helpers import *
 
