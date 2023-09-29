@@ -4,4 +4,5 @@ requests==2.31.0
 ctktooltip==0.8
 CTkMessagebox==2.5
 psutil==5.9.5
-pyinstaller
+pyinstaller==5.12.0
+ujson==5.8.0
