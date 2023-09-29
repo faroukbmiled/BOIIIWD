@@ -675,7 +675,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 def check_for_updates():
                     try:
 
-                        if check_item_date(down_date, date_updated):
+                        if check_item_date(down_date, date_updated, format=True):
                             if show_message("There is an update.", "Press download to redownload!", icon="info", _return=True, option_1="No", option_2="Download"):
                                 if main_app.app.is_downloading:
                                     show_message("Error", "Please wait for the current download to finish or stop it then restart.", icon="cancel")
@@ -909,7 +909,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
             _, _, x, y = get_window_size_from_registry()
             top.geometry(f"{window_width}x{window_height}+{x}+{y}")
             top.maxsize(window_width + 100, 450)
-            top.attributes('-topmost', 'true')
+            top.minsize(window_width - 5, window_height-100)
             top.resizable(True, True)
             selected_id_list = []
             cevent = Event()
@@ -1006,5 +1006,6 @@ class LibraryTab(ctk.CTkScrollableFrame):
             show_message("Error", f"{e}", icon="cancel")
 
         finally:
+            main_app.app.after(150, lambda: top.focus_force())
             self.update_button.configure(state="normal", width=65, height=20)
             self.update_tooltip.configure(message='Check items for updates')
