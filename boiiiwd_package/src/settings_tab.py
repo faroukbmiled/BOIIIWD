@@ -174,7 +174,7 @@ class SettingsTab(ctk.CTkFrame):
                     if response == "No":
                         return
                     elif response == "Ok":
-                        os.system(f"notepad {os.path.join(application_path, 'config.ini')}")
+                        os.system(f"notepad {os.path.join(APPLICATION_PATH, 'config.ini')}")
                     else:
                         return
                 self.after(0, callback)
@@ -363,7 +363,7 @@ class SettingsTab(ctk.CTkFrame):
         if setting == "theme":
             theme_config = check_config("theme", "boiiiwd_theme.json")
 
-            if os.path.exists(os.path.join(application_path, theme_config)):
+            if os.path.exists(os.path.join(APPLICATION_PATH, theme_config)):
                 return "Custom"
 
             if theme_config == "boiiiwd_theme.json":
@@ -377,11 +377,11 @@ class SettingsTab(ctk.CTkFrame):
             return 1 if check_config(setting, fallback) == "on" else 0
 
     def boiiiwd_custom_theme(self, disable_only=None):
-        file_to_rename = os.path.join(application_path, "boiiiwd_theme.json")
+        file_to_rename = os.path.join(APPLICATION_PATH, "boiiiwd_theme.json")
         if os.path.exists(file_to_rename):
             timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
             new_name = f"boiiiwd_theme_{timestamp}.json"
-            os.rename(file_to_rename, os.path.join(application_path, new_name))
+            os.rename(file_to_rename, os.path.join(APPLICATION_PATH, new_name))
 
             if not disable_only:
                 show_message("Preset file renamed", "Custom preset disabled, file has been renmaed\n* Restart the app to take effect", icon="info")
@@ -389,14 +389,15 @@ class SettingsTab(ctk.CTkFrame):
             if disable_only:
                 return
             try:
-                shutil.copy(os.path.join(RESOURCES_DIR, check_config("theme", "boiiiwd_theme.json")), os.path.join(application_path, "boiiiwd_theme.json"))
+                shutil.copy(os.path.join(RESOURCES_DIR, check_config("theme", "boiiiwd_theme.json")), os.path.join(APPLICATION_PATH, "boiiiwd_theme.json"))
             except:
-                shutil.copy(os.path.join(RESOURCES_DIR, "boiiiwd_theme.json"), os.path.join(application_path, "boiiiwd_theme.json"))
+                shutil.copy(os.path.join(RESOURCES_DIR, "boiiiwd_theme.json"), os.path.join(APPLICATION_PATH, "boiiiwd_theme.json"))
             show_message("Preset file created", "You can now edit boiiiwd_theme.json in the current directory to your liking\n* Edits will apply next time you open boiiiwd\n* Program will always take boiiiwd_theme.json as the first theme option if found\n* Click on this button again to disable your custom theme or just rename boiiiwd_theme.json", icon="info")
 
     def settings_check_for_updates(self):
         check_for_updates_func(self, ignore_up_todate=False)
 
+    # make this rename to {id}_duplicate as a fallback
     def rename_all_folders(self, option):
         boiiiFolder = main_app.app.edit_destination_folder.get()
         maps_folder = os.path.join(boiiiFolder, "mods")
@@ -436,14 +437,20 @@ class SettingsTab(ctk.CTkFrame):
                     folder_to_rename = os.path.join(folder_path, folder_name)
                     new_folder_name = new_name
                     while new_folder_name in processed_names:
-                        new_folder_name += f"_{publisher_id}"
+                        if option == "PublisherID":
+                            new_folder_name += f"_duplicated"
+                        else:
+                            new_folder_name += f"_{publisher_id}"
                         if folder_name == new_folder_name:
                             rename_flag = False
                             break
                     new_path = os.path.join(folder_path, new_folder_name)
 
                     while os.path.exists(new_path):
-                        new_folder_name += f"_{publisher_id}"
+                        if option == "PublishedID":
+                            new_folder_name += f"_duplicated"
+                        else:
+                            new_folder_name += f"_{publisher_id}"
                         if folder_name == new_folder_name:
                             rename_flag = False
                             break
@@ -618,7 +625,7 @@ class SettingsTab(ctk.CTkFrame):
                             if os.path.exists(json_file_path):
                                 workshop_id = extract_json_data(json_file_path, "PublisherID")
                                 mod_type = extract_json_data(json_file_path, "Type")
-                                items_file = os.path.join(application_path, LIBRARY_FILE)
+                                items_file = os.path.join(APPLICATION_PATH, LIBRARY_FILE)
                                 item_exists,_ = main_app.app.library_tab.item_exists_in_file(items_file, workshop_id)
 
                                 if item_exists:

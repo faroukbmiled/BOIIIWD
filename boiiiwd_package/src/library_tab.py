@@ -256,7 +256,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         folders_to_process = [mods_folder, maps_folder]
         ui_items_to_add = []
 
-        items_file = os.path.join(application_path, LIBRARY_FILE)
+        items_file = os.path.join(APPLICATION_PATH, LIBRARY_FILE)
         if not self.is_valid_json_format(items_file):
             try: self.rename_invalid_json_file(items_file)
             except: pass
@@ -409,7 +409,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                             creation_timestamp = zone_path.stat().st_mtime
                             date_added = datetime.fromtimestamp(creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
 
-                        items_file = os.path.join(application_path, LIBRARY_FILE)
+                        items_file = os.path.join(APPLICATION_PATH, LIBRARY_FILE)
 
                         item_info = {
                             "id": workshop_id,
@@ -425,7 +425,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
             show_message("Error updating json file", f"Error while updating library json file\n{e}")
 
     def remove_item(self, item, folder, id):
-        items_file = os.path.join(application_path, LIBRARY_FILE)
+        items_file = os.path.join(APPLICATION_PATH, LIBRARY_FILE)
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
             if item == label.cget("text"):
                 self.added_folders.remove(os.path.basename(folder))
@@ -622,7 +622,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                              url, workshop_id, invalid_warn, folder, description ,online,offline_date=None):
         def main_thread():
             try:
-                items_file = os.path.join(application_path, LIBRARY_FILE)
+                items_file = os.path.join(APPLICATION_PATH, LIBRARY_FILE)
                 top = ctk.CTkToplevel(self)
                 if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
                     top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
@@ -849,51 +849,40 @@ class LibraryTab(ctk.CTkScrollableFrame):
         # Needed to refresh item that needs updates
         self.to_update.clear()
 
-        def if_id_needs_update(item_id, item_date, text):
+        def if_ids_need_update(item_ids, item_dates, texts):
             try:
-                headers = {'Cache-Control': 'no-cache'}
-                url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={item_id}"
-                response = requests.get(url, headers=headers)
-                response.raise_for_status()
-                content = response.text
-                soup = BeautifulSoup(content, "html.parser")
-                details_stats_container = soup.find("div", class_="detailsStatsContainerRight")
-                details_stat_elements = details_stats_container.find_all("div", class_="detailsStatRight")
-                try:
-                    date_updated = details_stat_elements[2].text.strip()
-                except:
-                    try:
-                        date_updated = details_stat_elements[1].text.strip()
-                    except:
-                        return False
+                item_data = get_item_dates(item_ids)
 
-                if check_item_date(item_date, date_updated):
-                    self.to_update.add(text + f" | Updated: {date_updated}")
-                    return True
-                else:
-                    return False
+                for item_id, date_updated in item_data.items():
+                    item_date = item_dates[item_id]
+                    date_updated = datetime.fromtimestamp(date_updated)
+
+                    if check_item_date(item_date, date_updated):
+                        date_updated = date_updated.strftime("%d %b @ %I:%M%p, %Y")
+                        self.to_update.add(texts[item_id] + f" | Updated: {date_updated}")
 
             except Exception as e:
-                show_message("Error", f"Error occured\n{e}", icon="cancel")
-                return
+                show_message("Error", f"Error occurred\n{e}", icon="cancel")
 
         def check_for_update():
             try:
                 lib_data = None
 
-                if not os.path.exists(os.path.join(application_path, LIBRARY_FILE)):
-                    show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct boiii path!, you also need to have at lease 1 item!")
+                if not os.path.exists(os.path.join(APPLICATION_PATH, LIBRARY_FILE)):
+                    show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct boiii path!, you also need to have at least 1 item!")
                     return
 
-                with open(LIBRARY_FILE, 'r') as file:
+                with open(os.path.join(APPLICATION_PATH, LIBRARY_FILE), 'r') as file:
                     lib_data = json.load(file)
 
-                for item in lib_data:
-                    item_id = item["id"]
-                    item_date = item["date"]
-                    if_id_needs_update(item_id, item_date, item["text"])
+                item_ids = [item["id"] for item in lib_data]
+                item_dates = {item["id"]: item["date"] for item in lib_data}
+                texts = {item["id"]: item["text"] for item in lib_data}
+
+                if_ids_need_update(item_ids, item_dates, texts)
+
             except:
-                show_message("Error checking for item updates!", "Please visit library tab at least once with the correct boiii path!, you also need to have at lease 1 item!")
+                show_message("Error checking for item updates!", "Please visit the library tab at least once with the correct boiii path!, you also need to have at least 1 item!")
                 return
 
         check_for_update()
@@ -916,7 +905,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
             top.title("Item updater - List of Items with Updates - Click to select 1 or more")
             longest_text_length = max(len(text) for text in self.to_update)
             window_width = longest_text_length * 6 + 5
-            top.geometry(f"{window_width}x450")
+            _, _, x, y = get_window_size_from_registry()
+            top.geometry(f"{window_width}x450+{x}+{y}")
             top.attributes('-topmost', 'true')
             top.resizable(True, True)
             selected_id_list = []

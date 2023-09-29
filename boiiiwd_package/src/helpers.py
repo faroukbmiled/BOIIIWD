@@ -25,8 +25,8 @@ def save_config(name, value):
         config.write(config_file)
 
 def check_custom_theme(theme_name):
-    if os.path.exists(os.path.join(application_path, theme_name)):
-        return os.path.join(application_path, theme_name)
+    if os.path.exists(os.path.join(APPLICATION_PATH, theme_name)):
+        return os.path.join(APPLICATION_PATH, theme_name)
     else:
         try: return os.path.join(RESOURCES_DIR, theme_name)
         except: return os.path.join(RESOURCES_DIR, "boiiiwd_theme.json")
@@ -171,20 +171,10 @@ def initialize_steam(master):
 
 @if_internet_available
 def valid_id(workshop_id):
-    url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
-    response = requests.get(url)
-    response.raise_for_status()
-    content = response.text
-    soup = BeautifulSoup(content, "html.parser")
-
-    try:
-        soup.find("div", class_="rightDetailsBlock").text.strip()
-        soup.find("div", class_="workshopItemTitle").text.strip()
-        soup.find("div", class_="detailsStatRight").text.strip()
-        stars_div = soup.find("div", class_="fileRatingDetails")
-        stars_div.find("img")["src"]
+    data = item_steam_api(workshop_id)
+    if "consumer_app_id" in data['response']['publishedfiledetails'][0]:
         return True
-    except:
+    else:
         return False
 
 def convert_speed(speed_bytes):
@@ -200,7 +190,7 @@ def convert_speed(speed_bytes):
 def create_default_config():
     config = configparser.ConfigParser()
     config["Settings"] = {
-        "SteamCMDPath": application_path,
+        "SteamCMDPath": APPLICATION_PATH,
         "DestinationFolder": "",
         "checkforupdtes": "on",
         "console": "off"
@@ -211,7 +201,7 @@ def create_default_config():
 def get_steamcmd_path():
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_PATH)
-    return config.get("Settings", "SteamCMDPath", fallback=application_path)
+    return config.get("Settings", "SteamCMDPath", fallback=APPLICATION_PATH)
 
 def extract_json_data(json_path, key):
     with open(json_path, 'r') as json_file:
@@ -227,26 +217,13 @@ def convert_bytes_to_readable(size_in_bytes, no_symb=None):
         size_in_bytes /= 1024.0
 
 def get_workshop_file_size(workshop_id, raw=None):
-    url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}&searchtext="
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
-    file_size_element = soup.find("div", class_="detailsStatRight")
-
+    data = item_steam_api(workshop_id)
     try:
+        file_size_in_bytes = data['response']['publishedfiledetails'][0]['file_size']
         if raw:
-            file_size_text = file_size_element.get_text(strip=True)
-            file_size_text = file_size_text.replace(",", "")
-            file_size_in_mb = float(file_size_text.replace(" MB", ""))
-            file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
             return convert_bytes_to_readable(file_size_in_bytes)
-
-        if file_size_element:
-            file_size_text = file_size_element.get_text(strip=True)
-            file_size_text = file_size_text.replace(",", "")
-            file_size_in_mb = float(file_size_text.replace(" MB", ""))
-            file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
+        else:
             return file_size_in_bytes
-        return None
     except:
         return None
 
@@ -351,16 +328,9 @@ def reset_steamcmd(no_warn=None):
 
 def get_item_name(id):
     try:
-        url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={id}"
-        response = requests.get(url)
-        response.raise_for_status()
-        content = response.text
-
-        soup = BeautifulSoup(content, "html.parser")
-
+        data = item_steam_api(id)
         try:
-            map_name = soup.find("div", class_="workshopItemTitle").text.strip()
-            name = map_name[:32] + "..." if len(map_name) > 32 else map_name
+            name = data['response']['publishedfiledetails'][0]['title']
             return name
         except:
             return True
@@ -381,14 +351,9 @@ def check_item_date(down_date, date_updated):
         except ValueError:
             download_datetime = datetime.strptime(down_date + f", {current_year}", date_format_with_added_year)
 
-        try:
-            upload_datetime = datetime.strptime(date_updated, date_format_with_year)
-        except ValueError:
-            upload_datetime = datetime.strptime(date_updated + f", {current_year}", date_format_with_added_year)
-
-        if upload_datetime >= download_datetime:
+        if date_updated >= download_datetime:
             return True
-        elif upload_datetime < download_datetime:
+        elif date_updated < download_datetime:
             return False
     except:
         return False
@@ -413,5 +378,40 @@ def save_window_size_to_registry(width, height, x, y):
             winreg.SetValueEx(key, "WindowY", 0, winreg.REG_SZ, str(y))
     except Exception as e:
         print(f"Error saving to registry: {e}")
+
+def item_steam_api(id):
+    try:
+        url = ITEM_INFO_API
+        data = {
+            "itemcount": 1,
+            "publishedfileids[0]": int(id),
+        }
+        info = requests.post(url, data=data)
+        return info.json()
+
+    except Exception as e:
+        print(e)
+        return False
+
+def get_item_dates(ids):
+    try:
+        data = {
+            "itemcount": len(ids),
+        }
+        for i, id in enumerate(ids):
+            data[f"publishedfileids[{i}]"] = int(id)
+
+        info = requests.post(ITEM_INFO_API, data=data)
+        response_data = info.json()
+
+        if "response" in response_data:
+            item_details = response_data["response"]["publishedfiledetails"]
+            return {item["publishedfileid"]: item["time_updated"] for item in item_details}
+
+        return {}
+
+    except Exception as e:
+        print(e)
+        return {}
 
 # End helper functions

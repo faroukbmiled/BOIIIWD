@@ -430,7 +430,7 @@ class BOIIIWD(ctk.CTk):
     def load_configs(self):
         if os.path.exists(CONFIG_FILE_PATH):
             destination_folder = check_config("DestinationFolder", "")
-            steamcmd_path = check_config("SteamCMDPath", application_path)
+            steamcmd_path = check_config("SteamCMDPath", APPLICATION_PATH)
             new_appearance_mode = check_config("appearance", "Dark")
             new_scaling = check_config("scaling", 1.0)
             self.edit_destination_folder.delete(0, "end")
@@ -453,7 +453,7 @@ class BOIIIWD(ctk.CTk):
             scaling_int = math.trunc(scaling_float)
             self.settings_tab.scaling_optionemenu.set(f"{scaling_int}%")
             self.edit_steamcmd_path.delete(0, "end")
-            self.edit_steamcmd_path.insert(0, application_path)
+            self.edit_steamcmd_path.insert(0, APPLICATION_PATH)
             create_default_config()
 
     def help_queue_text_func(self, event=None):
@@ -522,11 +522,11 @@ class BOIIIWD(ctk.CTk):
     @if_internet_available
     def download_steamcmd(self):
         self.edit_steamcmd_path.delete(0, "end")
-        self.edit_steamcmd_path.insert(0, application_path)
+        self.edit_steamcmd_path.insert(0, APPLICATION_PATH)
         save_config("DestinationFolder" ,self.edit_destination_folder.get())
         save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
         steamcmd_url = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip"
-        steamcmd_zip_path = os.path.join(application_path, "steamcmd.zip")
+        steamcmd_zip_path = os.path.join(APPLICATION_PATH, "steamcmd.zip")
 
         try:
             response = requests.get(steamcmd_url)
@@ -536,7 +536,7 @@ class BOIIIWD(ctk.CTk):
                 zip_file.write(response.content)
 
             with zipfile.ZipFile(steamcmd_zip_path, "r") as zip_ref:
-                zip_ref.extractall(application_path)
+                zip_ref.extractall(APPLICATION_PATH)
 
             if check_steamcmd():
                 os.remove(fr"{steamcmd_zip_path}")
@@ -1286,7 +1286,7 @@ class BOIIIWD(ctk.CTk):
                     if os.path.exists(json_file_path):
                         self.label_speed.configure(text="Installing...")
                         mod_type = extract_json_data(json_file_path, "Type")
-                        items_file = os.path.join(application_path, LIBRARY_FILE)
+                        items_file = os.path.join(APPLICATION_PATH, LIBRARY_FILE)
                         item_exists,_ = self.library_tab.item_exists_in_file(items_file, workshop_id)
 
                         if item_exists:
@@ -1552,7 +1552,7 @@ class BOIIIWD(ctk.CTk):
                 if os.path.exists(json_file_path):
                     self.label_speed.configure(text="Installing...")
                     mod_type = extract_json_data(json_file_path, "Type")
-                    items_file = os.path.join(application_path, LIBRARY_FILE)
+                    items_file = os.path.join(APPLICATION_PATH, LIBRARY_FILE)
                     item_exists,_ = self.library_tab.item_exists_in_file(items_file, workshop_id)
 
                     if item_exists:
