@@ -1,3 +1,4 @@
+from turtle import window_height
 from src.imports import *
 from src.helpers import *
 
@@ -904,9 +905,11 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
             top.title("Item updater - List of Items with Updates - Click to select 1 or more")
             longest_text_length = max(len(text) for text in self.to_update)
+            window_height = len(self.to_update) * 70
             window_width = longest_text_length * 6 + 5
             _, _, x, y = get_window_size_from_registry()
-            top.geometry(f"{window_width}x450+{x}+{y}")
+            top.geometry(f"{window_width}x{window_height}+{x}+{y}")
+            top.maxsize(window_width + 100, 450)
             top.attributes('-topmost', 'true')
             top.resizable(True, True)
             selected_id_list = []
