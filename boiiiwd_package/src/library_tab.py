@@ -851,21 +851,11 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
         def if_id_needs_update(item_id, item_date, text):
             try:
-                headers = {'Cache-Control': 'no-cache'}
-                url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={item_id}"
-                response = requests.get(url, headers=headers)
-                response.raise_for_status()
-                content = response.text
-                soup = BeautifulSoup(content, "html.parser")
-                details_stats_container = soup.find("div", class_="detailsStatsContainerRight")
-                details_stat_elements = details_stats_container.find_all("div", class_="detailsStatRight")
-                try:
-                    date_updated = details_stat_elements[2].text.strip()
-                except:
-                    try:
-                        date_updated = details_stat_elements[1].text.strip()
-                    except:
-                        return False
+                item_data = item_steam_api(item_id)
+                date_updated = get_item_date(item_data)
+
+                if not date_updated:
+                    return False
 
                 if check_item_date(item_date, date_updated):
                     self.to_update.add(text + f" | Updated: {date_updated}")

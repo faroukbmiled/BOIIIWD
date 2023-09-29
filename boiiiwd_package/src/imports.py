@@ -38,6 +38,7 @@ else:
 
 CONFIG_FILE_PATH = "config.ini"
 GITHUB_REPO = "faroukbmiled/BOIIIWD"
+ITEM_INFO_API = "https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 LIBRARY_FILE = "boiiiwd_library.json"
 RESOURCES_DIR = os.path.join(os.path.dirname(__file__), '..', 'resources')

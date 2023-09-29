@@ -381,14 +381,11 @@ def check_item_date(down_date, date_updated):
         except ValueError:
             download_datetime = datetime.strptime(down_date + f", {current_year}", date_format_with_added_year)
 
-        try:
-            upload_datetime = datetime.strptime(date_updated, date_format_with_year)
-        except ValueError:
-            upload_datetime = datetime.strptime(date_updated + f", {current_year}", date_format_with_added_year)
+        date_updated_datetime = datetime.fromtimestamp(date_updated)
 
-        if upload_datetime >= download_datetime:
+        if date_updated_datetime >= download_datetime:
             return True
-        elif upload_datetime < download_datetime:
+        elif date_updated_datetime < download_datetime:
             return False
     except:
         return False
@@ -413,5 +410,26 @@ def save_window_size_to_registry(width, height, x, y):
             winreg.SetValueEx(key, "WindowY", 0, winreg.REG_SZ, str(y))
     except Exception as e:
         print(f"Error saving to registry: {e}")
+
+def item_steam_api(id):
+    try:
+        url = ITEM_INFO_API
+        data = {
+            "itemcount": 1,
+            "publishedfileids[0]": int(id),
+        }
+        info = requests.post(url, data=data)
+        return info.json()
+
+    except Exception as e:
+        print(e)
+        return False
+
+def get_item_date(data):
+    try:
+        time_updated = data["response"]["publishedfiledetails"][0]["time_updated"]
+        return time_updated
+    except:
+        return None
 
 # End helper functions
