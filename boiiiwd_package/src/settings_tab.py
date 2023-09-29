@@ -721,7 +721,7 @@ class SettingsTab(ctk.CTkFrame):
             main_app.app.create_context_menu(boiii_folder_entry)
             copy_var.set(True)
             progress_bar.set(0)
-            top.after(120, top.focus_force)
+            top.after(150, top.focus_force)
 
         except Exception as e:
             show_message("Error", f"{e}", icon="cancel")

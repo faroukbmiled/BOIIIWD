@@ -909,7 +909,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
             _, _, x, y = get_window_size_from_registry()
             top.geometry(f"{window_width}x{window_height}+{x}+{y}")
             top.maxsize(window_width + 100, 450)
-            top.attributes('-topmost', 'true')
+            top.minsize(window_width - 5, window_height-100)
             top.resizable(True, True)
             selected_id_list = []
             cevent = Event()
@@ -1006,5 +1006,6 @@ class LibraryTab(ctk.CTkScrollableFrame):
             show_message("Error", f"{e}", icon="cancel")
 
         finally:
+            main_app.app.after(150, lambda: top.focus_force())
             self.update_button.configure(state="normal", width=65, height=20)
             self.update_tooltip.configure(message='Check items for updates')
