@@ -675,7 +675,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 def check_for_updates():
                     try:
 
-                        if check_item_date(down_date, date_updated):
+                        if check_item_date(down_date, date_updated, format=True):
                             if show_message("There is an update.", "Press download to redownload!", icon="info", _return=True, option_1="No", option_2="Download"):
                                 if main_app.app.is_downloading:
                                     show_message("Error", "Please wait for the current download to finish or stop it then restart.", icon="cancel")

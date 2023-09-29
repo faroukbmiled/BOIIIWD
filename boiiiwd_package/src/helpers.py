@@ -354,7 +354,7 @@ def get_item_name(id):
 def show_noti(widget ,message, event=None, noti_dur=3.0, topmost=False):
     CTkToolTip(widget, message=message, is_noti=True, noti_event=event, noti_dur=noti_dur, topmost=topmost)
 
-def check_item_date(down_date, date_updated):
+def check_item_date(down_date, date_updated, format=False):
     current_year = datetime.now().year
     date_format_with_year = "%d %b, %Y @ %I:%M%p"
     date_format_with_added_year = "%d %b @ %I:%M%p, %Y"
@@ -363,6 +363,12 @@ def check_item_date(down_date, date_updated):
             download_datetime = datetime.strptime(down_date, date_format_with_year)
         except ValueError:
             download_datetime = datetime.strptime(down_date + f", {current_year}", date_format_with_added_year)
+
+        if format:
+            try:
+                date_updated = datetime.strptime(date_updated, date_format_with_year)
+            except ValueError:
+                date_updated = datetime.strptime(date_updated + f", {current_year}", date_format_with_added_year)
 
         if date_updated >= download_datetime:
             return True
