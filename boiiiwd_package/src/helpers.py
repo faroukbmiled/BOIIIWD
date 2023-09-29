@@ -171,20 +171,10 @@ def initialize_steam(master):
 
 @if_internet_available
 def valid_id(workshop_id):
-    url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
-    response = requests.get(url)
-    response.raise_for_status()
-    content = response.text
-    soup = BeautifulSoup(content, "html.parser")
-
-    try:
-        soup.find("div", class_="rightDetailsBlock").text.strip()
-        soup.find("div", class_="workshopItemTitle").text.strip()
-        soup.find("div", class_="detailsStatRight").text.strip()
-        stars_div = soup.find("div", class_="fileRatingDetails")
-        stars_div.find("img")["src"]
+    data = item_steam_api(workshop_id)
+    if "consumer_app_id" in data['response']['publishedfiledetails'][0]:
         return True
-    except:
+    else:
         return False
 
 def convert_speed(speed_bytes):
@@ -227,26 +217,13 @@ def convert_bytes_to_readable(size_in_bytes, no_symb=None):
         size_in_bytes /= 1024.0
 
 def get_workshop_file_size(workshop_id, raw=None):
-    url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}&searchtext="
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
-    file_size_element = soup.find("div", class_="detailsStatRight")
-
+    data = item_steam_api(workshop_id)
     try:
+        file_size_in_bytes = data['response']['publishedfiledetails'][0]['file_size']
         if raw:
-            file_size_text = file_size_element.get_text(strip=True)
-            file_size_text = file_size_text.replace(",", "")
-            file_size_in_mb = float(file_size_text.replace(" MB", ""))
-            file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
             return convert_bytes_to_readable(file_size_in_bytes)
-
-        if file_size_element:
-            file_size_text = file_size_element.get_text(strip=True)
-            file_size_text = file_size_text.replace(",", "")
-            file_size_in_mb = float(file_size_text.replace(" MB", ""))
-            file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
+        else:
             return file_size_in_bytes
-        return None
     except:
         return None
 
@@ -351,16 +328,9 @@ def reset_steamcmd(no_warn=None):
 
 def get_item_name(id):
     try:
-        url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={id}"
-        response = requests.get(url)
-        response.raise_for_status()
-        content = response.text
-
-        soup = BeautifulSoup(content, "html.parser")
-
+        data = item_steam_api(id)
         try:
-            map_name = soup.find("div", class_="workshopItemTitle").text.strip()
-            name = map_name[:32] + "..." if len(map_name) > 32 else map_name
+            name = data['response']['publishedfiledetails'][0]['title']
             return name
         except:
             return True
