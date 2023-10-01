@@ -824,6 +824,11 @@ class BOIIIWD(ctk.CTk):
                         return True
 
             return False
+        except:
+            try:
+                os.remove(temp_file_path)
+            except:
+                return False
         finally:
             os.remove(temp_file_path)
 
@@ -896,13 +901,13 @@ class BOIIIWD(ctk.CTk):
 
                 #wait for process
                 while True:
+                    if process.poll() is not None:
+                        break
                     if not self.is_downloading:
                         if self.check_steamcmd_stdout(stdout_path, wsid):
                             start_time = time.time()
                             self.is_downloading = True
                     elapsed_time = time.time() - start_time
-                    if process.poll() is not None:
-                        break
                     time.sleep(1)
 
                 # print("Broken freeeee!")
@@ -911,7 +916,10 @@ class BOIIIWD(ctk.CTk):
                     with open(stdout_path, 'w') as file:
                         file.write('')
                 except:
-                    os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
+                    try:
+                        os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
+                    except:
+                        pass
 
                 if not self.settings_tab.stopped:
                     self.settings_tab.steam_fail_counter = self.settings_tab.steam_fail_counter + 1
