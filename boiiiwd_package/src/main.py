@@ -797,7 +797,14 @@ class BOIIIWD(ctk.CTk):
 
     def check_steamcmd_stdout(self, log_file_path, target_item_id):
         temp_file_path = log_file_path + '.temp'
-        shutil.copy2(log_file_path, temp_file_path)
+        if not os.path.exists(log_file_path):
+            if os.path.isdir(log_file_path):
+                os.makedirs(log_file_path)
+            else:
+                open(log_file_path, 'w').close()
+
+        try: shutil.copy2(log_file_path, temp_file_path)
+        except: return False
 
         try:
             with open(temp_file_path, 'r') as log_file:
@@ -830,7 +837,8 @@ class BOIIIWD(ctk.CTk):
             except:
                 return False
         finally:
-            os.remove(temp_file_path)
+            try: os.remove(temp_file_path)
+            except: pass
 
     def skip_current_queue_item(self):
         if self.button_download._state == "normal":
