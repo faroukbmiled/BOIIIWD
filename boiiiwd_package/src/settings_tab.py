@@ -437,7 +437,7 @@ class SettingsTab(ctk.CTkFrame):
                     folder_to_rename = os.path.join(folder_path, folder_name)
                     new_folder_name = new_name
                     while new_folder_name in processed_names:
-                        if option == "PublisherID":
+                        if new_name == publisher_id:
                             new_folder_name += f"_duplicated"
                         else:
                             new_folder_name += f"_{publisher_id}"
@@ -447,7 +447,7 @@ class SettingsTab(ctk.CTkFrame):
                     new_path = os.path.join(folder_path, new_folder_name)
 
                     while os.path.exists(new_path):
-                        if option == "PublishedID":
+                        if new_name == publisher_id:
                             new_folder_name += f"_duplicated"
                         else:
                             new_folder_name += f"_{publisher_id}"
