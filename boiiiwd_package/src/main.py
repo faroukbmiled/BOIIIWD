@@ -799,9 +799,13 @@ class BOIIIWD(ctk.CTk):
         temp_file_path = log_file_path + '.temp'
         if not os.path.exists(log_file_path):
             if os.path.isdir(log_file_path):
-                os.makedirs(log_file_path)
+                try: os.makedirs(log_file_path)
+                except: return False
             else:
-                open(log_file_path, 'w').close()
+                try:
+                    with open(log_file_path, 'w') as file:
+                        file.write('')
+                except: pass
 
         try: shutil.copy2(log_file_path, temp_file_path)
         except: return False
@@ -866,13 +870,15 @@ class BOIIIWD(ctk.CTk):
         stdout_path = os.path.join(steamcmd_path, "logs", "workshop_log.txt")
         timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
-        os.makedirs(os.path.dirname(stdout_path), exist_ok=True)
+        try: os.makedirs(os.path.dirname(stdout_path), exist_ok=True)
+        except: pass
 
         try:
             with open(stdout_path, 'w') as file:
                 file.write('')
         except:
-            os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
+            try: os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
+            except: pass
 
         show_console = subprocess.CREATE_NO_WINDOW
         if self.settings_tab.console:
@@ -924,10 +930,8 @@ class BOIIIWD(ctk.CTk):
                     with open(stdout_path, 'w') as file:
                         file.write('')
                 except:
-                    try:
-                        os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
-                    except:
-                        pass
+                    try: os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
+                    except: pass
 
                 if not self.settings_tab.stopped:
                     self.settings_tab.steam_fail_counter = self.settings_tab.steam_fail_counter + 1
@@ -958,12 +962,15 @@ class BOIIIWD(ctk.CTk):
                 creationflags=show_console
             )
 
+            #wait for process
             while True:
-                if not self.is_downloading:
-                    if self.check_steamcmd_stdout(stdout_path, wsid):
-                        self.is_downloading = True
                 if process.poll() is not None:
                     break
+                if not self.is_downloading:
+                    if self.check_steamcmd_stdout(stdout_path, wsid):
+                        start_time = time.time()
+                        self.is_downloading = True
+                elapsed_time = time.time() - start_time
                 time.sleep(1)
 
             # print("Broken freeeee!")
@@ -972,7 +979,8 @@ class BOIIIWD(ctk.CTk):
                 with open(stdout_path, 'w') as file:
                     file.write('')
             except:
-                os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
+                try: os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
+                except: pass
 
             if not os.path.exists(map_folder):
                 show_message("SteamCMD has terminated", "SteamCMD has been terminated\nAnd failed to download the map/mod, try again or enable continuous download in settings")
