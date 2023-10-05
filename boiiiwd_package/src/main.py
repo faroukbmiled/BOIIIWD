@@ -948,6 +948,7 @@ class BOIIIWD(ctk.CTk):
                     except:
                         if self.fail_threshold >= 25:
                             reset_steamcmd(no_warn=True)
+                            self.settings_tab.steamcmd_reset = True
                             self.settings_tab.steam_fail_counter = 0
                             self.fail_threshold = 0
                 continue
