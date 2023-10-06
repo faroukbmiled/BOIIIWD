@@ -1017,7 +1017,7 @@ class BOIIIWD(ctk.CTk):
         self.after(0, callback)
 
     @if_internet_available
-    def download_map(self, update=False):
+    def download_map(self, update=False, invalid_item_folder=None):
         self.is_downloading = False
         self.fail_threshold = 0
         if not self.is_pressed:
@@ -1029,7 +1029,7 @@ class BOIIIWD(ctk.CTk):
                 start_down_thread = threading.Thread(target=self.queue_download_thread, args=(update,))
                 start_down_thread.start()
             else:
-                start_down_thread = threading.Thread(target=self.download_thread, args=(update,))
+                start_down_thread = threading.Thread(target=self.download_thread, args=(update, invalid_item_folder,))
                 start_down_thread.start()
         else:
             show_message("Warning", "Already pressed, Please wait.")
@@ -1389,7 +1389,7 @@ class BOIIIWD(ctk.CTk):
             self.stop_download()
             self.is_pressed = False
 
-    def download_thread(self, update=None):
+    def download_thread(self, update=None, invalid_item_folder=None):
         try:
             self.settings_tab.stopped = False
 
@@ -1580,20 +1580,23 @@ class BOIIIWD(ctk.CTk):
                     items_file = os.path.join(APPLICATION_PATH, LIBRARY_FILE)
                     item_exists,_ = self.library_tab.item_exists_in_file(items_file, workshop_id)
 
-                    if item_exists:
-                        get_folder_name = self.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
-                        if get_folder_name:
-                            folder_name = get_folder_name
+                    if invalid_item_folder:
+                        folder_name = invalid_item_folder
+                    else:
+                        if item_exists:
+                            get_folder_name = self.library_tab.get_item_by_id(items_file, workshop_id, return_option="folder_name")
+                            if get_folder_name:
+                                folder_name = get_folder_name
+                            else:
+                                try:
+                                    folder_name = extract_json_data(json_file_path, self.settings_tab.folder_options.get())
+                                except:
+                                    folder_name = extract_json_data(json_file_path, "publisherID")
                         else:
                             try:
                                 folder_name = extract_json_data(json_file_path, self.settings_tab.folder_options.get())
                             except:
                                 folder_name = extract_json_data(json_file_path, "publisherID")
-                    else:
-                        try:
-                            folder_name = extract_json_data(json_file_path, self.settings_tab.folder_options.get())
-                        except:
-                            folder_name = extract_json_data(json_file_path, "publisherID")
 
                     if mod_type == "mod":
                         path_folder = os.path.join(destination_folder, "mods")
