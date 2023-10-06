@@ -909,7 +909,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
             _, _, x, y = get_window_size_from_registry()
             top.geometry(f"{window_width}x{window_height}+{x}+{y}")
             top.maxsize(window_width + 100, 450)
-            top.minsize(window_width - 5, window_height-100)
+            top.minsize(window_width - 5, 250)
             top.resizable(True, True)
             selected_id_list = []
             cevent = Event()
