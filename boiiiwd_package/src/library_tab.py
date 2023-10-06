@@ -635,6 +635,16 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
                 if offline_date:
                     down_date = offline_date
+                elif invalid_warn:
+                    try:
+                        zone_path = Path(folder) / "zone"
+                        for ff_file in zone_path.glob("*.ff"):
+                            if ff_file.exists():
+                                creation_timestamp = ff_file.stat().st_mtime
+                                break
+                        down_date = datetime.fromtimestamp(creation_timestamp).strftime("%d %b, %Y @ %I:%M%p")
+                    except:
+                        down_date = "Failed to get download date"
                 else:
                     down_date = self.get_item_by_id(items_file, workshop_id, 'date')
 

@@ -1625,7 +1625,8 @@ class BOIIIWD(ctk.CTk):
                         remove_tree(map_folder)
                         remove_tree(download_folder)
 
-                    self.library_tab.update_item(self.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
+                    if not invalid_item_folder:
+                        self.library_tab.update_item(self.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
                     self.show_complete_message(message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)")
                     self.button_download.configure(state="normal")
                     self.button_stop.configure(state="disabled")
