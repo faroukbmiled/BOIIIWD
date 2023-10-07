@@ -581,7 +581,7 @@ class SettingsTab(ctk.CTkFrame):
                     boiii_folder_entry.insert(0, selected_folder)
 
             def open_steam_browser():
-                selected_folder = ctk.filedialog.askdirectory(title="Select Steam Folder (ex: C:\Program Files (x86)\Steam)")
+                selected_folder = ctk.filedialog.askdirectory(title="Select Steam Folder (ex: C:/Program Files (x86)/Steam)")
                 if selected_folder:
                     steam_folder_entry.delete(0, "end")
                     steam_folder_entry.insert(0, selected_folder)
@@ -600,7 +600,7 @@ class SettingsTab(ctk.CTkFrame):
                         boiii_folder = boiii_folder_entry.get()
 
                         if not os.path.exists(steam_folder) and not os.path.exists(ws_folder):
-                            show_message("Not found", "Either you have no items downloaded from Steam or wrong path, please recheck path (ex: C:\Program Files (x86)\Steam)")
+                            show_message("Not found", "Either you have no items downloaded from Steam or wrong path, please recheck path (ex: C:/Program Files (x86)/Steam)")
                             return
 
                         if not os.path.exists(boiii_folder):

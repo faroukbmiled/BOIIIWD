@@ -901,7 +901,7 @@ class BOIIIWD(ctk.CTk):
             start_time = 0
             while not os.path.exists(map_folder) and not self.settings_tab.stopped:
                 process = subprocess.Popen(
-                    [steamcmd_path + "\steamcmd.exe"] + command.split(),
+                    [steamcmd_path + "/steamcmd.exe"] + command.split(),
                     stdout=None if self.settings_tab.console else subprocess.PIPE,
                     stderr=None if self.settings_tab.console else subprocess.PIPE,
                     text=True,
@@ -954,7 +954,7 @@ class BOIIIWD(ctk.CTk):
                 continue
         else:
             process = subprocess.Popen(
-                [steamcmd_path + "\steamcmd.exe"] + command.split(),
+                [steamcmd_path + "/steamcmd.exe"] + command.split(),
                 stdout=None if self.settings_tab.console else subprocess.PIPE,
                 stderr=None if self.settings_tab.console else subprocess.PIPE,
                 text=True,
