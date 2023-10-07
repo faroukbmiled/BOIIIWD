@@ -52,6 +52,10 @@ or <br>
 2113146805
 ```
 
+## Hidden Config Options:
+- Added a way to update invalid Items (in details) -> add ```update_invalid = yes``` to config.ini
+- Added a way to download Beta items that normally will throw invalid item warning -> add ```skip_invalid = no``` to config.ini
+
 <a name="notes"></a>
 ### Notes:
 * It saves your input except for workshop id <br>
