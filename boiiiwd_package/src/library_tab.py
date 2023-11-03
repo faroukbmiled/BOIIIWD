@@ -869,12 +869,13 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 item_data = get_item_dates(item_ids)
 
                 for item_id, date_updated in item_data.items():
-                    item_date = item_dates[item_id]
+                    item_date = item_dates[str(item_id)] if str(item_id) in item_dates else ""
                     date_updated = datetime.fromtimestamp(date_updated)
 
                     if check_item_date(item_date, date_updated):
-                        date_updated = date_updated.strftime("%d %b @ %I:%M%p, %Y")
-                        self.to_update.add(texts[item_id] + f" | Updated: {date_updated}")
+                        if item_date != "":
+                            date_updated = date_updated.strftime("%d %b @ %I:%M%p, %Y")
+                            self.to_update.add(texts[item_id] + f" | Updated: {date_updated}")
 
             except Exception as e:
                 show_message("Error", f"Error occurred\n{e}", icon="cancel")

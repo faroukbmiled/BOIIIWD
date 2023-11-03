@@ -428,12 +428,12 @@ def get_item_dates(ids):
 
         if "response" in response_data:
             item_details = response_data["response"]["publishedfiledetails"]
-            return {item["publishedfileid"]: item["time_updated"] for item in item_details}
+            return {item["publishedfileid"]: item["time_updated"] for item in item_details if "time_updated" in item}
 
         return {}
 
     except Exception as e:
-        print(e)
+        print("Error: could not fetch all update times. Breaking early.")
         return {}
 
 # End helper functions
