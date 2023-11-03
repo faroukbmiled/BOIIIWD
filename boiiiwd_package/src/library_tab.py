@@ -269,7 +269,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     curr_folder_name = zone_path.parent.name
                     workshop_id = extract_json_data(json_path, "PublisherID") or "None"
                     name = re.sub(r'\^\d', '', extract_json_data(json_path, "Title")) or "None"
-                    name = name[:45] + "..." if len(name) > 45 else name
+                    name = name[:60] + "..." if len(name) > 60 else name
                     item_type = extract_json_data(json_path, "Type") or "None"
                     folder_name = extract_json_data(json_path, "FolderName") or "None"
                     folder_size_bytes = get_folder_size(zone_path.parent)
@@ -387,7 +387,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     workshop_id = extract_json_data(json_path, "PublisherID")
                     if workshop_id == id:
                         name = extract_json_data(json_path, "Title").replace(">", "").replace("^", "")
-                        name = name[:45] + "..." if len(name) > 45 else name
+                        name = name[:60] + "..." if len(name) > 60 else name
                         item_type = extract_json_data(json_path, "Type")
                         folder_name = extract_json_data(json_path, "FolderName")
                         size = convert_bytes_to_readable(get_folder_size(zone_path.parent))
@@ -587,7 +587,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 if json_path.exists():
                     workshop_id = extract_json_data(json_path, "PublisherID") or "None"
                     name = re.sub(r'\^\w+', '', extract_json_data(json_path, "Title")) or "None"
-                    map_name = name[:45] + "..." if len(name) > 45 else name
+                    map_name = name[:60] + "..." if len(name) > 60 else name
                     map_mod_type = extract_json_data(json_path, "Type") or "None"
                     preview_iamge = json_path.parent / "previewimage.png"
                     if preview_iamge.exists():

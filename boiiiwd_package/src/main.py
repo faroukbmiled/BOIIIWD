@@ -173,7 +173,7 @@ class BOIIIWD(ctk.CTk):
         self.normal_color = get_button_state_colors(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")), "button_normal_state_color")
         self.progress_color = get_button_state_colors(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")), "progress_bar_fill_color")
         self.settings_tab.appearance_mode_optionemenu.set("Dark")
-        self.settings_tab.scaling_optionemenu.set("100%")
+        self.settings_tab.scaling_optionemenu.set("80%")
         self.progress_bar.set(0.0)
         self.progress_bar.configure(progress_color=self.progress_color)
         self.hide_settings_widgets()

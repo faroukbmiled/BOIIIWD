@@ -142,7 +142,7 @@ class SettingsTab(ctk.CTkFrame):
         self.appearance_mode_optionemenu.grid(row=7, column=1, padx=20, pady=(0, 0))
         self.scaling_label = ctk.CTkLabel(right_frame, text="UI Scaling:", anchor="n")
         self.scaling_label.grid(row=8, column=1, padx=20, pady=(10, 0))
-        self.scaling_optionemenu = ctk.CTkOptionMenu(right_frame, values=["80%", "90%", "100%", "110%", "120%"],
+        self.scaling_optionemenu = ctk.CTkOptionMenu(right_frame, values=["60%", "70%", "80%", "90%", "100%", "110%", "120%"],
                                                                command=master.change_scaling_event)
         self.scaling_optionemenu.grid(row=9, column=1, padx=20, pady=(0, 0))
 
