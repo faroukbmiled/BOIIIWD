@@ -354,7 +354,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         for item in ui_items_to_add:
             self.add_item_helper(*item)
 
-        if not self.file_cleaned and os.path.exists(items_file):
+        if os.path.exists(items_file):
             self.file_cleaned = True
             self.clean_json_file(items_file)
 
