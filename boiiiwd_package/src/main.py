@@ -23,37 +23,40 @@ class BOIIIWD(ctk.CTk):
             self.geometry(f"{920}x{560}")
 
         self.minsize(920, 560)
+        ctk.set_window_scaling(float(check_config("scaling", 1.0)) + 0.25)
 
         if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
             self.wm_iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico"))
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-        # Qeue frame/tab, keep here or app will start shrinked eveytime
-        self.qeueuframe = ctk.CTkFrame(self)
-        self.qeueuframe.columnconfigure(1, weight=1)
-        self.qeueuframe.columnconfigure(2, weight=1)
-        self.qeueuframe.columnconfigure(3, weight=1)
-        self.qeueuframe.rowconfigure(1, weight=1)
-        self.qeueuframe.rowconfigure(2, weight=1)
-        self.qeueuframe.rowconfigure(3, weight=1)
-        self.qeueuframe.rowconfigure(4, weight=1)
+        # Queue frame/tab, keep here or app will start shrinked eveytime
+        self.queue_tab_enabled = False # Enable Queue Tab
+        
+        self.queueframe = ctk.CTkFrame(self)
+        self.queueframe.columnconfigure(1, weight=1)
+        self.queueframe.columnconfigure(2, weight=1)
+        self.queueframe.columnconfigure(3, weight=1)
+        self.queueframe.rowconfigure(1, weight=1)
+        self.queueframe.rowconfigure(2, weight=0)
+        self.queueframe.rowconfigure(3, weight=0)
+        self.queueframe.rowconfigure(4, weight=0)
 
-        self.workshop_queue_label = ctk.CTkLabel(self.qeueuframe, text="Workshop IDs/Links -> press help to see examples:")
+        self.workshop_queue_label = ctk.CTkLabel(self.queueframe, text="Batch Downloader:")
         self.workshop_queue_label.grid(row=0, column=0, padx=(20, 20), pady=(20, 20), sticky="wns")
 
-        self.help_button = ctk.CTkButton(master=self.qeueuframe, text="Help", command=self.help_queue_text_func, width=10, height=10, fg_color="#585858")
-        self.help_button.grid(row=0, column=0, padx=(352, 0), pady=(23, 0), sticky="en")
+        self.help_button = ctk.CTkButton(master=self.queueframe, text="Help", command=self.help_queue_text_func, width=10, height=10, fg_color="#585858")
+        self.help_button.grid(row=0, column=3, padx=(0, 20), pady=(20, 0), sticky="en")
         self.help_restore_content = None
 
-        self.queuetextarea = ctk.CTkTextbox(master=self.qeueuframe, font=("", 15))
-        self.queuetextarea.grid(row=1, column=0, columnspan=4, padx=(20, 20), pady=(0, 20), sticky="nwse")
+        self.queuetextarea = ctk.CTkTextbox(master=self.queueframe, font=("", 15))
+        self.queuetextarea.grid(row=1, column=0, columnspan=4, padx=(20, 20), pady=(0, 40), sticky="nwse")
 
-        self.status_text = ctk.CTkLabel(self.qeueuframe, text="Status: Standby!")
-        self.status_text.grid(row=3, column=0, padx=(20, 20), pady=(0, 20), sticky="ws")
+        self.status_text = ctk.CTkLabel(self.queueframe, text="Status: Standby!")
+        self.status_text.grid(row=1, column=0, padx=(20, 20), pady=(40, 0), sticky="ws")
 
-        self.skip_boutton = ctk.CTkButton(master=self.qeueuframe, text="Skip", command=self.skip_current_queue_item, width=10, height=10, fg_color="#585858")
+        self.skip_button = ctk.CTkButton(master=self.queueframe, text="Skip", command=self.skip_current_queue_item, width=10, height=10, fg_color="#585858")
 
-        self.qeueuframe.grid_remove()
+        self.queueframe.grid_remove()
 
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)
@@ -77,19 +80,23 @@ class BOIIIWD(ctk.CTk):
         self.txt_label = ctk.CTkLabel(self.sidebar_frame, text="- Sidebar -", font=(font, 17))
         self.txt_label.grid(row=1, column=0, padx=20, pady=(20, 10))
         self.sidebar_main = ctk.CTkButton(self.sidebar_frame, height=28)
-        self.sidebar_main.grid(row=2, column=0, padx=10, pady=(20, 6))
-        self.sidebar_queue = ctk.CTkButton(self.sidebar_frame, height=28)
-        self.sidebar_queue.grid(row=3, column=0, padx=10, pady=6)
+        self.sidebar_main.grid(row=2, column=0, padx=10, pady=(20, 6)) 
+        if self.queue_tab_enabled:
+            self.sidebar_queue = ctk.CTkButton(self.sidebar_frame, height=28)
+            self.sidebar_queue.grid(row=3, column=0, padx=10, pady=6)
         self.sidebar_library = ctk.CTkButton(self.sidebar_frame, height=28)
         self.sidebar_library.grid(row=4, column=0, padx=10, pady=6, sticky="n")
+        self.launch_game = ctk.CTkButton(self.sidebar_frame, text="Launch game", command=self.settings_launch_game, height=28)
+        self.launch_game.grid(row=5, column=0, padx=10, pady=6, sticky="n")
         self.sidebar_settings = ctk.CTkButton(self.sidebar_frame, height=28)
-        self.sidebar_settings.grid(row=5, column=0, padx=10, pady=6, sticky="n")
+        self.sidebar_settings.grid(row=6, column=0, padx=10, pady=6, sticky="n")
 
         # create optionsframe
         self.optionsframe = ctk.CTkFrame(self)
-        self.optionsframe.grid(row=0, column=1, rowspan=2, padx=(0, 20), pady=(20, 0), sticky="nsew")
+        self.optionsframe.grid(row=0, column=1, rowspan=1, padx=(0, 20), pady=(20, 0), sticky="nsew")
         self.txt_main = ctk.CTkLabel(self.optionsframe, text="💎 BOIIIWD 💎", font=(font, 20))
-        self.txt_main.grid(row=0, column=1, columnspan=5, padx=0, pady=(20, 20), sticky="n")
+        self.txt_main.grid(row=0, column=1, columnspan=1, padx=0, pady=(20, 20), sticky="n")
+        self.queueframe.grid(row=1, column=1, rowspan=1, padx=(0, 20), pady=(20, 0), sticky="nsew")
 
         # create slider and progressbar frame
         self.slider_progressbar_frame = ctk.CTkFrame(self)
@@ -102,9 +109,6 @@ class BOIIIWD(ctk.CTk):
         self.slider_progressbar_frame.rowconfigure(1, weight=1)
         self.slider_progressbar_frame.rowconfigure(2, weight=1)
         self.slider_progressbar_frame.rowconfigure(3, weight=1)
-
-        # self.spacer = ctk.CTkLabel(master=self.slider_progressbar_frame, text="")
-        # self.spacer.grid(row=0, column=0, columnspan=1)
 
         self.label_speed = ctk.CTkLabel(master=self.slider_progressbar_frame, text="Awaiting Download!")
         self.label_speed.grid(row=1, column=0, padx=20, pady=(0, 10), sticky="w")
@@ -127,46 +131,27 @@ class BOIIIWD(ctk.CTk):
 
         # options frame
         self.optionsframe.columnconfigure(1, weight=1)
-        self.optionsframe.columnconfigure(2, weight=1)
-        self.optionsframe.columnconfigure(3, weight=1)
-        self.optionsframe.rowconfigure(1, weight=1)
-        self.optionsframe.rowconfigure(2, weight=1)
-        self.optionsframe.rowconfigure(3, weight=1)
-        self.optionsframe.rowconfigure(4, weight=1)
+        self.optionsframe.columnconfigure(2, weight=0)
+        self.optionsframe.columnconfigure(3, weight=0)
+        self.optionsframe.rowconfigure(1, weight=0)
+        self.optionsframe.rowconfigure(2, weight=0)
+        self.optionsframe.rowconfigure(3, weight=0)
+        self.optionsframe.rowconfigure(4, weight=0)
 
-        self.label_workshop_id = ctk.CTkLabel(master=self.optionsframe, text="Enter the Workshop ID or Link of the map/mod you want to download:\n")
-        self.label_workshop_id.grid(row=1, column=1, padx=20, pady=(10, 0), columnspan=4, sticky="ws")
+        self.label_workshop_id = ctk.CTkLabel(master=self.optionsframe, text="Enter a Workshop ID or Link to download:\n")
+        self.label_workshop_id.grid(row=1, column=1, padx=(10, 5), pady=(10, 0), columnspan=1, sticky="ws")
 
         self.check_if_changed = ctk.StringVar()
-        self.check_if_changed.trace_add("write", self.id_chnaged_handler)
+        self.check_if_changed.trace_add("write", self.id_changed_handler)
         self.edit_workshop_id = ctk.CTkEntry(master=self.optionsframe, textvariable=self.check_if_changed)
-        self.edit_workshop_id.grid(row=2, column=1, padx=20, pady=(0, 10), columnspan=4, sticky="ewn")
+        self.edit_workshop_id.grid(row=2, column=1, padx=(5, 5), pady=(0, 10), columnspan=1, sticky="ewn")
 
         self.button_browse = ctk.CTkButton(master=self.optionsframe, text="Workshop", command=self.open_browser, width=10)
-        self.button_browse.grid(row=2, column=5, padx=(0, 20), pady=(0, 10), sticky="en")
-        self.button_browse_tooltip = CTkToolTip(self.button_browse, message="Will open steam workshop for boiii in your browser")
+        self.button_browse.grid(row=2, column=2, padx=(5, 5), pady=(0, 10), sticky="en")
+        self.button_browse_tooltip = CTkToolTip(self.button_browse, message="Will open steam workshop in your browser")
 
         self.info_button = ctk.CTkButton(master=self.optionsframe, text="Details", command=self.show_map_info, width=10)
-        self.info_button.grid(row=2, column=5, padx=(0, 20), pady=(0, 10), sticky="wn")
-
-        self.label_destination_folder = ctk.CTkLabel(master=self.optionsframe, text='Enter Your boiii folder:')
-        self.label_destination_folder.grid(row=3, column=1, padx=20, pady=(0, 0), columnspan=4, sticky="ws")
-
-        self.edit_destination_folder = ctk.CTkEntry(master=self.optionsframe, placeholder_text="Your boiii Instalation folder")
-        self.edit_destination_folder.grid(row=4, column=1, padx=20, pady=(0, 25), columnspan=4, sticky="ewn")
-
-        self.button_BOIII_browse = ctk.CTkButton(master=self.optionsframe, text="Select", command=self.open_BOIII_browser)
-        self.button_BOIII_browse.grid(row=4, column=5, padx=(0, 20), pady=(0, 10), sticky="ewn")
-
-        self.label_steamcmd_path = ctk.CTkLabel(master=self.optionsframe, text="Enter SteamCMD path:")
-        self.label_steamcmd_path.grid(row=5, column=1, padx=20, pady=(0, 0), columnspan=3, sticky="wn")
-
-        self.edit_steamcmd_path = ctk.CTkEntry(master=self.optionsframe, placeholder_text="Enter your SteamCMD path")
-        self.edit_steamcmd_path.grid(row=6, column=1, padx=20, pady=(0, 30), columnspan=4, sticky="ewn")
-
-        self.button_steamcmd_browse = ctk.CTkButton(master=self.optionsframe, text="Select", command=self.open_steamcmd_path_browser)
-        self.button_steamcmd_browse.grid(row=6, column=5, padx=(0, 20), pady=(0, 30), sticky="ewn")
-
+        self.info_button.grid(row=2, column=3, padx=(5, 10), pady=(0, 10), sticky="wn")
 
         # set default values
         self.active_color = get_button_state_colors(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")), "button_active_state_color")
@@ -179,27 +164,26 @@ class BOIIIWD(ctk.CTk):
         self.hide_settings_widgets()
         self.button_stop.configure(state="disabled")
         self.is_pressed = False
-        self.queue_enabled = False
         self.queue_stop_button = False
         self.is_downloading = False
         self.item_skipped = False
         self.fail_threshold = 0
 
-        # sidebar windows bouttons
+        # sidebar windows buttons
         self.sidebar_main.configure(command=self.main_button_event, text="Main ⬇️", fg_color=(self.active_color), state="active")
         self.sidebar_library.configure(text="Library 📙", command=self.library_button_event)
-        self.sidebar_queue.configure(text="Queue 🚧", command=self.queue_button_event)
+        if self.queue_tab_enabled: self.sidebar_queue.configure(text="Queue 🚧", command=self.queue_button_event)
         sidebar_settings_button_image = os.path.join(RESOURCES_DIR, "sett10.png")
         self.sidebar_settings.configure(command=self.settings_button_event, text="", image=ctk.CTkImage(Image.open(sidebar_settings_button_image), size=(int(35), int(35))), fg_color="transparent", width=45, height=45)
         self.sidebar_settings_tooltip = CTkToolTip(self.sidebar_settings, message="Settings")
         self.sidebar_library_tooltip = CTkToolTip(self.sidebar_library, message="Experimental")
-        self.sidebar_queue_tooltip = CTkToolTip(self.sidebar_queue, message="Experimental")
+        if self.queue_tab_enabled: self.sidebar_queue_tooltip = CTkToolTip(self.sidebar_queue, message="Experimental")
         self.bind("<Configure>", lambda e: self.save_window_size_position())
 
         # context_menus
         self.create_context_menu(self.edit_workshop_id)
-        self.create_context_menu(self.edit_destination_folder)
-        self.create_context_menu(self.edit_steamcmd_path)
+        self.create_context_menu(self.settings_tab.edit_destination_folder)
+        self.create_context_menu(self.settings_tab.edit_steamcmd_path)
         self.create_context_menu(self.queuetextarea, textbox=True)
         self.create_context_menu(self.library_tab.filter_entry, textbox=False, library=True)
         # valid event required for filter_items()
@@ -332,12 +316,16 @@ class BOIIIWD(ctk.CTk):
             print("Invalid geometry format:", geometry)
 
     def on_closing(self):
-        save_config("DestinationFolder" ,self.edit_destination_folder.get())
-        save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
+        save_config("DestinationFolder",self.settings_tab.edit_destination_folder.get())
+        save_config("SteamCMDPath",self.settings_tab.edit_steamcmd_path.get())
+        startupexe = str(self.settings_tab.edit_startup_exe.get())
+        launchargs = str(self.settings_tab.edit_launch_args.get())
+        save_config("GameExecutable",startupexe if not isNullOrWhiteSpace(startupexe) else "BlackOps3")
+        save_config("LaunchParameters",launchargs if not isNullOrWhiteSpace(launchargs) else " ")
         self.stop_download(on_close=True)
         os._exit(0)
 
-    def id_chnaged_handler(self, some=None, other=None ,shit=None):
+    def id_changed_handler(self, some=None, other=None ,shit=None):
         self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
 
     def check_for_updates(self):
@@ -350,16 +338,22 @@ class BOIIIWD(ctk.CTk):
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         ctk.set_widget_scaling(new_scaling_float)
+        ctk.set_window_scaling(new_scaling_float+0.25)
         save_config("scaling", str(new_scaling_float))
 
     def hide_main_widgets(self):
         self.optionsframe.grid_forget()
         self.slider_progressbar_frame.grid_forget()
+        self.hide_queue_widgets()
+        
+    def use_queue_download(self):
+        return not self.queuetextarea.get("1.0", "end").isspace()
 
     def show_main_widgets(self):
         self.title("BOIII Workshop Downloader - Main")
         self.slider_progressbar_frame.grid(row=2, column=1, rowspan=1, padx=(0, 20), pady=(20, 20), sticky="nsew")
-        self.optionsframe.grid(row=0, column=1, rowspan=2, padx=(0, 20), pady=(20, 0), sticky="nsew")
+        self.optionsframe.grid(row=0, column=1, rowspan=1, padx=(0, 20), pady=(20, 0), sticky="nsew")
+        self.queueframe.grid(row=1, column=1, rowspan=1, padx=(0, 20), pady=(20, 0), sticky="nsew")
 
     def hide_settings_widgets(self):
         self.settings_tab.grid_forget()
@@ -374,26 +368,24 @@ class BOIIIWD(ctk.CTk):
 
     def show_library_widgets(self):
         self.title("BOIII Workshop Downloader - Library  ➜  Loading... ⏳")
-        status = self.library_tab.load_items(self.edit_destination_folder.get())
+        status = self.library_tab.load_items(self.settings_tab.edit_destination_folder.get())
         self.library_tab.grid(row=0, rowspan=3, column=1, padx=(0, 20), pady=(20, 20), sticky="nsew")
         self.title(f"BOIII Workshop Downloader - Library  ➜  {status}")
 
     def show_queue_widgets(self):
         self.title("BOIII Workshop Downloader - Queue")
         self.optionsframe.grid_forget()
-        self.queue_enabled = True
         self.slider_progressbar_frame.grid(row=2, column=1, rowspan=1, padx=(0, 20), pady=(20, 20), sticky="nsew")
-        self.qeueuframe.grid(row=0, column=1, rowspan=2, padx=(0, 20), pady=(20, 0), sticky="nsew")
+        self.queueframe.grid(row=0, column=1, rowspan=2, padx=(0, 20), pady=(20, 0), sticky="nsew")
 
     def hide_queue_widgets(self):
-        self.queue_enabled = False
-        self.qeueuframe.grid_forget()
+        self.queueframe.grid_forget()
 
     def main_button_event(self):
         self.sidebar_main.configure(state="active", fg_color=(self.active_color))
         self.sidebar_settings.configure(state="normal", fg_color="transparent")
         self.sidebar_library.configure(state="normal", fg_color=(self.normal_color))
-        self.sidebar_queue.configure(state="normal", fg_color=(self.normal_color))
+        if self.queue_tab_enabled: self.sidebar_queue.configure(state="normal", fg_color=(self.normal_color))
         self.hide_settings_widgets()
         self.hide_library_widgets()
         self.hide_queue_widgets()
@@ -402,7 +394,7 @@ class BOIIIWD(ctk.CTk):
     def settings_button_event(self):
         self.sidebar_main.configure(state="normal", fg_color=(self.normal_color))
         self.sidebar_library.configure(state="normal", fg_color=(self.normal_color))
-        self.sidebar_queue.configure(state="normal", fg_color=(self.normal_color))
+        if self.queue_tab_enabled: self.sidebar_queue.configure(state="normal", fg_color=(self.normal_color))
         self.sidebar_settings.configure(state="active", fg_color=(self.active_color))
         self.hide_main_widgets()
         self.hide_library_widgets()
@@ -412,7 +404,7 @@ class BOIIIWD(ctk.CTk):
     def library_button_event(self):
         self.sidebar_main.configure(state="normal", fg_color=(self.normal_color))
         self.sidebar_settings.configure(state="normal", fg_color="transparent")
-        self.sidebar_queue.configure(state="normal", fg_color=(self.normal_color))
+        if self.queue_tab_enabled: self.sidebar_queue.configure(state="normal", fg_color=(self.normal_color))
         self.sidebar_library.configure(state="active", fg_color=(self.active_color))
         self.hide_main_widgets()
         self.hide_settings_widgets()
@@ -423,7 +415,7 @@ class BOIIIWD(ctk.CTk):
         self.sidebar_main.configure(state="normal", fg_color=(self.normal_color))
         self.sidebar_settings.configure(state="normal", fg_color="transparent")
         self.sidebar_library.configure(state="normal", fg_color=(self.normal_color))
-        self.sidebar_queue.configure(state="active", fg_color=(self.active_color))
+        if self.queue_tab_enabled: self.sidebar_queue.configure(state="active", fg_color=(self.active_color))
         self.hide_settings_widgets()
         self.hide_library_widgets()
         self.show_queue_widgets()
@@ -432,12 +424,19 @@ class BOIIIWD(ctk.CTk):
         if os.path.exists(CONFIG_FILE_PATH):
             destination_folder = check_config("DestinationFolder", "")
             steamcmd_path = check_config("SteamCMDPath", APPLICATION_PATH)
+            startup_exe = check_config("GameExecutable", "BlackOps3")
+            launch_params = check_config("LaunchParameters", None)      
             new_appearance_mode = check_config("appearance", "Dark")
             new_scaling = check_config("scaling", 1.0)
-            self.edit_destination_folder.delete(0, "end")
-            self.edit_destination_folder.insert(0, destination_folder)
-            self.edit_steamcmd_path.delete(0, "end")
-            self.edit_steamcmd_path.insert(0, steamcmd_path)
+            self.settings_tab.edit_destination_folder.delete(0, "end")
+            self.settings_tab.edit_destination_folder.insert(0, destination_folder)
+            self.settings_tab.edit_steamcmd_path.delete(0, "end")
+            self.settings_tab.edit_steamcmd_path.insert(0, steamcmd_path)
+            self.settings_tab.edit_startup_exe.delete(0, "end")
+            self.settings_tab.edit_startup_exe.insert(0, startup_exe)
+            if not isNullOrWhiteSpace(launch_params):
+                self.settings_tab.edit_launch_args.delete(0, "end")
+                self.settings_tab.edit_launch_args.insert(0, launch_params)
             ctk.set_appearance_mode(new_appearance_mode)
             ctk.set_widget_scaling(float(new_scaling))
             self.settings_tab.appearance_mode_optionemenu.set(new_appearance_mode)
@@ -453,18 +452,20 @@ class BOIIIWD(ctk.CTk):
             scaling_float = float(new_scaling)*100
             scaling_int = math.trunc(scaling_float)
             self.settings_tab.scaling_optionemenu.set(f"{scaling_int}%")
-            self.edit_steamcmd_path.delete(0, "end")
-            self.edit_steamcmd_path.insert(0, APPLICATION_PATH)
+            self.settings_tab.edit_steamcmd_path.delete(0, "end")
+            self.settings_tab.edit_steamcmd_path.insert(0, APPLICATION_PATH)
+            self.settings_tab.edit_startup_exe.delete(0, "end")
+            self.settings_tab.edit_startup_exe.insert(0, "BlackOps3")
             create_default_config()
 
     def help_queue_text_func(self, event=None):
         textarea_content = self.queuetextarea.get("1.0", "end").strip()
-        help_text = "3010399939,2976006537,2118338989,...\nor:\n3010399939\n2976006537\n2113146805\n..."
+        help_text = "3010399939,2976006537,2118338989 \n\nor:\n\n3010399939\n2976006537\n2113146805"
         if any(char.strip() for char in textarea_content):
             if help_text in textarea_content:
-                self.workshop_queue_label.configure(text="Workshop IDs/Links => press help to see examples:")
+                self.workshop_queue_label.configure(text="Batch Downloader:")
                 self.help_button.configure(text="Help")
-                self.queuetextarea.configure(state="normal")
+                self.queuetextarea.configure(state="normal",text_color="#fcfcfc")
                 self.queuetextarea.delete(1.0, "end")
                 self.queuetextarea.insert(1.0, "")
                 if self.help_restore_content:
@@ -473,37 +474,37 @@ class BOIIIWD(ctk.CTk):
                     self.queuetextarea.insert(1.0, "")
             else:
                 if not help_text in textarea_content:
-                        self.help_restore_content = textarea_content
-                self.workshop_queue_label.configure(text="Workshop IDs/Links => press help to see examples:")
+                    self.help_restore_content = textarea_content
+                self.workshop_queue_label.configure(text="Batch Downloader:")
                 self.help_button.configure(text="Restore")
-                self.queuetextarea.configure(state="normal")
+                self.queuetextarea.configure(state="normal",text_color="#fcfcfc")
                 self.queuetextarea.delete(1.0, "end")
                 self.queuetextarea.insert(1.0, "")
-                self.workshop_queue_label.configure(text="Workshop IDs/Links => press restore to remove examples:")
+                self.workshop_queue_label.configure(text="Batch Downloader Example:")
                 self.queuetextarea.insert(1.0, help_text)
-                self.queuetextarea.configure(state="disabled")
+                self.queuetextarea.configure(state="disabled", text_color="gray74")
         else:
             self.help_restore_content = textarea_content
-            self.workshop_queue_label.configure(text="Workshop IDs/Links => press restore to remove examples:")
+            self.workshop_queue_label.configure(text="Batch Downloader Example:")
             self.help_button.configure(text="Restore")
             self.queuetextarea.insert(1.0, help_text)
-            self.queuetextarea.configure(state="disabled")
+            self.queuetextarea.configure(state="disabled", text_color="gray74")
 
     def open_BOIII_browser(self):
-        selected_folder = ctk.filedialog.askdirectory(title="Select boiii Folder")
+        selected_folder = ctk.filedialog.askdirectory(title="Select Game Folder")
         if selected_folder:
-            self.edit_destination_folder.delete(0, "end")
-            self.edit_destination_folder.insert(0, selected_folder)
-            save_config("DestinationFolder" ,self.edit_destination_folder.get())
-            save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
+            self.settings_tab.edit_destination_folder.delete(0, "end")
+            self.settings_tab.edit_destination_folder.insert(0, selected_folder)
+            save_config("DestinationFolder" ,self.settings_tab.edit_destination_folder.get())
+            save_config("SteamCMDPath" ,self.settings_tab.edit_steamcmd_path.get())
 
     def open_steamcmd_path_browser(self):
         selected_folder = ctk.filedialog.askdirectory(title="Select SteamCMD Folder")
         if selected_folder:
-            self.edit_steamcmd_path.delete(0, "end")
-            self.edit_steamcmd_path.insert(0, selected_folder)
-            save_config("DestinationFolder" ,self.edit_destination_folder.get())
-            save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
+            self.settings_tab.edit_steamcmd_path.delete(0, "end")
+            self.settings_tab.edit_steamcmd_path.insert(0, selected_folder)
+            save_config("DestinationFolder" ,self.settings_tab.edit_destination_folder.get())
+            save_config("SteamCMDPath" ,self.settings_tab.edit_steamcmd_path.get())
 
     def show_steam_warning_message(self):
         def callback():
@@ -519,13 +520,16 @@ class BOIIIWD(ctk.CTk):
     def open_browser(self):
         link = "https://steamcommunity.com/app/311210/workshop/"
         webbrowser.open(link)
+        
+    def settings_launch_game(self):
+        launch_game_func(check_config("destinationfolder"), self.settings_tab.edit_startup_exe.get(), self.settings_tab.edit_launch_args.get())
 
     @if_internet_available
     def download_steamcmd(self):
-        self.edit_steamcmd_path.delete(0, "end")
-        self.edit_steamcmd_path.insert(0, APPLICATION_PATH)
-        save_config("DestinationFolder" ,self.edit_destination_folder.get())
-        save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
+        self.settings_tab.edit_steamcmd_path.delete(0, "end")
+        self.settings_tab.edit_steamcmd_path.insert(0, APPLICATION_PATH)
+        save_config("DestinationFolder" ,self.settings_tab.edit_destination_folder.get())
+        save_config("SteamCMDPath" ,self.settings_tab.edit_steamcmd_path.get())
         steamcmd_url = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip"
         steamcmd_zip_path = os.path.join(APPLICATION_PATH, "steamcmd.zip")
 
@@ -847,7 +851,7 @@ class BOIIIWD(ctk.CTk):
 
     def skip_current_queue_item(self):
         if self.button_download._state == "normal":
-            self.skip_boutton.grid_remove()
+            self.skip_button.grid_remove()
             self.after(1, self.status_text.configure(text=f"Status: Standby!"))
             return
         self.settings_tab.stopped = True
@@ -859,7 +863,7 @@ class BOIIIWD(ctk.CTk):
 
         subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     creationflags=subprocess.CREATE_NO_WINDOW)
-        self.skip_boutton.grid_remove()
+        self.skip_button.grid_remove()
         self.after(2, self.status_text.configure(text=f"Status: Skipping..."))
         self.label_speed.configure(text="Network Speed: 0 KB/s")
         self.progress_text.configure(text="0%")
@@ -1012,7 +1016,7 @@ class BOIIIWD(ctk.CTk):
             msg = CTkMessagebox(title="Downloads Complete", message=message, icon="info", option_1="Launch", option_2="Ok", sound=True)
             response = msg.get()
             if response=="Launch":
-                launch_boiii_func(self.edit_destination_folder.get().strip())
+                launch_game_func(self.settings_tab.edit_destination_folder.get().strip(), self.settings_tab.edit_startup_exe.get(), self.settings_tab.edit_launch_args.get())
             if response=="Ok":
                 return
         self.after(0, callback)
@@ -1024,8 +1028,8 @@ class BOIIIWD(ctk.CTk):
         if not self.is_pressed:
             self.after(1, self.label_speed.configure(text=f"Loading..."))
             self.is_pressed = True
-            self.library_tab.load_items(self.edit_destination_folder.get(), dont_add=True)
-            if self.queue_enabled:
+            self.library_tab.load_items(self.settings_tab.edit_destination_folder.get(), dont_add=True)
+            if self.use_queue_download():
                 self.item_skipped = False
                 start_down_thread = threading.Thread(target=self.queue_download_thread, args=(update,))
                 start_down_thread.start()
@@ -1039,8 +1043,8 @@ class BOIIIWD(ctk.CTk):
         self.stopped = False
         self.queue_stop_button = False
         try:
-            save_config("DestinationFolder" ,self.edit_destination_folder.get())
-            save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
+            save_config("DestinationFolder" ,self.settings_tab.edit_destination_folder.get())
+            save_config("SteamCMDPath" ,self.settings_tab.edit_steamcmd_path.get())
 
             if not check_steamcmd():
                 self.show_steam_warning_message()
@@ -1066,7 +1070,7 @@ class BOIIIWD(ctk.CTk):
                 self.stop_download()
                 return
 
-            destination_folder = self.edit_destination_folder.get().strip()
+            destination_folder = self.settings_tab.edit_destination_folder.get().strip()
 
             if not destination_folder or not os.path.exists(destination_folder):
                 show_message("Error", "Please select a valid destination folder => in the main tab!.")
@@ -1207,9 +1211,9 @@ class BOIIIWD(ctk.CTk):
                             self.after(1, self.status_text.configure(
                                 text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | ID: {workshop_id} | {item_name} | Waiting {current_number}/{total_items}"))
                             if len(items) > 1:
-                                self.skip_boutton.grid(row=3, column=1, padx=(10, 20), pady=(0, 25), sticky="ws")
+                                self.skip_button.grid(row=3, column=1, padx=(10, 20), pady=(0, 25), sticky="ws")
                                 if index == len(items) - 1:
-                                    self.skip_boutton.grid_remove()
+                                    self.skip_button.grid_remove()
                             time.sleep(1)
                             if self.is_downloading:
                                 break
@@ -1356,7 +1360,7 @@ class BOIIIWD(ctk.CTk):
                             remove_tree(map_folder)
                             remove_tree(download_folder)
 
-                        self.library_tab.update_item(self.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
+                        self.library_tab.update_item(self.settings_tab.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
 
                         if index == len(items) - 1:
                             self.after(1, self.status_text.configure(text=f"Status: Done! => Please press stop only if you see no popup window (rare bug)"))
@@ -1379,7 +1383,7 @@ class BOIIIWD(ctk.CTk):
                     self.button_download.configure(state="normal")
                     self.button_stop.configure(state="disabled")
                     self.after(1, self.status_text.configure(text=f"Status: Done!"))
-                    self.skip_boutton.grid_remove()
+                    self.skip_button.grid_remove()
                     self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
                     self.settings_tab.stopped = True
                     self.stop_download()
@@ -1394,8 +1398,8 @@ class BOIIIWD(ctk.CTk):
         try:
             self.settings_tab.stopped = False
 
-            save_config("DestinationFolder" ,self.edit_destination_folder.get())
-            save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
+            save_config("DestinationFolder" ,self.settings_tab.edit_destination_folder.get())
+            save_config("SteamCMDPath" ,self.settings_tab.edit_steamcmd_path.get())
 
             if not check_steamcmd():
                 self.show_steam_warning_message()
@@ -1409,7 +1413,7 @@ class BOIIIWD(ctk.CTk):
 
             workshop_id = self.edit_workshop_id.get().strip()
 
-            destination_folder = self.edit_destination_folder.get().strip()
+            destination_folder = self.settings_tab.edit_destination_folder.get().strip()
 
             if not destination_folder or not os.path.exists(destination_folder):
                 show_message("Error", "Please select a valid destination folder.")
@@ -1627,7 +1631,7 @@ class BOIIIWD(ctk.CTk):
                         remove_tree(download_folder)
 
                     if not invalid_item_folder:
-                        self.library_tab.update_item(self.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
+                        self.library_tab.update_item(self.settings_tab.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
                     self.show_complete_message(message=f"{mod_type.capitalize()} files were downloaded\nYou can run the game now!\nPS: You have to restart the game \n(pressing launch will launch/restarts)")
                     self.button_download.configure(state="normal")
                     self.button_stop.configure(state="disabled")
@@ -1693,4 +1697,4 @@ class BOIIIWD(ctk.CTk):
         self.progress_bar.set(0.0)
         self.after(50, self.status_text.configure(text=f"Status: Standby!"))
         self.after(1, self.label_speed.configure(text=f"Awaiting Download!"))
-        self.skip_boutton.grid_remove()
+        self.skip_button.grid_remove()

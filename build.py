@@ -31,4 +31,4 @@ PyInstaller.__main__.run([
 # create symbolic hardlink to main directory
 if os.path.exists("BOIIIWD.exe"):
     os.remove("BOIIIWD.exe")
-os.link( 'dist/BOIIIWD.exe', 'BOIIIWD.exe' )
+os.link('dist/BOIIIWD.exe', 'BOIIIWD.exe')

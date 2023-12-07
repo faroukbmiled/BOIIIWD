@@ -258,18 +258,18 @@ def show_message(title, message, icon="warning", _return=False, option_1="No", o
             CTkMessagebox(title=title, message=message, icon=icon, sound=True)
         main_app.app.after(0, callback)
 
-def launch_boiii_func(path):
-    procname = "boiii.exe"
+def launch_game_func(path, procname="BlackOps3.exe", flags=""):
+    if not procname.endswith(('.exe','.bat','.sh','.lnk')): procname+='.exe'
     try:
         if procname in (p.name() for p in psutil.process_iter()):
             for proc in psutil.process_iter():
                 if proc.name() == procname:
                     proc.kill()
-        boiii_path = os.path.join(path, procname)
-        subprocess.Popen([boiii_path ,"-launch"] , cwd=path)
+        game_path = os.path.join(path, procname)
+        subprocess.Popen([game_path, flags] , cwd=path)
         show_message("Please wait!", "The game has launched in the background it will open up in a sec!", icon="info")
     except Exception as e:
-        show_message("Error: Failed to launch BOIII", f"Failed to launch boiii.exe\nMake sure to put in your correct boiii path\n{e}")
+        show_message(f"Error: Failed to launch game", f"Failed to start {procname}\n\nMake sure the game path is correct.\n\n{e}")
 
 def remove_tree(folder_path, show_error=None):
     if show_error:
@@ -435,5 +435,10 @@ def get_item_dates(ids):
     except Exception as e:
         print("Error: could not fetch all update times. Breaking early.")
         return {}
+    
+def isNullOrWhiteSpace(str):
+    if (str is None) or (str == "") or (str.isspace()):
+        return True
+    return False
 
 # End helper functions

@@ -28,10 +28,10 @@ class SettingsTab(ctk.CTkFrame):
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
         left_frame = ctk.CTkFrame(self)
-        left_frame.grid(row=0, column=0, padx=(20, 20), pady=(20, 0), sticky="nsew")
+        left_frame.grid(row=0, column=0, columnspan=2, padx=(20, 20), pady=(20, 0), sticky="nsew")
         left_frame.grid_columnconfigure(1, weight=1)
         right_frame = ctk.CTkFrame(self)
-        right_frame.grid(row=0, column=1, padx=(20, 20), pady=(20, 0), sticky="nsew")
+        right_frame.grid(row=0, column=2, padx=(0, 20), pady=(20, 0), sticky="nsew")
         right_frame.grid_columnconfigure(1, weight=1)
         self.update_idletasks()
 
@@ -45,7 +45,7 @@ class SettingsTab(ctk.CTkFrame):
         # Show console checkbox
         self.console_var = ctk.BooleanVar()
         self.console_var.trace_add("write", self.enable_save_button)
-        self.checkbox_show_console = ctk.CTkSwitch(left_frame, text="Console (On Download)", variable=self.console_var)
+        self.checkbox_show_console = ctk.CTkSwitch(left_frame, text="Display SteamCMD console", variable=self.console_var)
         self.checkbox_show_console.grid(row=1, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.checkbox_show_console_tooltip = CTkToolTip(self.checkbox_show_console, message="Toggle SteamCMD console\nPlease don't close the Console If you want to stop press the Stop button")
         self.console_var.set(self.load_settings("console"))
@@ -53,7 +53,7 @@ class SettingsTab(ctk.CTkFrame):
         # Show continuous checkbox
         self.continuous_var = ctk.BooleanVar()
         self.continuous_var.trace_add("write", self.enable_save_button)
-        self.checkbox_continuous = ctk.CTkSwitch(left_frame, text="Continuous Download", variable=self.continuous_var)
+        self.checkbox_continuous = ctk.CTkSwitch(left_frame, text="Continuous download", variable=self.continuous_var)
         self.checkbox_continuous.grid(row=2, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.checkbox_continuous_tooltip = CTkToolTip(self.checkbox_continuous, message="This will make sure that the download restarts and resumes! until it finishes if steamcmd crashes randomly (it will not redownload from the start)")
         self.continuous_var.set(self.load_settings("continuous_download"))
@@ -69,16 +69,16 @@ class SettingsTab(ctk.CTkFrame):
         # Show estimated_progress checkbox
         self.estimated_progress_var = ctk.BooleanVar()
         self.estimated_progress_var.trace_add("write", self.enable_save_button)
-        self.estimated_progress_cb = ctk.CTkSwitch(left_frame, text="Estimated Progress Bar", variable=self.estimated_progress_var)
+        self.estimated_progress_cb = ctk.CTkSwitch(left_frame, text="Estimated progress bar", variable=self.estimated_progress_var)
         self.estimated_progress_cb.grid(row=4, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.estimated_progress_var_tooltip = CTkToolTip(self.estimated_progress_cb, message="This will change how to progress bar works by estimating how long the download will take\
             \nThis is not accurate ,it's better than with it off which is calculating the downloaded folder size which steamcmd dumps the full size rigth mostly")
         self.estimated_progress_var.set(self.load_settings("estimated_progress", "on"))
 
-        # Show show fails checkbox
+        # Show fails checkbox
         self.show_fails_var = ctk.BooleanVar()
         self.show_fails_var.trace_add("write", self.enable_save_button)
-        self.show_fails_cb = ctk.CTkSwitch(left_frame, text="Show fails (on top of progress bar)", variable=self.show_fails_var)
+        self.show_fails_cb = ctk.CTkSwitch(left_frame, text="Show fails", variable=self.show_fails_var)
         self.show_fails_cb.grid(row=5, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.show_fails_tooltip = CTkToolTip(self.show_fails_cb, message="Display how many times steamcmd has failed/crashed\nIf the number is getting high quickly then try pressing Reset SteamCMD and try again, otherwise its fine")
         self.estimated_progress_var.set(self.load_settings("show_fails", "on"))
@@ -94,75 +94,122 @@ class SettingsTab(ctk.CTkFrame):
         # check items for update on launch
         self.check_items_var = ctk.BooleanVar()
         self.check_items_var.trace_add("write", self.enable_save_button)
-        self.check_items_ch = ctk.CTkSwitch(left_frame, text="Check Library items on launch", variable=self.check_items_var)
+        self.check_items_ch = ctk.CTkSwitch(left_frame, text="Check library items on launch", variable=self.check_items_var)
         self.check_items_ch.grid(row=7, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.check_items_tooltip = CTkToolTip(self.check_items_ch, message="This will show a window on launch of items that have pending updates -> you can open it manually from library tab")
         self.check_items_var.set(self.load_settings("check_items", "off"))
 
-        # Resetr steam on many fails
+        self.label_destination_folder = ctk.CTkLabel(left_frame, text='Enter Game folder:')
+        self.label_destination_folder.grid(row=8, column=1, padx=20, pady=(20, 0), columnspan=1, sticky="ws")
+        
+        self.entry_var1 = ctk.StringVar(value="")
+        self.edit_destination_folder = ctk.CTkEntry(left_frame, placeholder_text="game installation folder", textvariable=self.entry_var1)
+        self.edit_destination_folder.grid(row=9, column=1, padx=20, pady=(0, 10), columnspan=1, sticky="ewn")
+        self.entry_var1.trace_add("write", self.enable_save_button)
+        
+        self.button_BOIII_browse = ctk.CTkButton(left_frame, text="Select", command=self.open_BOIII_browser)
+        self.button_BOIII_browse.grid(row=9, column=2, padx=(0, 20), pady=(0, 10), sticky="ewn")
+        
+        self.label_steamcmd_path = ctk.CTkLabel(left_frame, text="Enter SteamCMD path:")
+        self.label_steamcmd_path.grid(row=10, column=1, padx=20, pady=(0, 0), columnspan=1, sticky="wn")
+
+        self.entry_var2 = ctk.StringVar(value="")
+        self.edit_steamcmd_path = ctk.CTkEntry(left_frame, placeholder_text="Enter SteamCMD path", textvariable=self.entry_var2)
+        self.edit_steamcmd_path.grid(row=11, column=1, padx=20, pady=(0, 10), columnspan=1, sticky="ewn")
+        self.entry_var2.trace_add("write", self.enable_save_button)
+
+        self.button_steamcmd_browse = ctk.CTkButton(left_frame, text="Select", command=self.open_steamcmd_path_browser)
+        self.button_steamcmd_browse.grid(row=11, column=2, padx=(0, 20), pady=(0, 10), sticky="ewn")
+        
+        self.label_launch_args = ctk.CTkLabel(left_frame, text='Launch Parameters:')
+        self.label_launch_args.grid(row=12, column=1, padx=20, pady=(0, 0), columnspan=1, sticky="ws")
+       
+        self.edit_startup_exe = ctk.CTkEntry(left_frame, placeholder_text="exe")
+        self.edit_startup_exe.grid(row=13, column=1, padx=(20,0), pady=(0, 20), columnspan=1, sticky="we")        
+
+        self.edit_launch_args = ctk.CTkEntry(left_frame, placeholder_text="launch arguments")
+        self.edit_launch_args.grid(row=13, column=1, padx=(140,20), pady=(0, 20), columnspan=2, sticky="we")
+
+        # Check for updates button n Launch game
+        self.check_for_updates = ctk.CTkButton(right_frame, text="Check for updates", command=self.settings_check_for_updates)
+        self.check_for_updates.grid(row=1, column=1, padx=20, pady=(20, 0), sticky="n")
+
+        # self.launch_game = ctk.CTkButton(right_frame, text="Launch game", command=self.settings_launch_game)
+        # self.launch_game.grid(row=2, column=1, padx=20, pady=(10, 0), sticky="n")
+
+        self.reset_steamcmd = ctk.CTkButton(right_frame, text="Reset SteamCMD", command=self.settings_reset_steamcmd)
+        self.reset_steamcmd.grid(row=3, column=1, padx=20, pady=(10, 0), sticky="n")
+        self.reset_steamcmd_tooltip = CTkToolTip(self.reset_steamcmd, message="This will remove steamapps folder + all the maps that are potentioaly corrupted\nor not so use at ur own risk (could fix some issues as well)")
+
+        self.workshop_to_gamedir = ctk.CTkButton(right_frame, text="Workshop Transfer", command=self.workshop_to_gamedir_toplevel)
+        self.workshop_to_gamedir.grid(row=4, column=1, padx=20, pady=(10, 0), sticky="n")
+        self.workshop_to_gamedir_tooltip = CTkToolTip(self.workshop_to_gamedir, message="Copy/Move maps and mods from Workshop to the game directory (opens up a window)")
+
+        # appearance
+        self.appearance_mode_label = ctk.CTkLabel(right_frame, text="Appearance:", anchor="w")
+        self.appearance_mode_label.grid(row=5, column=1, padx=20, pady=(150, 0), sticky="nw")
+        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(right_frame, values=["Light", "Dark", "System"],
+                                                                       command=master.change_appearance_mode_event)
+        self.appearance_mode_optionemenu.grid(row=6, column=1, padx=20, pady=(0, 0), sticky="nw")
+        self.scaling_label = ctk.CTkLabel(right_frame, text="UI Scaling:", anchor="w")
+        self.scaling_label.grid(row=7, column=1, padx=20, pady=(0, 0), sticky="nw")
+        self.scaling_optionemenu = ctk.CTkOptionMenu(right_frame, values=["60%", "70%", "80%", "90%", "100%", "110%"],
+                                                               command=master.change_scaling_event)
+        self.scaling_optionemenu.grid(row=8, column=1, padx=20, pady=(0, 0), sticky="nw")
+
+        # self.custom_theme = ctk.CTkButton(right_frame, text="Custom theme", command=self.boiiiwd_custom_theme)
+        # self.custom_theme.grid(row=9, column=1, padx=20, pady=(20, 0), sticky="n")
+
+        self.theme_options_label = ctk.CTkLabel(right_frame, text="Theme:", anchor="w")
+        self.theme_options_label.grid(row=9, column=1, padx=20, pady=(0, 0), sticky="nw")
+        self.theme_options = ctk.CTkOptionMenu(right_frame, values=["Default", "Blue", "Grey", "Obsidian", "Ghost","NeonBanana", "Custom"],
+                                                               command=self.theme_options_func)
+        self.theme_options.grid(row=10, column=1, padx=20, pady=(0, 0), sticky="nw")
+        self.theme_options.set(value=self.load_settings("theme", "Default"))
+        
+        # Reset steam on many fails
         self.reset_steamcmd_on_fail_var = ctk.IntVar()
         self.reset_steamcmd_on_fail_var.trace_add("write", self.enable_save_button)
-        self.reset_steamcmd_on_fail_text = ctk.CTkLabel(left_frame, text=f"Reset steamcmd: (n of fails):", anchor="w")
-        self.reset_steamcmd_on_fail_text.grid(row=8, column=1, padx=20, pady=(10, 0), sticky="nw")
-        self.reset_steamcmd_on_fail = ctk.CTkOptionMenu(left_frame, values=["5", "10", "20", "30", "40", "Custom", "Disable"], variable=self.reset_steamcmd_on_fail_var, command=self.reset_steamcmd_on_fail_func)
-        self.reset_steamcmd_on_fail.grid(row=8, column=1, padx=(190, 0), pady=(10, 0), sticky="nw")
-        self.reset_steamcmd_on_fail_tooltip = CTkToolTip(self.reset_steamcmd_on_fail, message="This actually fixes steamcmd when its crashing way too much")
+        self.reset_steamcmd_on_fail_text = ctk.CTkLabel(right_frame, text=f"Download Attempts:", anchor="w")
+        self.reset_steamcmd_on_fail_text.grid(row=11, column=1, padx=20, pady=(0, 0), sticky="nw")
+        self.reset_steamcmd_on_fail = ctk.CTkOptionMenu(right_frame, values=["5", "10", "15", "20", "Custom", "Disable"], variable=self.reset_steamcmd_on_fail_var, command=self.reset_steamcmd_on_fail_func)
+        self.reset_steamcmd_on_fail.grid(row=12, column=1, padx=20, pady=(0, 0), sticky="nw")
+        self.reset_steamcmd_on_fail_tooltip = CTkToolTip(self.reset_steamcmd_on_fail, message="Number of failed download attempts before resetting SteamCMD")
         self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "10"))
 
         # item folder naming
         self.folder_options_label_var = ctk.IntVar()
         self.folder_options_label_var.trace_add("write", self.enable_save_button)
-        self.folder_options_label = ctk.CTkLabel(left_frame, text="Items Folder Naming:", anchor="nw")
-        self.folder_options_label.grid(row=10, column=1, padx=20, pady=(10, 0), sticky="nw")
-        self.folder_options = ctk.CTkOptionMenu(left_frame, values=["PublisherID", "FolderName"], command=self.change_folder_naming,
+        self.folder_options_label = ctk.CTkLabel(right_frame, text="Items Folder Naming:", anchor="w")
+        self.folder_options_label.grid(row=13, column=1, padx=(20,0), pady=(0, 0), sticky="nw")
+        self.folder_options = ctk.CTkOptionMenu(right_frame, values=["PublisherID", "FolderName"], command=self.change_folder_naming,
                                                 variable=self.folder_options_label_var)
-        self.folder_options.grid(row=10, column=1, padx=(150, 0), pady=(3, 0), sticky="nw")
+        self.folder_options.grid(row=14, column=1, padx=20, pady=(0, 0), sticky="nw")
         self.folder_options.set(value=self.load_settings("folder_naming", "PublisherID"))
-
-        # Check for updates button n Launch boiii
-        self.check_for_updates = ctk.CTkButton(right_frame, text="Check for updates", command=self.settings_check_for_updates)
-        self.check_for_updates.grid(row=1, column=1, padx=20, pady=(20, 0), sticky="n")
-
-        self.launch_boiii = ctk.CTkButton(right_frame, text="Launch boiii", command=self.settings_launch_boiii)
-        self.launch_boiii.grid(row=2, column=1, padx=20, pady=(20, 0), sticky="n")
-
-        self.reset_steamcmd = ctk.CTkButton(right_frame, text="Reset SteamCMD", command=self.settings_reset_steamcmd)
-        self.reset_steamcmd.grid(row=3, column=1, padx=20, pady=(20, 0), sticky="n")
-        self.reset_steamcmd_tooltip = CTkToolTip(self.reset_steamcmd, message="This will remove steamapps folder + all the maps that are potentioaly corrupted\nor not so use at ur own risk (could fix some issues as well)")
-
-        self.steam_to_boiii = ctk.CTkButton(right_frame, text="Steam to boiii", command=self.from_steam_to_boiii_toplevel)
-        self.steam_to_boiii.grid(row=5, column=1, padx=20, pady=(20, 0), sticky="n")
-        self.steam_to_boiii_tooltip = CTkToolTip(self.steam_to_boiii, message="Moves/copies maps and mods from steam to boiii (opens up a window)")
-
-        # appearance
-        self.appearance_mode_label = ctk.CTkLabel(right_frame, text="Appearance Mode:", anchor="n")
-        self.appearance_mode_label.grid(row=6, column=1, padx=20, pady=(20, 0))
-        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(right_frame, values=["Light", "Dark", "System"],
-                                                                       command=master.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=7, column=1, padx=20, pady=(0, 0))
-        self.scaling_label = ctk.CTkLabel(right_frame, text="UI Scaling:", anchor="n")
-        self.scaling_label.grid(row=8, column=1, padx=20, pady=(10, 0))
-        self.scaling_optionemenu = ctk.CTkOptionMenu(right_frame, values=["60%", "70%", "80%", "90%", "100%", "110%", "120%"],
-                                                               command=master.change_scaling_event)
-        self.scaling_optionemenu.grid(row=9, column=1, padx=20, pady=(0, 0))
-
-        # self.custom_theme = ctk.CTkButton(right_frame, text="Custom theme", command=self.boiiiwd_custom_theme)
-        # self.custom_theme.grid(row=8, column=1, padx=20, pady=(20, 0), sticky="n")
-
-        self.theme_options_label = ctk.CTkLabel(right_frame, text="Themes:", anchor="n")
-        self.theme_options_label.grid(row=10, column=1, padx=20, pady=(10, 0))
-        self.theme_options = ctk.CTkOptionMenu(right_frame, values=["Default", "Blue", "Grey", "Obsidian", "Ghost","NeonBanana", "Custom"],
-                                                               command=self.theme_options_func)
-        self.theme_options.grid(row=11, column=1, padx=20, pady=(0, 0))
-        self.theme_options.set(value=self.load_settings("theme", "Default"))
 
         # Save button
         self.save_button = ctk.CTkButton(self, text="Save", command=self.save_settings, state='disabled')
-        self.save_button.grid(row=3, column=0, padx=20, pady=(20, 20), sticky="nw")
+        self.save_button.grid(row=3, column=1, padx=40, pady=(20, 20), sticky="ne")
 
         #version
         self.version_info = ctk.CTkLabel(self, text=f"{VERSION}")
-        self.version_info.grid(row=3, column=1, padx=20, pady=(20, 20), sticky="e")
+        self.version_info.grid(row=3, column=2, padx=20, pady=(20, 20), sticky="e")
+        
+    def open_BOIII_browser(self):
+        selected_folder = ctk.filedialog.askdirectory(title="Select Game Folder")
+        if selected_folder:
+            self.edit_destination_folder.delete(0, "end")
+            self.edit_destination_folder.insert(0, selected_folder)
+            save_config("DestinationFolder" ,self.edit_destination_folder.get())
+            save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
+            
+    def open_steamcmd_path_browser(self):
+        selected_folder = ctk.filedialog.askdirectory(title="Select SteamCMD Folder")
+        if selected_folder:
+            self.edit_steamcmd_path.delete(0, "end")
+            self.edit_steamcmd_path.insert(0, selected_folder)
+            save_config("DestinationFolder" ,self.edit_destination_folder.get())
+            save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
 
     def reset_steamcmd_on_fail_func(self, option: str):
         if option == "Custom":
@@ -224,6 +271,9 @@ class SettingsTab(ctk.CTkFrame):
 
     def save_settings(self):
         self.save_button.configure(state='disabled')
+
+        save_config("GameExecutable", str(self.edit_startup_exe.get()) if not isNullOrWhiteSpace(self.edit_startup_exe.get()) else "BlackOps3")
+        save_config("LaunchParameters", str(self.edit_launch_args.get()) if not isNullOrWhiteSpace(self.edit_launch_args.get()) else " ")
 
         if self.folder_options.get() == "PublisherID":
             save_config("folder_naming", "0")
@@ -399,9 +449,9 @@ class SettingsTab(ctk.CTkFrame):
 
     # make this rename to {id}_duplicate as a fallback
     def rename_all_folders(self, option):
-        boiiiFolder = main_app.app.edit_destination_folder.get()
-        maps_folder = os.path.join(boiiiFolder, "mods")
-        mods_folder = os.path.join(boiiiFolder, "usermaps")
+        gameFolder = self.edit_destination_folder.get()
+        maps_folder = os.path.join(gameFolder, "mods")
+        mods_folder = os.path.join(gameFolder, "usermaps")
 
         folders_to_process = []
 
@@ -412,7 +462,7 @@ class SettingsTab(ctk.CTkFrame):
             folders_to_process.append(maps_folder)
 
         if not os.path.exists(maps_folder) and not os.path.exists(mods_folder):
-            show_message("Warning -> Check boiii path", f"You don't have any items yet ,from now on item's folders will be named as their {option}")
+            show_message("Warning -> Check game path", f"You don't have any items yet ,from now on item's folders will be named as their {option}")
             return 0
 
         processed_names = set()
@@ -465,8 +515,8 @@ class SettingsTab(ctk.CTkFrame):
     def change_folder_naming(self, option):
         main_app.app.title("BOIII Workshop Downloader - Settings  ➜  Loading... ⏳")
         try:
-            if os.path.exists(main_app.app.edit_destination_folder.get()):
-                lib = main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
+            if os.path.exists(self.edit_destination_folder.get()):
+                lib = main_app.app.library_tab.load_items(self.edit_destination_folder.get(), dont_add=True)
                 if not "No items" in lib:
                     if show_message("Renaming", "Would you like to rename all your exisiting item folders now?", _return=True):
                         main_app.app.title("BOIII Workshop Downloader - Settings  ➜  Renaming... ⏳")
@@ -476,13 +526,13 @@ class SettingsTab(ctk.CTkFrame):
                             return 0
                         else:
                             show_message("Done!", "All folders have been renamed", icon="info")
-                            main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
+                            main_app.app.library_tab.load_items(self.edit_destination_folder.get(), dont_add=True)
                     else:
                         show_message("Heads up!", "Only newly downloaded items will be affected", icon="info")
                 else:
-                    show_message("Warning -> Check boiii path", f"You don't have any items yet ,from now on item's folders will be named as their {option}")
+                    show_message("Warning -> Check game path", f"You don't have any items yet ,from now on item's folders will be named as their {option}")
             else:
-                show_message("Warning -> Check boiii path", f"You don't have any items yet ,from now on item's folders will be named as their {option}")
+                show_message("Warning -> Check game path", f"You don't have any items yet ,from now on item's folders will be named as their {option}")
         except Exception as e:
             show_message("Error", f"Error occured \n{e}")
         finally:
@@ -502,20 +552,20 @@ class SettingsTab(ctk.CTkFrame):
         # keep last cuz of trace_add()
         self.save_button.configure(state='disabled')
 
-    def settings_launch_boiii(self):
-        launch_boiii_func(check_config("destinationfolder"))
+    def settings_launch_game(self):
+        launch_game_func(check_config("destinationfolder"), self.edit_startup_exe.get(), self.edit_launch_args.get())
 
     def settings_reset_steamcmd(self):
         reset_steamcmd()
 
-    def from_steam_to_boiii_toplevel(self):
+    def workshop_to_gamedir_toplevel(self):
         try:
             # to make sure json file is up to date
-            main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
+            main_app.app.library_tab.load_items(self.edit_destination_folder.get(), dont_add=True)
             top = ctk.CTkToplevel(self)
             if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
                 top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
-            top.title("Steam to boiii")
+            top.title("Workshop Transfer")
             _, _, x, y = get_window_size_from_registry()
             top.geometry(f"+{x}+{y}")
             # top.attributes('-topmost', 'true')
@@ -527,9 +577,10 @@ class SettingsTab(ctk.CTkFrame):
             steam_folder_label = ctk.CTkLabel(center_frame, text="Steam Folder:")
             steam_folder_entry = ctk.CTkEntry(center_frame, width=225)
             button_steam_browse = ctk.CTkButton(center_frame, text="Select", width=10)
-            boiii_folder_label = ctk.CTkLabel(center_frame, text="boiii Folder:")
-            boiii_folder_entry = ctk.CTkEntry(center_frame, width=225)
+            game_folder_label = ctk.CTkLabel(center_frame, text="Game Folder:")
+            game_folder_entry = ctk.CTkEntry(center_frame, width=225)
             button_BOIII_browse = ctk.CTkButton(center_frame, text="Select", width=10)
+            
             # Create option to choose between cut or copy
             operation_label = ctk.CTkLabel(center_frame, text="Choose operation:")
             copy_var = ctk.BooleanVar()
@@ -574,11 +625,11 @@ class SettingsTab(ctk.CTkFrame):
                 if copy_var.get():
                     copy_button.configure(text=f"Start (Copy)")
 
-            def open_BOIII_browser():
-                selected_folder = ctk.filedialog.askdirectory(title="Select boiii Folder")
+            def open_game_browser():
+                selected_folder = ctk.filedialog.askdirectory(title="Select Game Folder")
                 if selected_folder:
-                    boiii_folder_entry.delete(0, "end")
-                    boiii_folder_entry.insert(0, selected_folder)
+                    game_folder_entry.delete(0, "end")
+                    game_folder_entry.insert(0, selected_folder)
 
             def open_steam_browser():
                 selected_folder = ctk.filedialog.askdirectory(title="Select Steam Folder (ex: C:/Program Files (x86)/Steam)")
@@ -591,20 +642,20 @@ class SettingsTab(ctk.CTkFrame):
                 def start_thread():
                     try:
                         if not cut_var.get() and not copy_var.get():
-                            show_message("Choose operation!", "Please choose an operation, Copy or Cut files from steam!")
+                            show_message("Choose operation!", "Please choose an operation, Copy or Cut files from Steam!")
                             return
 
                         copy_button.configure(state="disabled")
                         steam_folder = steam_folder_entry.get()
                         ws_folder = os.path.join(steam_folder, "steamapps/workshop/content/311210")
-                        boiii_folder = boiii_folder_entry.get()
+                        game_folder = game_folder_entry.get()
 
                         if not os.path.exists(steam_folder) and not os.path.exists(ws_folder):
                             show_message("Not found", "Either you have no items downloaded from Steam or wrong path, please recheck path (ex: C:/Program Files (x86)/Steam)")
                             return
 
-                        if not os.path.exists(boiii_folder):
-                            show_message("Not found", "boiii folder not found, please recheck path")
+                        if not os.path.exists(game_folder):
+                            show_message("Not found", "game folder not found, please recheck path")
                             return
 
                         top.after(0, progress_text.configure(text="Loading..."))
@@ -644,10 +695,10 @@ class SettingsTab(ctk.CTkFrame):
                                         folder_name = extract_json_data(json_file_path, "publisherID")
 
                                 if mod_type == "mod":
-                                    path_folder = os.path.join(boiii_folder, "mods")
+                                    path_folder = os.path.join(game_folder, "mods")
                                     folder_name_path = os.path.join(path_folder, folder_name, "zone")
                                 elif mod_type == "map":
-                                    path_folder = os.path.join(boiii_folder, "usermaps")
+                                    path_folder = os.path.join(game_folder, "usermaps")
                                     folder_name_path = os.path.join(path_folder, folder_name, "zone")
                                 else:
                                     show_message("Error", "Invalid workshop type in workshop.json, are you sure this is a map or a mod?.", icon="cancel")
@@ -669,17 +720,17 @@ class SettingsTab(ctk.CTkFrame):
                                 if cut_var.get():
                                     remove_tree(os.path.join(map_folder, dir_name))
 
-                                main_app.app.library_tab.update_item(main_app.app.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
+                                main_app.app.library_tab.update_item(self.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
                             else:
                                 # if its last folder to check
                                 if i == total_folders:
                                     show_message("Error", f"workshop.json not found in {dir_name}", icon="cancel")
-                                    main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
+                                    main_app.app.library_tab.load_items(self.edit_destination_folder.get(), dont_add=True)
                                     return
                                 continue
 
                         if subfolders:
-                            main_app.app.library_tab.load_items(main_app.app.edit_destination_folder.get(), dont_add=True)
+                            main_app.app.library_tab.load_items(self.edit_destination_folder.get(), dont_add=True)
                             main_app.app.show_complete_message(message=f"All items were moved\nYou can run the game now!\nPS: You have to restart the game\n(pressing launch will launch/restarts)")
 
                     finally:
@@ -699,8 +750,8 @@ class SettingsTab(ctk.CTkFrame):
             button_steam_browse.grid(row=1, column=2, padx=(0, 20), pady=(10, 10), sticky="wnes")
             steam_folder_label.grid(row=0, column=0, padx=(20, 20), pady=(10, 0), sticky='w')
             steam_folder_entry.grid(row=1, column=0, columnspan=2, padx=(0, 20), pady=(10, 10), sticky='nes')
-            boiii_folder_label.grid(row=2, column=0, padx=(20, 20), pady=(10, 0), sticky='w')
-            boiii_folder_entry.grid(row=3, column=0, columnspan=2, padx=(0, 20), pady=(10, 10), sticky='nes')
+            game_folder_label.grid(row=2, column=0, padx=(20, 20), pady=(10, 0), sticky='w')
+            game_folder_entry.grid(row=3, column=0, columnspan=2, padx=(0, 20), pady=(10, 10), sticky='nes')
             button_BOIII_browse.grid(row=3, column=2, padx=(0, 20), pady=(10, 10), sticky="wnes")
             operation_label.grid(row=4, column=0, padx=(20, 20), pady=(10, 10), sticky='wnes')
             copy_check.grid(row=4, column=1, padx=(0, 10), pady=(10, 10), sticky='wnes')
@@ -711,14 +762,14 @@ class SettingsTab(ctk.CTkFrame):
             progress_color = get_button_state_colors(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")), "progress_bar_fill_color")
             progress_bar.configure(progress_color=progress_color)
             steam_folder_entry.insert(1, check_config("steam_folder", ""))
-            boiii_folder_entry.insert(1, main_app.app.edit_destination_folder.get())
-            button_BOIII_browse.configure(command=open_BOIII_browser)
+            game_folder_entry.insert(1, self.edit_destination_folder.get())
+            button_BOIII_browse.configure(command=open_game_browser)
             button_steam_browse.configure(command=open_steam_browser)
             copy_button.configure(command=start_copy_operation)
             cut_check.configure(command = lambda: check_status(cut_var, copy_var))
             copy_check.configure(command = lambda: check_status(copy_var, cut_var))
             main_app.app.create_context_menu(steam_folder_entry)
-            main_app.app.create_context_menu(boiii_folder_entry)
+            main_app.app.create_context_menu(game_folder_entry)
             copy_var.set(True)
             progress_bar.set(0)
             top.after(150, top.focus_force)

@@ -231,7 +231,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         item_type, item_name = item[5], item[0]
         return (0, item_name) if item_type == "map" else (1, item_name)
 
-    def load_items(self, boiiiFolder, dont_add=False):
+    def load_items(self, gameFolder, dont_add=False):
         if self.refresh_next_time and not dont_add:
             self.refresh_next_time = False
             status = self.refresh_items()
@@ -243,8 +243,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
             self.ids_added.clear()
             self.refresh_next_time = True
 
-        maps_folder = Path(boiiiFolder) / "mods"
-        mods_folder = Path(boiiiFolder) / "usermaps"
+        maps_folder = Path(gameFolder) / "mods"
+        mods_folder = Path(gameFolder) / "usermaps"
         mod_img = os.path.join(RESOURCES_DIR, "mod_image.png")
         map_img = os.path.join(RESOURCES_DIR, "map_image.png")
         b_mod_img = os.path.join(RESOURCES_DIR, "b_mod_image.png")
@@ -372,12 +372,12 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.show_no_items_message(only_up=True)
         return "No items in current selected folder"
 
-    def update_item(self, boiiiFolder, id, item_type, foldername):
+    def update_item(self, gameFolder, id, item_type, foldername):
         try:
             if item_type == "map":
-                folder_path = Path(boiiiFolder) / "usermaps" / f"{foldername}"
+                folder_path = Path(gameFolder) / "usermaps" / f"{foldername}"
             elif item_type == "mod":
-                folder_path = Path(boiiiFolder) / "mods" / f"{foldername}"
+                folder_path = Path(gameFolder) / "mods" / f"{foldername}"
             else:
                 raise ValueError("Unsupported item_type. It must be 'map' or 'mod'.")
 
@@ -456,7 +456,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.added_items.clear()
         self.added_folders.clear()
         self.ids_added.clear()
-        status = self.load_items(main_app.app.edit_destination_folder.get().strip())
+        
+        status = self.load_items( main_app.app.settings_tab.edit_destination_folder.get().strip())
         main_app.app.title(f"BOIII Workshop Downloader - Library  ➜  {status}")
         # main_app library event needs a return for status => when refresh_next_time is true
         return status
@@ -471,7 +472,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         if only_up:
             return
         self.no_items_label.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="n")
-        self.no_items_label.configure(text="No items found in the selected folder. \nMake sure you have a mod/map downloaded and or have the right boiii folder selected.")
+        self.no_items_label.configure(text="No items found in the selected folder. \nMake sure you have a mod/map downloaded and or have the right game folder selected.")
 
     def hide_no_items_message(self):
         self.update_tooltip.configure(message="Check items for updates")
@@ -885,7 +886,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 lib_data = None
 
                 if not os.path.exists(os.path.join(APPLICATION_PATH, LIBRARY_FILE)):
-                    show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct boiii path!, you also need to have at least 1 item!")
+                    show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct game path!, you also need to have at least 1 item!")
                     return
 
                 with open(os.path.join(APPLICATION_PATH, LIBRARY_FILE), 'r') as file:
@@ -898,7 +899,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 if_ids_need_update(item_ids, item_dates, texts)
 
             except:
-                show_message("Error checking for item updates!", "Please visit the library tab at least once with the correct boiii path!, you also need to have at least 1 item!")
+                show_message("Error checking for item updates!", "Please visit the library tab at least once with the correct game path!, you also need to have at least 1 item!")
                 return
 
         check_for_update()
