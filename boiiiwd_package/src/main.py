@@ -212,7 +212,8 @@ class BOIIIWD(ctk.CTk):
 
         if check_config("checkforupdtes") == "on":
             self.withdraw()
-            check_for_updates_func(self, ignore_up_todate=True)
+            try: check_for_updates_func(self, ignore_up_todate=True)
+            except: pass
             self.update()
             self.deiconify()
 
