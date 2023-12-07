@@ -262,7 +262,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
             except: pass
 
         for folder_path in folders_to_process:
-            for zone_path in folder_path.glob("**/zone"):
+            for zone_path in folder_path.glob("*/zone"):
                 json_path = zone_path / "workshop.json"
                 if json_path.exists():
 
@@ -339,7 +339,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                                     f.seek(0)
                                     json.dump(items_data, f, indent=4)
 
-                        if id_found and not folder_found and curr_folder_name not in self.item_block_list and workshop_id not in self.ids_added:
+                        if curr_folder_name not in self.item_block_list:
                             self.update_or_add_item_by_id(items_file, item_info, workshop_id)
 
                         # keep here cuz of item_exists_in_file() testing
@@ -381,7 +381,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
             else:
                 raise ValueError("Unsupported item_type. It must be 'map' or 'mod'.")
 
-            for zone_path in folder_path.glob("**/zone"):
+            for zone_path in folder_path.glob("*/zone"):
                 json_path = zone_path / "workshop.json"
                 if json_path.exists():
                     workshop_id = extract_json_data(json_path, "PublisherID")

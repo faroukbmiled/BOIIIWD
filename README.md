@@ -35,14 +35,10 @@
 #### Mouse Bindings:
   Library Tab:
 
-    * Mouse3 (Right click) -> will open the item in the browser (Steam Workshop)
-
-  Update Window:
-
     * Mouse1 -> copy id
     * Ctrl + Mouse 1 -> append to clipboard
     * Mouse2 (scroll wheel button) -> open item path in file explorer
-    * Mouse3 -> copy path
+    * Mouse3 (Right click) -> copy path
 
 ## Building from Source:
 - ```pip install -r requirements.txt``` -> use my modified [CTkToolTip](./CTkToolTip) and [CTkListbox](./CTkListbox) for [v0.2.8](https://github.com/faroukbmiled/BOIIIWD/releases) and up
