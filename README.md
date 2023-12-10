@@ -16,7 +16,7 @@
 
 ## Usage:
 - Run [BOIIIWD.exe](https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip) ([VirusTotal Scan](https://www.virustotal.com/gui/file/5ca1367a82893a1f412b59a52431e9ac4219a67a50c294ee86a7d41473826b14/detection))
-- Steamcmd will be downloaded if it is not installed
+- [Optional] Run as script:```python boiiiwd_package\boiiiwd.py```
 
 ## Features:
 - Improved download stability
@@ -29,18 +29,17 @@
 
 ## Notes:
 
-* Initializing SteamCMD for the first time could take some time depending on your internet speed <br>
-* New item update window: Right click on an item (mouse3) -> will open the item in the browser (Steam Workshop) <br>
+- Steamcmd will be downloaded if it is not installed <br>
+- Initializing SteamCMD for the first time could take some time depending on your internet speed <br>
 
 #### Mouse Bindings:
   Library Tab:
 
     * Mouse1 -> copy id
-    * Ctrl + Mouse 1 -> append to clipboard
+    * Ctrl + Mouse1 -> append to clipboard
     * Mouse2 (scroll wheel button) -> open item path in file explorer
     * Mouse3 (Right click) -> copy path
 
 ## Building from Source:
-- ```pip install -r requirements.txt``` -> use my modified [CTkToolTip](./CTkToolTip) and [CTkListbox](./CTkListbox) for [v0.2.8](https://github.com/faroukbmiled/BOIIIWD/releases) and up
+- ```pip install -r requirements.txt``` -> use my modified [CTkToolTip](./CTkToolTip) and [CTkListbox](./CTkListbox)
 - ```python build.py```
-- run `BOIIIWD.exe` or from script with ```python boiiiwd_package\boiiiwd.py```
