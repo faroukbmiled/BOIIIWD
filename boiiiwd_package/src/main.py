@@ -42,10 +42,10 @@ class BOIIIWD(ctk.CTk):
         self.queueframe.rowconfigure(4, weight=0)
 
         self.workshop_queue_label = ctk.CTkLabel(self.queueframe, text="Batch Downloader:")
-        self.workshop_queue_label.grid(row=0, column=0, padx=(20, 20), pady=(20, 20), sticky="wns")
+        self.workshop_queue_label.grid(row=0, column=0, padx=(20, 20), pady=(10, 10), sticky="wns")
 
         self.help_button = ctk.CTkButton(master=self.queueframe, text="Help", command=self.help_queue_text_func, width=10, height=10, fg_color="#585858")
-        self.help_button.grid(row=0, column=3, padx=(0, 20), pady=(20, 0), sticky="en")
+        self.help_button.grid(row=0, column=3, padx=(0, 20), pady=(10, 0), sticky="en")
         self.help_restore_content = None
 
         self.queuetextarea = ctk.CTkTextbox(master=self.queueframe, font=("", 15))
@@ -1211,7 +1211,7 @@ class BOIIIWD(ctk.CTk):
                             self.after(1, self.status_text.configure(
                                 text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | ID: {workshop_id} | {item_name} | Waiting {current_number}/{total_items}"))
                             if len(items) > 1:
-                                self.skip_button.grid(row=3, column=1, padx=(10, 20), pady=(0, 25), sticky="ws")
+                                self.skip_button.grid(row=1, column=3, padx=(0, 20), pady=(0, 8), sticky="es")
                                 if index == len(items) - 1:
                                     self.skip_button.grid_remove()
                             time.sleep(1)
