@@ -430,8 +430,8 @@ class SettingsTab(ctk.CTkFrame):
         file_to_rename = os.path.join(APPLICATION_PATH, "boiiiwd_theme.json")
         if os.path.exists(file_to_rename):
             timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-            new_name = f"boiiiwd_theme_{timestamp}.json"
-            os.rename(file_to_rename, os.path.join(APPLICATION_PATH, new_name))
+            name = f"boiiiwd_theme_{timestamp}.json"
+            os.rename(file_to_rename, os.path.join(APPLICATION_PATH, name))
 
             if not disable_only:
                 show_message("Preset file renamed", "Custom preset disabled, file has been renmaed\n* Restart the app to take effect", icon="info")
@@ -450,8 +450,8 @@ class SettingsTab(ctk.CTkFrame):
     # make this rename to {id}_duplicate as a fallback
     def rename_all_folders(self, option):
         gameFolder = self.edit_destination_folder.get()
-        maps_folder = os.path.join(gameFolder, "mods")
-        mods_folder = os.path.join(gameFolder, "usermaps")
+        mods_folder = os.path.join(gameFolder, "mods")
+        maps_folder = os.path.join(gameFolder, "usermaps")
 
         folders_to_process = []
 
@@ -462,53 +462,70 @@ class SettingsTab(ctk.CTkFrame):
             folders_to_process.append(maps_folder)
 
         if not os.path.exists(maps_folder) and not os.path.exists(mods_folder):
-            show_message("Warning -> Check game path", f"You don't have any items yet ,from now on item's folders will be named as their {option}")
+            show_message("Warning -> Check game path", f"You don't have any items yet, from now on item's folders will be named as their {option}")
             return 0
 
         processed_names = set()
 
-        for folder_path in folders_to_process:
-            for folder_name in os.listdir(folder_path):
-                zone_path = os.path.join(folder_path, folder_name, "zone")
-                if not os.path.isdir(zone_path):
-                    continue
-                if folder_name in main_app.app.library_tab.item_block_list:
-                    continue
-
-                json_path = os.path.join(zone_path, "workshop.json")
-                publisher_id = extract_json_data(json_path, 'PublisherID')
-                new_name = extract_json_data(json_path, option)
-                if folder_name == new_name:
-                    continue
-
-                rename_flag = True
-
-                if os.path.exists(json_path):
-                    folder_to_rename = os.path.join(folder_path, folder_name)
-                    new_folder_name = new_name
-                    while new_folder_name in processed_names:
-                        if new_name == publisher_id:
-                            new_folder_name += f"_duplicated"
+        files =Path(folders_to_process[0]).glob("*/zone/*.json")
+        items=dict()
+        
+        for idx,file in enumerate(files):
+            curr_folder_name = os.path.relpath(file, folders_to_process[0]).split("\\", 1)[0]
+            
+            with open(file, 'r') as json_file:
+                data = json.load(json_file)
+                items[idx]={
+                    'PublisherID':data.get('PublisherID'),
+                    'Name':data.get(option),
+                    'current_folder':curr_folder_name
+                    }
+                
+        IDs = [x['PublisherID'] for x in items.values()]
+        Names = [x['Name'] for x in items.values()]
+        currFolder = [x['current_folder'] for x in items.values()]
+        
+        def indices(lst, item):
+            return [i for i, x in enumerate(lst) if item in x]
+        def find_duplicate_items_in_list(list,items):
+            return dict((x, indices(list, x)) for x in [y for y in items if items.count(y) > 1])
+        def renameto(orig, new): 
+            return os.rename(os.path.join(folders_to_process[0], orig),  os.path.join(folders_to_process[0], new))
+    
+        duplicates = find_duplicate_items_in_list(Names,Names)
+        duplicates_IDs = find_duplicate_items_in_list(IDs,IDs)
+                
+        duplicate_idx = concatenate_sublists(duplicates.values())
+        
+        for i in range(len(IDs)):
+            if i not in duplicate_idx:
+                renameto(currFolder[i], Names[i])
+                
+        for v in duplicates.values():
+            if len(v)==2:
+                if IDs[v[0]]==IDs[v[1]]:
+                    renameto(currFolder[v[0]], Names[v[0]])
+                    renameto(currFolder[v[1]], Names[v[1]]+"_duplicate")
+                else: 
+                    renameto(currFolder[v[0]], Names[v[0]]+f"{IDs[v[0]]}")
+                    renameto(currFolder[v[1]], Names[v[1]]+f"{IDs[v[1]]}")
+            if len(v)>2:
+                for i in v:
+                    if i in (duplicates_IDs.get(f'{IDs[i]}') if duplicates_IDs.get(f'{IDs[i]}') is not None else []):
+                        if i == v[0]:
+                            if Names[i].startswith(IDs[i]):
+                                renameto(currFolder[i], Names[i])
+                            else:
+                                renameto(currFolder[i], Names[i]+f"_{IDs[i]}")
                         else:
-                            new_folder_name += f"_{publisher_id}"
-                        if folder_name == new_folder_name:
-                            rename_flag = False
-                            break
-                    new_path = os.path.join(folder_path, new_folder_name)
-
-                    while os.path.exists(new_path):
-                        if new_name == publisher_id:
-                            new_folder_name += f"_duplicated"
-                        else:
-                            new_folder_name += f"_{publisher_id}"
-                        if folder_name == new_folder_name:
-                            rename_flag = False
-                            break
-                        new_path = os.path.join(folder_path, new_folder_name)
-
-                    if rename_flag:
-                        os.rename(folder_to_rename, new_path)
-                        processed_names.add(new_folder_name)
+                            if Names[i].startswith(IDs[i]):
+                                newname, n_index = nextnonexistent(Names[i]+f"_duplicate", path=os.path.join(folders_to_process[0]), return_idx=True)
+                            else:
+                                newname, n_index = nextnonexistent(Names[i]+f"_{IDs[i]}", path=os.path.join(folders_to_process[0]), return_idx=True)
+                                
+                            renameto(currFolder[i], newname)
+                    else:
+                        renameto(currFolder[i], Names[i]+f"_{IDs[i]}")
 
         return 1
 

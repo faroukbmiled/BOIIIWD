@@ -298,7 +298,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     if curr_folder_name not in self.added_folders:
                         image_path = mod_img if item_type == "mod" else map_img
                         if not (str(curr_folder_name).strip() == str(workshop_id).strip() or str(curr_folder_name).strip() == str(folder_name).strip()
-                                or str(curr_folder_name).strip() == f"{folder_name}_{workshop_id}"):
+                                or str(curr_folder_name).strip() == f"{folder_name}_{workshop_id}" or str(curr_folder_name).strip() == f"{folder_name}_duplicated"):
                             try: self.remove_item_by_option(items_file, curr_folder_name, "folder_name")
                             except: pass
                             self.item_block_list.add(curr_folder_name)
@@ -308,6 +308,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         elif (curr_folder_name not in self.added_folders and (workshop_id in self.ids_added or workshop_id == "None")):
                             try: self.remove_item_by_option(items_file, curr_folder_name, "folder_name")
                             except: pass
+                            self.item_block_list.add(workshop_id)
                             text_to_add = re.sub(r'ID:\s+(?:\d+|None)', f'Folder: {curr_folder_name}', text_to_add)
                             image_path = b_mod_img if item_type == "mod" else b_map_img
                             text_to_add += " | ⚠️"

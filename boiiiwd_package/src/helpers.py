@@ -552,4 +552,20 @@ def isNullOrWhiteSpace(str):
         return True
     return False
 
+def concatenate_sublists(a):
+    out = []
+    for sublist in a:
+        out.extend(sublist)
+    return out
+            
+def nextnonexistent(f, path=os.curdir, return_idx=False):
+    fnew = f
+    root, ext = os.path.splitext(f)
+    i = 0
+    while os.path.exists(os.path.join(path,fnew)):
+        i += 1
+        fnew = '%s_%i%s' % (root, i, ext)
+    if return_idx: return fnew, i
+    else: return fnew
+
 # End helper functions
