@@ -456,7 +456,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.added_items.clear()
         self.added_folders.clear()
         self.ids_added.clear()
-        
+
         status = self.load_items( main_app.app.settings_tab.edit_destination_folder.get().strip())
         main_app.app.title(f"BOIII Workshop Downloader - Library  ➜  {status}")
         # main_app library event needs a return for status => when refresh_next_time is true
@@ -870,6 +870,12 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 item_data = get_item_dates(item_ids)
 
                 for item_id, date_updated in item_data.items():
+                    if not date_updated:
+                        try:
+                            new_date = get_update_time_from_html(item_id)
+                            date_updated = new_date if new_date else 1
+                        except:
+                            date_updated = 1
                     item_date = item_dates[str(item_id)] if str(item_id) in item_dates else ""
                     date_updated = datetime.fromtimestamp(date_updated)
 
