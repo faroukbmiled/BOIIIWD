@@ -31,7 +31,7 @@ class BOIIIWD(ctk.CTk):
 
         # Queue frame/tab, keep here or app will start shrinked eveytime
         self.queue_tab_enabled = False # Enable Queue Tab
-        
+
         self.queueframe = ctk.CTkFrame(self)
         self.queueframe.columnconfigure(1, weight=1)
         self.queueframe.columnconfigure(2, weight=1)
@@ -80,7 +80,7 @@ class BOIIIWD(ctk.CTk):
         self.txt_label = ctk.CTkLabel(self.sidebar_frame, text="- Sidebar -", font=(font, 17))
         self.txt_label.grid(row=1, column=0, padx=20, pady=(20, 10))
         self.sidebar_main = ctk.CTkButton(self.sidebar_frame, height=28)
-        self.sidebar_main.grid(row=2, column=0, padx=10, pady=(20, 6)) 
+        self.sidebar_main.grid(row=2, column=0, padx=10, pady=(20, 6))
         if self.queue_tab_enabled:
             self.sidebar_queue = ctk.CTkButton(self.sidebar_frame, height=28)
             self.sidebar_queue.grid(row=3, column=0, padx=10, pady=6)
@@ -166,6 +166,7 @@ class BOIIIWD(ctk.CTk):
         self.is_pressed = False
         self.queue_stop_button = False
         self.is_downloading = False
+        self.is_steamcmd_downloading = False
         self.item_skipped = False
         self.fail_threshold = 0
 
@@ -345,7 +346,7 @@ class BOIIIWD(ctk.CTk):
         self.optionsframe.grid_forget()
         self.slider_progressbar_frame.grid_forget()
         self.hide_queue_widgets()
-        
+
     def use_queue_download(self):
         return not self.queuetextarea.get("1.0", "end").isspace()
 
@@ -425,7 +426,7 @@ class BOIIIWD(ctk.CTk):
             destination_folder = check_config("DestinationFolder", "")
             steamcmd_path = check_config("SteamCMDPath", APPLICATION_PATH)
             startup_exe = check_config("GameExecutable", "BlackOps3")
-            launch_params = check_config("LaunchParameters", None)      
+            launch_params = check_config("LaunchParameters", None)
             new_appearance_mode = check_config("appearance", "Dark")
             new_scaling = check_config("scaling", 1.0)
             self.settings_tab.edit_destination_folder.delete(0, "end")
@@ -520,7 +521,7 @@ class BOIIIWD(ctk.CTk):
     def open_browser(self):
         link = "https://steamcommunity.com/app/311210/workshop/"
         webbrowser.open(link)
-        
+
     def settings_launch_game(self):
         launch_game_func(check_config("destinationfolder"), self.settings_tab.edit_startup_exe.get(), self.settings_tab.edit_launch_args.get())
 
@@ -800,6 +801,55 @@ class BOIIIWD(ctk.CTk):
 
         self.after(0, main_thread)
 
+    def check_if_steamcmd_updating(self, log_file_path):
+        temp_file_path = log_file_path + '.temp'
+        if not os.path.exists(log_file_path):
+            if os.path.isdir(log_file_path):
+                try: os.makedirs(log_file_path)
+                except: return False
+            else:
+                try:
+                    with open(log_file_path, 'w') as file:
+                        file.write('')
+                except: pass
+
+        try: shutil.copy2(log_file_path, temp_file_path)
+        except: return False
+
+        try:
+            with open(temp_file_path, 'r') as log_file:
+                log_file.seek(0, os.SEEK_END)
+                file_size = log_file.tell()
+
+                position = file_size
+                lines_found = 0
+
+                while lines_found < 7 and position > 0:
+                    position -= 1
+                    log_file.seek(position, os.SEEK_SET)
+
+                    char = log_file.read(1)
+
+                    if char == '\n':
+                        lines_found += 1
+
+                lines = log_file.readlines()[-7:]
+
+                for line in reversed(lines):
+                    line = line.lower().strip()
+                    if "downloading update" in line:
+                        return True
+
+            return False
+        except:
+            try:
+                os.remove(temp_file_path)
+            except:
+                return False
+        finally:
+            try: os.remove(temp_file_path)
+            except: pass
+
     def check_steamcmd_stdout(self, log_file_path, target_item_id):
         temp_file_path = log_file_path + '.temp'
         if not os.path.exists(log_file_path):
@@ -872,6 +922,7 @@ class BOIIIWD(ctk.CTk):
     # the real deal
     def run_steamcmd_command(self, command, map_folder, wsid, queue=None):
         steamcmd_path = get_steamcmd_path()
+        steamcmd_bootstrap_logs = os.path.join(steamcmd_path, "logs", "bootstrap_log.txt")
         stdout_path = os.path.join(steamcmd_path, "logs", "workshop_log.txt")
         timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
@@ -879,9 +930,13 @@ class BOIIIWD(ctk.CTk):
         except: pass
 
         try:
+            with open(steamcmd_bootstrap_logs, 'w') as file:
+                file.write('')
             with open(stdout_path, 'w') as file:
                 file.write('')
         except:
+            try: os.rename(stdout_path, os.path.join(map_folder, os.path.join(steamcmd_bootstrap_logs, f"bootstrap_log_couldntremove_{timestamp}.txt")))
+            except: pass
             try: os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
             except: pass
 
@@ -923,6 +978,8 @@ class BOIIIWD(ctk.CTk):
                     if process.poll() is not None:
                         break
                     if not self.is_downloading:
+                        if self.check_if_steamcmd_updating(steamcmd_bootstrap_logs):
+                            self.is_steamcmd_downloading = True
                         if self.check_steamcmd_stdout(stdout_path, wsid):
                             start_time = time.time()
                             self.is_downloading = True
@@ -931,6 +988,7 @@ class BOIIIWD(ctk.CTk):
 
                 # print("Broken freeeee!")
                 self.is_downloading = False
+                self.is_steamcmd_downloading = False
                 try:
                     with open(stdout_path, 'w') as file:
                         file.write('')
@@ -973,6 +1031,8 @@ class BOIIIWD(ctk.CTk):
                 if process.poll() is not None:
                     break
                 if not self.is_downloading:
+                    if self.check_if_steamcmd_updating(steamcmd_bootstrap_logs):
+                        self.is_steamcmd_downloading = True
                     if self.check_steamcmd_stdout(stdout_path, wsid):
                         start_time = time.time()
                         self.is_downloading = True
@@ -981,6 +1041,7 @@ class BOIIIWD(ctk.CTk):
 
             # print("Broken freeeee!")
             self.is_downloading = False
+            self.is_steamcmd_downloading = False
             try:
                 with open(stdout_path, 'w') as file:
                     file.write('')
@@ -1201,7 +1262,10 @@ class BOIIIWD(ctk.CTk):
                             self.item_skipped = False
 
                         while not self.is_downloading and not self.settings_tab.stopped:
-                            self.after(1, self.label_speed.configure(text=f"Waiting for steamcmd..."))
+                            if self.is_steamcmd_downloading:
+                                self.after(1, self.label_speed.configure(text=f"Updating steamcmd..."))
+                            else:
+                                self.after(1, self.label_speed.configure(text=f"Waiting for steamcmd..."))
                             time_elapsed = time.time() - start_time
                             elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
                             if self.settings_tab.show_fails:
@@ -1216,6 +1280,7 @@ class BOIIIWD(ctk.CTk):
                                     self.skip_button.grid_remove()
                             time.sleep(1)
                             if self.is_downloading:
+                                self.is_steamcmd_downloading = False
                                 break
 
                         try:
