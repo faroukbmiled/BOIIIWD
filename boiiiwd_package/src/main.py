@@ -166,7 +166,7 @@ class BOIIIWD(ctk.CTk):
         self.is_pressed = False
         self.queue_stop_button = False
         self.is_downloading = False
-        self.is_steamcmd_downloading = False
+        self.is_steamcmd_updating = False
         self.item_skipped = False
         self.fail_threshold = 0
 
@@ -979,16 +979,17 @@ class BOIIIWD(ctk.CTk):
                         break
                     if not self.is_downloading:
                         if self.check_if_steamcmd_updating(steamcmd_bootstrap_logs):
-                            self.is_steamcmd_downloading = True
+                            self.is_steamcmd_updating = True
                         if self.check_steamcmd_stdout(stdout_path, wsid):
                             start_time = time.time()
                             self.is_downloading = True
+                            self.is_steamcmd_updating = False
                     elapsed_time = time.time() - start_time
                     time.sleep(1)
 
                 # print("Broken freeeee!")
                 self.is_downloading = False
-                self.is_steamcmd_downloading = False
+                self.is_steamcmd_updating = False
                 try:
                     with open(stdout_path, 'w') as file:
                         file.write('')
@@ -1032,7 +1033,7 @@ class BOIIIWD(ctk.CTk):
                     break
                 if not self.is_downloading:
                     if self.check_if_steamcmd_updating(steamcmd_bootstrap_logs):
-                        self.is_steamcmd_downloading = True
+                        self.is_steamcmd_updating = True
                     if self.check_steamcmd_stdout(stdout_path, wsid):
                         start_time = time.time()
                         self.is_downloading = True
@@ -1041,7 +1042,7 @@ class BOIIIWD(ctk.CTk):
 
             # print("Broken freeeee!")
             self.is_downloading = False
-            self.is_steamcmd_downloading = False
+            self.is_steamcmd_updating = False
             try:
                 with open(stdout_path, 'w') as file:
                     file.write('')
@@ -1262,7 +1263,7 @@ class BOIIIWD(ctk.CTk):
                             self.item_skipped = False
 
                         while not self.is_downloading and not self.settings_tab.stopped:
-                            if self.is_steamcmd_downloading:
+                            if self.is_steamcmd_updating:
                                 self.after(1, self.label_speed.configure(text=f"Updating steamcmd..."))
                             else:
                                 self.after(1, self.label_speed.configure(text=f"Waiting for steamcmd..."))
@@ -1280,7 +1281,7 @@ class BOIIIWD(ctk.CTk):
                                     self.skip_button.grid_remove()
                             time.sleep(1)
                             if self.is_downloading:
-                                self.is_steamcmd_downloading = False
+                                self.is_steamcmd_updating = False
                                 break
 
                         try:
