@@ -98,7 +98,16 @@ class SettingsTab(ctk.CTkFrame):
         self.check_items_ch.grid(row=7, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.check_items_tooltip = CTkToolTip(self.check_items_ch, message="This will show a window on launch of items that have pending updates -> you can open it manually from library tab")
         self.check_items_var.set(self.load_settings("check_items", "off"))
+        
+        # download options
+        self.invalid_items_var = ctk.BooleanVar()
+        self.invalid_items_var.trace_add("write", self.enable_save_button)
+        self.invalid_items_ch = ctk.CTkSwitch(left_frame, text="Check library items on launch", variable=self.invalid_items_var)
+        self.invalid_items_ch.grid(row=1, column=2, padx=20, pady=(20, 0), sticky="nw")
+        self.invalid_items_tooltip = CTkToolTip(self.invalid_items_ch, message="Attempt to download invalid items")
+        self.invalid_items_var.set(self.load_settings("check_items", "off"))       
 
+        # text input fields
         self.label_destination_folder = ctk.CTkLabel(left_frame, text='Enter Game folder:')
         self.label_destination_folder.grid(row=8, column=1, padx=20, pady=(20, 0), columnspan=1, sticky="ws")
         
@@ -462,70 +471,89 @@ class SettingsTab(ctk.CTkFrame):
             folders_to_process.append(maps_folder)
 
         if not os.path.exists(maps_folder) and not os.path.exists(mods_folder):
-            show_message("Warning -> Check game path", f"You don't have any items yet, from now on item's folders will be named as their {option}")
+            show_message("Warning -> Check game path",
+                         f"You don't have any items yet, from now on item's folders will be named as their {option}")
             return 0
 
         processed_names = set()
 
-        files =Path(folders_to_process[0]).glob("*/zone/*.json")
-        items=dict()
-        
-        for idx,file in enumerate(files):
-            curr_folder_name = os.path.relpath(file, folders_to_process[0]).split("\\", 1)[0]
-            
+        files = Path(folders_to_process[0]).glob("*/zone/*.json")
+        items = dict()
+
+        for idx, file in enumerate(files):
+            curr_folder_name = os.path.relpath(
+                file, folders_to_process[0]).split("\\", 1)[0]
+
             with open(file, 'r') as json_file:
                 data = json.load(json_file)
-                items[idx]={
-                    'PublisherID':data.get('PublisherID'),
-                    'Name':data.get(option),
-                    'current_folder':curr_folder_name
-                    }
-                
+                items[idx] = {
+                    'PublisherID': data.get('PublisherID'),
+                    'Name': data.get(option),
+                    'current_folder': curr_folder_name
+                }
+
         IDs = [x['PublisherID'] for x in items.values()]
         Names = [x['Name'] for x in items.values()]
         currFolder = [x['current_folder'] for x in items.values()]
-        
+
         def indices(lst, item):
             return [i for i, x in enumerate(lst) if item in x]
-        def find_duplicate_items_in_list(list,items):
+
+        def find_duplicate_items_in_list(list, items):
             return dict((x, indices(list, x)) for x in [y for y in items if items.count(y) > 1])
-        def renameto(orig, new): 
-            return os.rename(os.path.join(folders_to_process[0], orig),  os.path.join(folders_to_process[0], new))
-    
-        duplicates = find_duplicate_items_in_list(Names,Names)
-        duplicates_IDs = find_duplicate_items_in_list(IDs,IDs)
-                
+
+        def prep_rename(changelist, orig, new):
+            return changelist.append((os.path.join(folders_to_process[0], orig),  os.path.join(folders_to_process[0], new)))
+
+        duplicates = find_duplicate_items_in_list(Names, Names)
+        duplicates_IDs = find_duplicate_items_in_list(IDs, IDs)
+
         duplicate_idx = concatenate_sublists(duplicates.values())
-        
+
+        changelist = []
+
         for i in range(len(IDs)):
             if i not in duplicate_idx:
-                renameto(currFolder[i], Names[i])
-                
+                prep_rename(changelist, currFolder[i], Names[i])
+
         for v in duplicates.values():
-            if len(v)==2:
-                if IDs[v[0]]==IDs[v[1]]:
-                    renameto(currFolder[v[0]], Names[v[0]])
-                    renameto(currFolder[v[1]], Names[v[1]]+"_duplicate")
-                else: 
-                    renameto(currFolder[v[0]], Names[v[0]]+f"{IDs[v[0]]}")
-                    renameto(currFolder[v[1]], Names[v[1]]+f"{IDs[v[1]]}")
-            if len(v)>2:
-                for i in v:
+            if len(v) == 2:
+                if IDs[v[0]] == IDs[v[1]]:
+                    prep_rename(changelist, currFolder[v[0]], Names[v[0]])
+                    prep_rename(
+                        changelist, currFolder[v[1]], Names[v[1]]+"_duplicate")
+                else:
+                    prep_rename(
+                        changelist, currFolder[v[0]], Names[v[0]]+f"{IDs[v[0]]}")
+                    prep_rename(
+                        changelist, currFolder[v[1]], Names[v[1]]+f"{IDs[v[1]]}")
+
+            if len(v) > 2:
+                for j, i in enumerate(v):
                     if i in (duplicates_IDs.get(f'{IDs[i]}') if duplicates_IDs.get(f'{IDs[i]}') is not None else []):
                         if i == v[0]:
                             if Names[i].startswith(IDs[i]):
-                                renameto(currFolder[i], Names[i])
+                                prep_rename(
+                                    changelist, currFolder[i], Names[i])
                             else:
-                                renameto(currFolder[i], Names[i]+f"_{IDs[i]}")
+                                prep_rename(
+                                    changelist, currFolder[i], Names[i]+f"_{IDs[i]}")
                         else:
                             if Names[i].startswith(IDs[i]):
-                                newname, n_index = nextnonexistent(Names[i]+f"_duplicate", path=os.path.join(folders_to_process[0]), return_idx=True)
+                                newname = Names[i]+f"_duplicate"
                             else:
-                                newname, n_index = nextnonexistent(Names[i]+f"_{IDs[i]}", path=os.path.join(folders_to_process[0]), return_idx=True)
-                                
-                            renameto(currFolder[i], newname)
+                                newname = Names[i]+f"_{IDs[i]}"
+
+                            if j > 0:
+                                newname += '_' + str(j)
+
+                            prep_rename(changelist, currFolder[i], newname)
                     else:
-                        renameto(currFolder[i], Names[i]+f"_{IDs[i]}")
+                        prep_rename(
+                            changelist, currFolder[i], Names[i]+f"_{IDs[i]}")
+
+        for n in changelist:
+            os.rename(n[0], n[1])
 
         return 1
 

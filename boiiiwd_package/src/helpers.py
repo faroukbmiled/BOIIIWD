@@ -51,8 +51,7 @@ except:
 
 def get_latest_release_version():
     try:
-        release_api_url = f"https://api.github.com/repos/{
-            GITHUB_REPO}/releases/latest"
+        release_api_url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
         response = requests.get(release_api_url)
         response.raise_for_status()
         data = response.json()
@@ -119,8 +118,7 @@ def check_for_updates_func(window, ignore_up_todate=False):
             current_version.replace("v", "").replace(".", ""))
 
         if latest_version and int_latest_version > int_current_version:
-            msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {
-                                    current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1), sound=True)
+            msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1), sound=True)
 
             result = msg_box.get()
 
@@ -139,8 +137,7 @@ def check_for_updates_func(window, ignore_up_todate=False):
         elif int_latest_version < int_current_version:
             if ignore_up_todate:
                 return
-            msg_box = CTkMessagebox(title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {
-                                    current_version}\nLatest Version: {latest_version}", option_1="Ok", sound=True)
+            msg_box = CTkMessagebox(title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="Ok", sound=True)
             result = msg_box.get()
         elif int_latest_version == int_current_version:
             if ignore_up_todate:
@@ -154,8 +151,7 @@ def check_for_updates_func(window, ignore_up_todate=False):
                 "Error!", "An error occured while checking for updates!\nCheck your internet and try again")
 
     except Exception as e:
-        show_message("Error", f"Error while checking for updates: \n{
-                     e}", icon="cancel")
+        show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
 
 
 def extract_workshop_id(link):
@@ -258,8 +254,7 @@ def convert_bytes_to_readable(size_in_bytes, no_symb=None):
 
 
 def get_workshop_file_size(workshop_id, raw=None):
-    url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={
-        workshop_id}&searchtext="
+    url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}&searchtext="
     response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
     file_size_element = soup.find("div", class_="detailsStatRight")
@@ -313,8 +308,7 @@ def launch_game_func(path, procname="BlackOps3.exe", flags=""):
         show_message(
             "Please wait!", "The game has launched in the background it will open up in a sec!", icon="info")
     except Exception as e:
-        show_message(f"Error: Failed to launch game", f"Failed to start {
-                     procname}\n\nMake sure the game path is correct.\n\n{e}")
+        show_message(f"Error: Failed to launch game", f"Failed to start {procname}\n\nMake sure the game path is correct.\n\n{e}")
 
 
 def remove_tree(folder_path, show_error=None):
@@ -322,8 +316,7 @@ def remove_tree(folder_path, show_error=None):
         try:
             shutil.rmtree(folder_path)
         except Exception as e:
-            show_message("Error!", f"An error occurred while trying to remove files:\n{
-                         e}", icon="cancel")
+            show_message("Error!", f"An error occurred while trying to remove files:\n{e}", icon="cancel")
     try:
         shutil.rmtree(folder_path)
     except Exception as e:
@@ -552,20 +545,25 @@ def isNullOrWhiteSpace(str):
         return True
     return False
 
+
 def concatenate_sublists(a):
     out = []
     for sublist in a:
         out.extend(sublist)
     return out
-            
-def nextnonexistent(f, path=os.curdir, return_idx=False):
-    fnew = f
-    root, ext = os.path.splitext(f)
+
+
+def nextnonexistentdir(f, dir=os.path.dirname(os.path.realpath(__file__))):
     i = 0
-    while os.path.exists(os.path.join(path,fnew)):
+
+    def already_exists(i):
+        return os.path.exists(os.path.join(dir, (f + f'_{str(i)}').strip()))
+
+    while already_exists(i):
         i += 1
-        fnew = '%s_%i%s' % (root, i, ext)
-    if return_idx: return fnew, i
-    else: return fnew
+
+    root_i_ext = [f, i]
+
+    return root_i_ext
 
 # End helper functions
