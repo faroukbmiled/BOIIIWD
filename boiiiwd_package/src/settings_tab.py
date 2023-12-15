@@ -99,14 +99,25 @@ class SettingsTab(ctk.CTkFrame):
         self.check_items_tooltip = CTkToolTip(self.check_items_ch, message="This will show a window on launch of items that have pending updates -> you can open it manually from library tab")
         self.check_items_var.set(self.load_settings("check_items", "off"))
         
-        # download options
+        
+        # TODO: get windows size to padx for the following checkboxes
+        
+        # update invalid
         self.invalid_items_var = ctk.BooleanVar()
         self.invalid_items_var.trace_add("write", self.enable_save_button)
-        self.invalid_items_ch = ctk.CTkSwitch(left_frame, text="Check library items on launch", variable=self.invalid_items_var)
-        self.invalid_items_ch.grid(row=1, column=2, padx=20, pady=(20, 0), sticky="nw")
-        self.invalid_items_tooltip = CTkToolTip(self.invalid_items_ch, message="Attempt to download invalid items")
-        self.invalid_items_var.set(self.load_settings("check_items", "off"))       
+        self.invalid_items_ch = ctk.CTkSwitch(left_frame, text="Update invalid items", variable=self.invalid_items_var)
+        self.invalid_items_ch.grid(row=0, column=1, padx=(300,0), pady=(20, 0), sticky="nw")
+        self.invalid_items_tooltip = CTkToolTip(self.invalid_items_ch, message="Allow updating invalid items")
+        self.invalid_items_var.set(self.load_settings("update_invalid", "off"))       
 
+        # skip invalid
+        self.skip_items_var = ctk.BooleanVar()
+        self.skip_items_var.trace_add("write", self.enable_save_button)
+        self.skip_items_ch = ctk.CTkSwitch(left_frame, text="Skip invalid items", variable=self.skip_items_var)
+        self.skip_items_ch.grid(row=1, column=1, padx=(300,0), pady=(20, 0), sticky="nw")
+        self.skip_items_tooltip = CTkToolTip(self.skip_items_ch, message="Skip invalid items")
+        self.skip_items_var.set(self.load_settings("skip_invalid", "off"))       
+        
         # text input fields
         self.label_destination_folder = ctk.CTkLabel(left_frame, text='Enter Game folder:')
         self.label_destination_folder.grid(row=8, column=1, padx=20, pady=(20, 0), columnspan=1, sticky="ws")
@@ -293,11 +304,21 @@ class SettingsTab(ctk.CTkFrame):
             save_config("check_items", "on")
         else:
             save_config("check_items", "off")
+            
+        if self.invalid_items_var.get():
+            save_config("update_invalid", "on")
+        else:
+            save_config("update_invalid", "off")
+            
+        if self.skip_items_var.get():
+            save_config("skip_invalid", "on")
+        else:
+            save_config("skip_invalid", "off")
 
         if self.check_updates_checkbox.get():
-            save_config("checkforupdtes", "on")
+            save_config("checkforupdates", "on")
         else:
-            save_config("checkforupdtes", "off")
+            save_config("checkforupdates", "off")
 
         if self.checkbox_show_console.get():
             save_config("console", "on")
@@ -585,7 +606,7 @@ class SettingsTab(ctk.CTkFrame):
             self.save_settings()
 
     def load_on_switch_screen(self):
-        self.check_updates_var.set(self.load_settings("checkforupdtes"))
+        self.check_updates_var.set(self.load_settings("checkforupdates"))
         self.console_var.set(self.load_settings("console"))
         self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "10"))
         self.estimated_progress_var.set(self.load_settings("estimated_progress", "on"))

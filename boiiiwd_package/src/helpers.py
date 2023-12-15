@@ -200,7 +200,7 @@ def initialize_steam(master):
 @if_internet_available
 def valid_id(workshop_id):
     data = item_steam_api(workshop_id)
-    if check_config("skip_invalid", "skip") == "no":
+    if check_config("skip_invalid", "on") == "off":
         if data:
             return True
     if "consumer_app_id" in data['response']['publishedfiledetails'][0]:
@@ -225,7 +225,7 @@ def create_default_config():
     config["Settings"] = {
         "SteamCMDPath": APPLICATION_PATH,
         "DestinationFolder": "",
-        "checkforupdtes": "on",
+        "checkforupdates": "on",
         "console": "off"
     }
     with open(CONFIG_FILE_PATH, "w") as config_file:

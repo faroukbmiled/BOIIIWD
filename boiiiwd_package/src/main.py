@@ -195,7 +195,7 @@ class BOIIIWD(ctk.CTk):
         # load ui configs
         self.load_configs()
 
-        if check_config("checkforupdtes") == "on":
+        if check_config("checkforupdates") == "on":
             self.withdraw()
             try: check_for_updates_func(self, ignore_up_todate=True)
             except: pass

@@ -695,7 +695,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                                 main_app.app.edit_workshop_id.delete(0, "end")
                                 main_app.app.edit_workshop_id.insert(0, workshop_id)
                                 main_app.app.main_button_event()
-                                if invalid_warn and check_config("update_invalid", "no") == "yes":
+                                if invalid_warn and check_config("update_invalid", "off") == "on":
                                     main_app.app.download_map(update=True, invalid_item_folder=os.path.basename(folder))
                                 else:
                                     main_app.app.download_map(update=True)
@@ -812,8 +812,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     update_btn.configure(state="disabled")
                     update_btn_tooltip.configure(message="Currently offline")
                     view_button_tooltip.configure(message="Currently offline")
-                if check_config("update_invalid", "no") == "yes":
-                    update_btn_tooltip.configure(message="update_invalid is set to 'yes' in config.ini")
+                if check_config("update_invalid", "off") == "on":
+                    update_btn_tooltip.configure(message="update_invalid is set to 'on' in config.ini")
                 elif invalid_warn:
                     update_btn.configure(text="Update", state="disabled")
                     update_btn_tooltip.configure(message="Disabled due to item being blocked or duplicated")
