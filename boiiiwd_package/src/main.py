@@ -168,6 +168,7 @@ class BOIIIWD(ctk.CTk):
         self.is_downloading = False
         self.is_steamcmd_updating = False
         self.item_skipped = False
+        self.steam_updater_size = "Unknown size"
         self.fail_threshold = 0
 
         # sidebar windows buttons
@@ -835,11 +836,17 @@ class BOIIIWD(ctk.CTk):
 
                 lines = log_file.readlines()[-7:]
 
-                for line in reversed(lines):
-                    line = line.lower().strip()
+                for _line in reversed(lines):
+                    line = _line.lower().strip()
                     if "downloading update" in line:
+                        print(line)
+                        match = re.search(r'(\d{1,3}(?:,\d{3})* of \d{1,3}(?:,\d{3})* [kKMGTP]{0,1}B)', _line)
+                        if match:
+                            update_size_str = match.group(1)
+                            self.steam_updater_size = update_size_str
                         return True
-
+                    elif self.is_steamcmd_updating and "downloading update" not in line:
+                        self.steam_updater_size = "Installing"
             return False
         except:
             try:
@@ -1264,7 +1271,7 @@ class BOIIIWD(ctk.CTk):
 
                         while not self.is_downloading and not self.settings_tab.stopped:
                             if self.is_steamcmd_updating:
-                                self.after(1, self.label_speed.configure(text=f"Updating steamcmd..."))
+                                self.after(1, self.label_speed.configure(text=f"Updating steamcmd ({self.steam_updater_size})..."))
                             else:
                                 self.after(1, self.label_speed.configure(text=f"Waiting for steamcmd..."))
                             time_elapsed = time.time() - start_time
@@ -1544,7 +1551,10 @@ class BOIIIWD(ctk.CTk):
                         est_downloaded_bytes = 0
 
                     while not self.is_downloading and not self.settings_tab.stopped:
-                        self.after(1, self.label_speed.configure(text=f"Waiting for steamcmd..."))
+                        if self.is_steamcmd_updating:
+                            self.after(1, self.label_speed.configure(text=f"Updating steamcmd ({self.steam_updater_size})..."))
+                        else:
+                            self.after(1, self.label_speed.configure(text=f"Waiting for steamcmd..."))
                         time_elapsed = time.time() - start_time
                         elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
                         if self.settings_tab.show_fails:
@@ -1553,6 +1563,7 @@ class BOIIIWD(ctk.CTk):
                             self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
                         time.sleep(1)
                         if self.is_downloading:
+                            self.is_steamcmd_updating = False
                             break
 
                     try:
