@@ -34,6 +34,10 @@ class SettingsTab(ctk.CTkFrame):
         right_frame.grid(row=0, column=2, padx=(0, 20), pady=(20, 0), sticky="nsew")
         right_frame.grid_columnconfigure(1, weight=1)
         self.update_idletasks()
+        
+        # Save button
+        self.save_button = ctk.CTkButton(self, text="Save", command=self.save_settings, state='disabled')
+        self.save_button.grid(row=3, column=1, padx=40, pady=(20, 20), sticky="ne")
 
         # Check for updates checkbox
         self.check_updates_var = ctk.BooleanVar()
@@ -206,10 +210,6 @@ class SettingsTab(ctk.CTkFrame):
                                                 variable=self.folder_options_label_var)
         self.folder_options.grid(row=14, column=1, padx=20, pady=(0, 0), sticky="nw")
         self.folder_options.set(value=self.load_settings("folder_naming", "PublisherID"))
-
-        # Save button
-        self.save_button = ctk.CTkButton(self, text="Save", command=self.save_settings, state='disabled')
-        self.save_button.grid(row=3, column=1, padx=40, pady=(20, 20), sticky="ne")
 
         #version
         self.version_info = ctk.CTkLabel(self, text=f"{VERSION}")
