@@ -111,7 +111,7 @@ class SettingsTab(ctk.CTkFrame):
         self.invalid_items_var.trace_add("write", self.enable_save_button)
         self.invalid_items_ch = ctk.CTkSwitch(left_frame, text="Update invalid items", variable=self.invalid_items_var)
         self.invalid_items_ch.grid(row=0, column=1, padx=(300,0), pady=(20, 0), sticky="nw")
-        self.invalid_items_tooltip = CTkToolTip(self.invalid_items_ch, message="Allow updating invalid items")
+        self.invalid_items_tooltip = CTkToolTip(self.invalid_items_ch, message="Allow updating invalid items from the details tab")
         self.invalid_items_var.set(self.load_settings("update_invalid", "off"))       
 
         # skip invalid
@@ -500,18 +500,22 @@ class SettingsTab(ctk.CTkFrame):
 
         files = Path(folders_to_process[0]).glob("*/zone/workshop.json")
         items = dict()
+        ignored_folders = []
 
         for idx, file in enumerate(files):
-            curr_folder_name = os.path.relpath(
-                file, folders_to_process[0]).split("\\", 1)[0]
+            curr_folder_name = os.path.relpath(file, folders_to_process[0]).split("\\", 1)[0]
 
             with open(file, 'r') as json_file:
                 data = json.load(json_file)
-                items[idx] = {
+                _item = {
                     'PublisherID': data.get('PublisherID'),
                     'Name': data.get(option),
                     'current_folder': curr_folder_name
                 }
+                if _item.get('PublisherID')!="" and int(_item.get('PublisherID'))>0:
+                    items[idx] = _item
+                else:
+                    ignored_folders.append(curr_folder_name)
 
         IDs = [x['PublisherID'] for x in items.values()]
         Names = [x['Name'] for x in items.values()]
@@ -545,9 +549,9 @@ class SettingsTab(ctk.CTkFrame):
                         changelist, currFolder[v[1]], Names[v[1]]+"_duplicate")
                 else:
                     prep_rename(
-                        changelist, currFolder[v[0]], Names[v[0]]+f"{IDs[v[0]]}")
+                        changelist, currFolder[v[0]], Names[v[0]]+f"_{IDs[v[0]]}")
                     prep_rename(
-                        changelist, currFolder[v[1]], Names[v[1]]+f"{IDs[v[1]]}")
+                        changelist, currFolder[v[1]], Names[v[1]]+f"_{IDs[v[1]]}")
 
             if len(v) > 2:
                 for j, i in enumerate(v):
@@ -574,7 +578,11 @@ class SettingsTab(ctk.CTkFrame):
                             changelist, currFolder[i], Names[i]+f"_{IDs[i]}")
 
         for n in changelist:
-            os.rename(n[0], n[1])
+            safe_name = nextnonexistentdir(*tuple(reversed(os.path.split(n[1]))))
+            if safe_name[0] in ignored_folders and safe_name[1] > 0:
+                os.rename(n[0], os.path.join(n[0], '{}_{}'.format(*safe_name)))
+            else:
+                os.rename(n[0], n[1])
 
         return 1
 

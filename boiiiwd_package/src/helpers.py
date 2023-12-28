@@ -425,8 +425,9 @@ def get_update_time_from_html(workshop_id):
 
         details_stats_container = soup.find(
             "div", class_="detailsStatsContainerRight")
-        details_stat_elements = details_stats_container.find_all(
-            "div", class_="detailsStatRight")
+        if details_stats_container:
+            details_stat_elements = details_stats_container.find_all(
+                "div", class_="detailsStatRight")
         try:
             date_updated = details_stat_elements[2].text.strip()
         except:
@@ -557,7 +558,10 @@ def nextnonexistentdir(f, dir=os.path.dirname(os.path.realpath(__file__))):
     i = 0
 
     def already_exists(i):
-        return os.path.exists(os.path.join(dir, (f + f'_{str(i)}').strip()))
+        if i==0 and os.path.exists(os.path.join(dir, (f).strip())):
+            return True
+        else:
+            return os.path.exists(os.path.join(dir, (f + f'_{str(i)}').strip()))
 
     while already_exists(i):
         i += 1

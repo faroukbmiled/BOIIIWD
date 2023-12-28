@@ -1515,7 +1515,7 @@ class BOIIIWD(ctk.CTk):
             file_size = ws_file_size
 
             if not valid_id(workshop_id):
-                show_message("Warning", "Please enter a valid Workshop ID/Link.", icon="warning")
+                show_message("Warning", "Invalid Workshop ID/Link.\nYou can attempt to update with 'Skip Invalid Items' disabled.", icon="warning")
                 self.stop_download()
                 return
 

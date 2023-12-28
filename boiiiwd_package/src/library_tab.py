@@ -893,7 +893,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 lib_data = None
 
                 if not os.path.exists(os.path.join(APPLICATION_PATH, LIBRARY_FILE)):
-                    show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct game path!, you also need to have at least 1 item!")
+                    show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct game path! You also need to have at least 1 item!")
                     return
 
                 with open(os.path.join(APPLICATION_PATH, LIBRARY_FILE), 'r') as file:
@@ -906,7 +906,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 if_ids_need_update(item_ids, item_dates, texts)
 
             except:
-                show_message("Error checking for item updates!", "Please visit the library tab at least once with the correct game path!, you also need to have at least 1 item!")
+                show_message("Error checking for item updates!", "Please visit the library tab at least once with the correct game path! You also need to have at least 1 item!")
                 return
 
         check_for_update()
