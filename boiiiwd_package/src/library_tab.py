@@ -326,7 +326,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                                 "folder_name": curr_folder_name,
                                 "json_folder_name": folder_name
                             }
-                        # when item is blocked ,item_exists_in_file() returns None for folder_found
+                        # when item is blocked item_exists_in_file() returns None for folder_found
                         if not id_found and folder_found == None:
                             self.remove_item_by_option(items_file, curr_folder_name, "folder_name")
                         elif not id_found and not folder_found and curr_folder_name not in self.item_block_list and workshop_id not in self.ids_added:
@@ -347,7 +347,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         self.added_folders.add(curr_folder_name)
                         # added that cuz it sometimes can add blocked ids first
                         # and legit ids will be blocked cuz theyll be added to "ids_added"
-                        if not workshop_id in self.ids_added and curr_folder_name not in self.item_block_list:
+                        if not workshop_id in self.ids_added and curr_folder_name not in self.item_block_list and workshop_id!='None':
                             self.ids_added.add(workshop_id)
 
         # sort items by type then alphabet
