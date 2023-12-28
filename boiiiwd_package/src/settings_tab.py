@@ -498,7 +498,7 @@ class SettingsTab(ctk.CTkFrame):
 
         processed_names = set()
 
-        files = Path(folders_to_process[0]).glob("*/zone/*.json")
+        files = Path(folders_to_process[0]).glob("*/zone/workshop.json")
         items = dict()
 
         for idx, file in enumerate(files):
