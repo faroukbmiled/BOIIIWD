@@ -14,6 +14,10 @@
   </div>
 </div>
 
+## Usage:
+- Run [BOIIIWD.exe](https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip) ([VirusTotal Scan](https://www.virustotal.com/gui/file/5ca1367a82893a1f412b59a52431e9ac4219a67a50c294ee86a7d41473826b14/detection))
+- [Optional] Run as script:```python boiiiwd_package\boiiiwd.py```
+
 ## Features:
 - Improved download stability
 - Auto installs mods and maps
@@ -35,3 +39,7 @@
     * Ctrl + Mouse1 -> append to clipboard
     * Mouse2 (scroll wheel button) -> open item path in file explorer
     * Mouse3 (Right click) -> copy path
+
+## Building from Source:
+- ```pip install -r requirements.txt``` -> use my modified [CTkToolTip](./CTkToolTip) and [CTkListbox](./CTkListbox)
+- ```python build.py```
