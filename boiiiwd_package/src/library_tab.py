@@ -231,7 +231,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         item_type, item_name = item[5], item[0]
         return (0, item_name) if item_type == "map" else (1, item_name)
 
-    def load_items(self, boiiiFolder, dont_add=False):
+    def load_items(self, gameFolder, dont_add=False):
         if self.refresh_next_time and not dont_add:
             self.refresh_next_time = False
             status = self.refresh_items()
@@ -243,8 +243,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
             self.ids_added.clear()
             self.refresh_next_time = True
 
-        maps_folder = Path(boiiiFolder) / "mods"
-        mods_folder = Path(boiiiFolder) / "usermaps"
+        maps_folder = Path(gameFolder) / "mods"
+        mods_folder = Path(gameFolder) / "usermaps"
         mod_img = os.path.join(RESOURCES_DIR, "mod_image.png")
         map_img = os.path.join(RESOURCES_DIR, "map_image.png")
         b_mod_img = os.path.join(RESOURCES_DIR, "b_mod_image.png")
@@ -262,14 +262,14 @@ class LibraryTab(ctk.CTkScrollableFrame):
             except: pass
 
         for folder_path in folders_to_process:
-            for zone_path in folder_path.glob("**/zone"):
+            for zone_path in folder_path.glob("*/zone"):
                 json_path = zone_path / "workshop.json"
                 if json_path.exists():
 
                     curr_folder_name = zone_path.parent.name
                     workshop_id = extract_json_data(json_path, "PublisherID") or "None"
                     name = re.sub(r'\^\d', '', extract_json_data(json_path, "Title")) or "None"
-                    name = name[:45] + "..." if len(name) > 45 else name
+                    name = name[:60] + "..." if len(name) > 60 else name
                     item_type = extract_json_data(json_path, "Type") or "None"
                     folder_name = extract_json_data(json_path, "FolderName") or "None"
                     folder_size_bytes = get_folder_size(zone_path.parent)
@@ -298,7 +298,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     if curr_folder_name not in self.added_folders:
                         image_path = mod_img if item_type == "mod" else map_img
                         if not (str(curr_folder_name).strip() == str(workshop_id).strip() or str(curr_folder_name).strip() == str(folder_name).strip()
-                                or str(curr_folder_name).strip() == f"{folder_name}_{workshop_id}"):
+                                or str(curr_folder_name).strip() == f"{folder_name}_{workshop_id}" or str(curr_folder_name).strip() == f"{folder_name}_duplicated"):
                             try: self.remove_item_by_option(items_file, curr_folder_name, "folder_name")
                             except: pass
                             self.item_block_list.add(curr_folder_name)
@@ -308,6 +308,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                         elif (curr_folder_name not in self.added_folders and (workshop_id in self.ids_added or workshop_id == "None")):
                             try: self.remove_item_by_option(items_file, curr_folder_name, "folder_name")
                             except: pass
+                            self.item_block_list.add(workshop_id)
                             text_to_add = re.sub(r'ID:\s+(?:\d+|None)', f'Folder: {curr_folder_name}', text_to_add)
                             image_path = b_mod_img if item_type == "mod" else b_map_img
                             text_to_add += " | ⚠️"
@@ -325,7 +326,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                                 "folder_name": curr_folder_name,
                                 "json_folder_name": folder_name
                             }
-                        # when item is blocked ,item_exists_in_file() returns None for folder_found
+                        # when item is blocked item_exists_in_file() returns None for folder_found
                         if not id_found and folder_found == None:
                             self.remove_item_by_option(items_file, curr_folder_name, "folder_name")
                         elif not id_found and not folder_found and curr_folder_name not in self.item_block_list and workshop_id not in self.ids_added:
@@ -339,14 +340,14 @@ class LibraryTab(ctk.CTkScrollableFrame):
                                     f.seek(0)
                                     json.dump(items_data, f, indent=4)
 
-                        if id_found and not folder_found and curr_folder_name not in self.item_block_list and workshop_id not in self.ids_added:
+                        if curr_folder_name not in self.item_block_list:
                             self.update_or_add_item_by_id(items_file, item_info, workshop_id)
 
                         # keep here cuz of item_exists_in_file() testing
                         self.added_folders.add(curr_folder_name)
                         # added that cuz it sometimes can add blocked ids first
                         # and legit ids will be blocked cuz theyll be added to "ids_added"
-                        if not workshop_id in self.ids_added and curr_folder_name not in self.item_block_list:
+                        if not workshop_id in self.ids_added and curr_folder_name not in self.item_block_list and workshop_id!='None':
                             self.ids_added.add(workshop_id)
 
         # sort items by type then alphabet
@@ -354,7 +355,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         for item in ui_items_to_add:
             self.add_item_helper(*item)
 
-        if not self.file_cleaned and os.path.exists(items_file):
+        if os.path.exists(items_file):
             self.file_cleaned = True
             self.clean_json_file(items_file)
 
@@ -372,22 +373,22 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.show_no_items_message(only_up=True)
         return "No items in current selected folder"
 
-    def update_item(self, boiiiFolder, id, item_type, foldername):
+    def update_item(self, gameFolder, id, item_type, foldername):
         try:
             if item_type == "map":
-                folder_path = Path(boiiiFolder) / "usermaps" / f"{foldername}"
+                folder_path = Path(gameFolder) / "usermaps" / f"{foldername}"
             elif item_type == "mod":
-                folder_path = Path(boiiiFolder) / "mods" / f"{foldername}"
+                folder_path = Path(gameFolder) / "mods" / f"{foldername}"
             else:
                 raise ValueError("Unsupported item_type. It must be 'map' or 'mod'.")
 
-            for zone_path in folder_path.glob("**/zone"):
+            for zone_path in folder_path.glob("*/zone"):
                 json_path = zone_path / "workshop.json"
                 if json_path.exists():
                     workshop_id = extract_json_data(json_path, "PublisherID")
                     if workshop_id == id:
                         name = extract_json_data(json_path, "Title").replace(">", "").replace("^", "")
-                        name = name[:45] + "..." if len(name) > 45 else name
+                        name = name[:60] + "..." if len(name) > 60 else name
                         item_type = extract_json_data(json_path, "Type")
                         folder_name = extract_json_data(json_path, "FolderName")
                         size = convert_bytes_to_readable(get_folder_size(zone_path.parent))
@@ -456,7 +457,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.added_items.clear()
         self.added_folders.clear()
         self.ids_added.clear()
-        status = self.load_items(main_app.app.edit_destination_folder.get().strip())
+
+        status = self.load_items( main_app.app.settings_tab.edit_destination_folder.get().strip())
         main_app.app.title(f"BOIII Workshop Downloader - Library  ➜  {status}")
         # main_app library event needs a return for status => when refresh_next_time is true
         return status
@@ -471,7 +473,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         if only_up:
             return
         self.no_items_label.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="n")
-        self.no_items_label.configure(text="No items found in the selected folder. \nMake sure you have a mod/map downloaded and or have the right boiii folder selected.")
+        self.no_items_label.configure(text="No items found in the selected folder. \nMake sure you have a mod/map downloaded and or have the right game folder selected.")
 
     def hide_no_items_message(self):
         self.update_tooltip.configure(message="Check items for updates")
@@ -587,7 +589,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 if json_path.exists():
                     workshop_id = extract_json_data(json_path, "PublisherID") or "None"
                     name = re.sub(r'\^\w+', '', extract_json_data(json_path, "Title")) or "None"
-                    map_name = name[:45] + "..." if len(name) > 45 else name
+                    map_name = name[:60] + "..." if len(name) > 60 else name
                     map_mod_type = extract_json_data(json_path, "Type") or "None"
                     preview_iamge = json_path.parent / "previewimage.png"
                     if preview_iamge.exists():
@@ -693,7 +695,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                                 main_app.app.edit_workshop_id.delete(0, "end")
                                 main_app.app.edit_workshop_id.insert(0, workshop_id)
                                 main_app.app.main_button_event()
-                                if invalid_warn and check_config("update_invalid", "no") == "yes":
+                                if invalid_warn and check_config("update_invalid", "off") == "on":
                                     main_app.app.download_map(update=True, invalid_item_folder=os.path.basename(folder))
                                 else:
                                     main_app.app.download_map(update=True)
@@ -810,8 +812,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     update_btn.configure(state="disabled")
                     update_btn_tooltip.configure(message="Currently offline")
                     view_button_tooltip.configure(message="Currently offline")
-                if check_config("update_invalid", "no") == "yes":
-                    update_btn_tooltip.configure(message="update_invalid is set to 'yes' in config.ini")
+                if check_config("update_invalid", "off") == "on":
+                    update_btn_tooltip.configure(message="update_invalid is set to 'on' in config.ini")
                 elif invalid_warn:
                     update_btn.configure(text="Update", state="disabled")
                     update_btn_tooltip.configure(message="Disabled due to item being blocked or duplicated")
@@ -869,12 +871,19 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 item_data = get_item_dates(item_ids)
 
                 for item_id, date_updated in item_data.items():
-                    item_date = item_dates[item_id]
+                    if not date_updated:
+                        try:
+                            new_date = get_update_time_from_html(item_id)
+                            date_updated = new_date if new_date else 1
+                        except:
+                            date_updated = 1
+                    item_date = item_dates[str(item_id)] if str(item_id) in item_dates else ""
                     date_updated = datetime.fromtimestamp(date_updated)
 
                     if check_item_date(item_date, date_updated):
-                        date_updated = date_updated.strftime("%d %b @ %I:%M%p, %Y")
-                        self.to_update.add(texts[item_id] + f" | Updated: {date_updated}")
+                        if item_date != "":
+                            date_updated = date_updated.strftime("%d %b @ %I:%M%p, %Y")
+                            self.to_update.add(texts[item_id] + f" | Updated: {date_updated}")
 
             except Exception as e:
                 show_message("Error", f"Error occurred\n{e}", icon="cancel")
@@ -884,7 +893,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 lib_data = None
 
                 if not os.path.exists(os.path.join(APPLICATION_PATH, LIBRARY_FILE)):
-                    show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct boiii path!, you also need to have at least 1 item!")
+                    show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct game path! You also need to have at least 1 item!")
                     return
 
                 with open(os.path.join(APPLICATION_PATH, LIBRARY_FILE), 'r') as file:
@@ -897,7 +906,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 if_ids_need_update(item_ids, item_dates, texts)
 
             except:
-                show_message("Error checking for item updates!", "Please visit the library tab at least once with the correct boiii path!, you also need to have at least 1 item!")
+                show_message("Error checking for item updates!", "Please visit the library tab at least once with the correct game path! You also need to have at least 1 item!")
                 return
 
         check_for_update()

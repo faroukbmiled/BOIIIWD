@@ -1,5 +1,4 @@
 import os
-import shutil
 import PyInstaller.__main__
 from distutils.sysconfig import get_python_lib
 
@@ -29,5 +28,7 @@ PyInstaller.__main__.run([
     "--add-data", f"{site_packages_path}/CTkToolTip;CTkToolTip",
 ])
 
-current_directory = os.path.dirname(__file__)
-shutil.copy2(os.path.join(current_directory, "dist", "BOIIIWD.exe"), current_directory)
+# create symbolic hardlink to main directory
+if os.path.exists("BOIIIWD.exe"):
+    os.remove("BOIIIWD.exe")
+os.link('dist/BOIIIWD.exe', 'BOIIIWD.exe')
