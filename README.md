@@ -1,18 +1,19 @@
 # BOIIIWD
 - A Feature-rich GUI Steam Workshop downloader for [Call of Duty®: Black Ops III](https://store.steampowered.com/app/311210/Call_of_Duty_Black_Ops_III/) built using CustomTkinter <br>
 
-<div style="display: flex; justify-content: space-between;">
-  <!-- Left Side -->
-  <div style="flex: 1; margin-right: 5px;">
-    <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/0aa8295f-ba07-4778-8140-200021df4ba9" width="400" />
-    <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/b4f27fe1-88f2-4158-b7ba-c8aec57b9968" width="400" />
-  </div>
-  <!-- Right Side -->
-  <div style="flex: 1; margin-left: 5px;">
-    <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/86c07cf2-b04b-42d0-ae06-8526bffafb34" width="400" />
-    <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/4c5877eb-81a7-4ae7-99db-3096ab57b12b" width="400" />
-  </div>
-</div>
+<table>
+  <tr>
+    <td align="center">
+      <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/4d199e21-c9a0-4dfc-b831-866fbff1d1a1" max-width="400" />
+    </td>
+    <td align="center">
+      <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/25174889-4524-455f-9836-f4ea5240e07f" max-width="400" />
+    </td>
+    <td align="center">
+      <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/df54a0d7-f9ab-4061-b8b7-06d9e5992c90" max-width="400" />
+    </td>
+  </tr>
+</table>
 
 ## Usage:
 - Run [BOIIIWD.exe](https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip) ([VirusTotal Scan](https://www.virustotal.com/gui/file/5ca1367a82893a1f412b59a52431e9ac4219a67a50c294ee86a7d41473826b14/detection))
@@ -28,7 +29,7 @@
 - Custom Themes
 
 ## Notes:
-
+- Use [BOIIIWD.exe v0.3.3](https://github.com/faroukbmiled/BOIIIWD/releases/download/v0.3.3/Release.zip) if you encounter issues and you only play ezz boii (code at [v0.3.3](https://github.com/faroukbmiled/BOIIIWD/tree/v0.3.3))
 - Steamcmd will be downloaded if it is not installed <br>
 - Initializing SteamCMD for the first time could take some time depending on your internet speed <br>
 
