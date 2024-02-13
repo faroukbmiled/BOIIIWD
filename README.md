@@ -29,7 +29,6 @@
 - Custom Themes
 
 ## Notes:
-- Use [BOIIIWD.exe v0.3.3](https://github.com/faroukbmiled/BOIIIWD/releases/download/v0.3.3/Release.zip) if you encounter issues and you only play ezz boii (code at [v0.3.3](https://github.com/faroukbmiled/BOIIIWD/tree/v0.3.3))
 - Steamcmd will be downloaded if it is not installed <br>
 - Initializing SteamCMD for the first time could take some time depending on your internet speed <br>
 
