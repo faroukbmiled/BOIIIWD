@@ -1176,13 +1176,16 @@ class BOIIIWD(ctk.CTk):
 
                 ws_file_size = get_workshop_file_size(workshop_id)
                 file_size = ws_file_size
-                items_ws_sizes[workshop_id] = ws_file_size
-                self.total_queue_size += ws_file_size
 
                 if file_size is None:
-                    show_message("Error", "Failed to retrieve file size.", icon="cancel")
-                    self.stop_download()
-                    return
+                    ws_file_size = 1
+                    file_size = 1
+                    show_message("Error", "Failed to retrieve file size, Continuing anyway", icon="cancel")
+                    # self.stop_download()
+                    # return
+
+                items_ws_sizes[workshop_id] = ws_file_size
+                self.total_queue_size += ws_file_size
 
                 if any(workshop_id in item for item in self.library_tab.added_items):
                     self.already_installed.append(workshop_id)
@@ -1234,7 +1237,7 @@ class BOIIIWD(ctk.CTk):
                         self.stop_download()
                         return
                 ws_file_size = get_workshop_file_size(workshop_id)
-                file_size = ws_file_size
+                file_size = ws_file_size if ws_file_size is not None else 1
                 self.after(1, lambda mid=workshop_id: self.label_file_size.configure(text=f"File size: {get_workshop_file_size(mid ,raw=True)}"))
                 download_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "downloads", "311210", workshop_id)
                 map_folder = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", workshop_id)
@@ -1244,7 +1247,7 @@ class BOIIIWD(ctk.CTk):
                 def check_and_update_progress():
                     previous_net_speed = 0
                     est_downloaded_bytes = 0
-                    file_size = ws_file_size
+                    file_size = ws_file_size if ws_file_size is not None else 1
                     item_name = get_item_name(workshop_id) if get_item_name(workshop_id) else "Error getting name"
 
                     while not self.settings_tab.stopped:
@@ -1520,9 +1523,11 @@ class BOIIIWD(ctk.CTk):
                 return
 
             if file_size is None:
-                show_message("Error", "Failed to retrieve file size.", icon="cancel")
-                self.stop_download()
-                return
+                ws_file_size = 1
+                file_size = 1
+                show_message("Error", "Failed to retrieve file size, Continuing anyway", icon="cancel")
+                # self.stop_download()
+                # return
 
             if not update:
                 if any(workshop_id in item for item in self.library_tab.added_items):
@@ -1542,7 +1547,7 @@ class BOIIIWD(ctk.CTk):
                 previous_net_speed = 0
                 est_downloaded_bytes = 0
                 start_time = time.time()
-                file_size = ws_file_size
+                file_size = ws_file_size if ws_file_size is not None else 1
 
                 while not self.settings_tab.stopped:
                     if self.settings_tab.steamcmd_reset:

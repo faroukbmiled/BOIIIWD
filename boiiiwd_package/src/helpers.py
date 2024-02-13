@@ -263,18 +263,27 @@ def get_workshop_file_size(workshop_id, raw=None):
         if raw:
             file_size_text = file_size_element.get_text(strip=True)
             file_size_text = file_size_text.replace(",", "")
-            file_size_in_mb = float(file_size_text.replace(" MB", ""))
-            file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
+            if "GB" in file_size_text:
+                file_size_in_gb = float(file_size_text.replace(" GB", ""))
+                file_size_in_bytes = int(file_size_in_gb * 1024 * 1024 * 1024)
+            else:
+                file_size_in_mb = float(file_size_text.replace(" MB", ""))
+                file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
             return convert_bytes_to_readable(file_size_in_bytes)
 
         if file_size_element:
             file_size_text = file_size_element.get_text(strip=True)
             file_size_text = file_size_text.replace(",", "")
-            file_size_in_mb = float(file_size_text.replace(" MB", ""))
-            file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
+            if "GB" in file_size_text:
+                file_size_in_gb = float(file_size_text.replace(" GB", ""))
+                file_size_in_bytes = int(file_size_in_gb * 1024 * 1024 * 1024)
+            else:
+                file_size_in_mb = float(file_size_text.replace(" MB", ""))
+                file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
             return file_size_in_bytes
         return None
-    except:
+    except Exception as e:
+        print(e)
         return None
 
 
