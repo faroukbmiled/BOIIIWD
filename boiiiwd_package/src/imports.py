@@ -19,6 +19,7 @@ import customtkinter as ctk
 import ujson as json
 import psutil
 import requests
+import socket
 import winreg
 from bs4 import BeautifulSoup
 

@@ -87,19 +87,21 @@ def create_update_script(current_exe, new_exe, updater_folder, program_name):
     return script_path
 
 
-def if_internet_available(func):
-    if func == "return":
+def if_internet_available(func=None):
+    def check_internet():
         try:
-            requests.get("https://www.google.com", timeout=3)
+            socket.create_connection(("8.8.8.8", 53), timeout=3)
             return True
-        except:
+        except OSError:
             return False
 
+    if func == "return":
+        return check_internet()
+
     def wrapper(*args, **kwargs):
-        try:
-            requests.get("https://www.google.com", timeout=3)
+        if check_internet():
             return func(*args, **kwargs)
-        except:
+        else:
             show_message(
                 "Offline", "No internet connection. Please check your internet connection and try again.")
             return
