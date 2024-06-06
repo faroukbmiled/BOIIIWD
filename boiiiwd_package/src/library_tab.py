@@ -841,8 +841,13 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     button_view.configure(state="normal")
         main_app.app.after(0, main_thread)
 
-    @if_internet_available
     def check_for_updates(self, on_launch=False):
+        online = if_internet_available("return")
+        if not online:
+            if not on_launch:
+                show_message(
+                        "Offline", "No internet connection. Please check your internet connection and try again.")
+            return
         self.after(1, self.update_button.configure(state="disabled"))
         self.update_tooltip.configure(message='Still loading please wait...')
         cevent = Event()
