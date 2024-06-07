@@ -34,7 +34,7 @@ class SettingsTab(ctk.CTkFrame):
         right_frame.grid(row=0, column=2, padx=(0, 20), pady=(20, 0), sticky="nsew")
         right_frame.grid_columnconfigure(1, weight=1)
         self.update_idletasks()
-        
+
         # Save button
         self.save_button = ctk.CTkButton(self, text="Save", command=self.save_settings, state='disabled')
         self.save_button.grid(row=3, column=1, padx=40, pady=(20, 20), sticky="ne")
@@ -102,17 +102,17 @@ class SettingsTab(ctk.CTkFrame):
         self.check_items_ch.grid(row=7, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.check_items_tooltip = CTkToolTip(self.check_items_ch, message="This will show a window on launch of items that have pending updates -> you can open it manually from library tab")
         self.check_items_var.set(self.load_settings("check_items", "off"))
-        
-        
+
+
         # TODO: get windows size to padx for the following checkboxes
-        
+
         # update invalid
         self.invalid_items_var = ctk.BooleanVar()
         self.invalid_items_var.trace_add("write", self.enable_save_button)
         self.invalid_items_ch = ctk.CTkSwitch(left_frame, text="Update invalid items", variable=self.invalid_items_var)
         self.invalid_items_ch.grid(row=0, column=1, padx=(300,0), pady=(20, 0), sticky="nw")
         self.invalid_items_tooltip = CTkToolTip(self.invalid_items_ch, message="Allow updating invalid items from the details tab")
-        self.invalid_items_var.set(self.load_settings("update_invalid", "off"))       
+        self.invalid_items_var.set(self.load_settings("update_invalid", "off"))
 
         # skip invalid
         self.skip_items_var = ctk.BooleanVar()
@@ -120,20 +120,20 @@ class SettingsTab(ctk.CTkFrame):
         self.skip_items_ch = ctk.CTkSwitch(left_frame, text="Skip invalid items", variable=self.skip_items_var)
         self.skip_items_ch.grid(row=1, column=1, padx=(300,0), pady=(20, 0), sticky="nw")
         self.skip_items_tooltip = CTkToolTip(self.skip_items_ch, message="Skip invalid items")
-        self.skip_items_var.set(self.load_settings("skip_invalid", "off"))       
-        
+        self.skip_items_var.set(self.load_settings("skip_invalid", "off"))
+
         # text input fields
         self.label_destination_folder = ctk.CTkLabel(left_frame, text='Enter Game folder:')
         self.label_destination_folder.grid(row=8, column=1, padx=20, pady=(20, 0), columnspan=1, sticky="ws")
-        
+
         self.entry_var1 = ctk.StringVar(value="")
         self.edit_destination_folder = ctk.CTkEntry(left_frame, placeholder_text="game installation folder", textvariable=self.entry_var1)
         self.edit_destination_folder.grid(row=9, column=1, padx=20, pady=(0, 10), columnspan=1, sticky="ewn")
         self.entry_var1.trace_add("write", self.enable_save_button)
-        
+
         self.button_BOIII_browse = ctk.CTkButton(left_frame, text="Select", command=self.open_BOIII_browser)
         self.button_BOIII_browse.grid(row=9, column=2, padx=(0, 20), pady=(0, 10), sticky="ewn")
-        
+
         self.label_steamcmd_path = ctk.CTkLabel(left_frame, text="Enter SteamCMD path:")
         self.label_steamcmd_path.grid(row=10, column=1, padx=20, pady=(0, 0), columnspan=1, sticky="wn")
 
@@ -144,12 +144,12 @@ class SettingsTab(ctk.CTkFrame):
 
         self.button_steamcmd_browse = ctk.CTkButton(left_frame, text="Select", command=self.open_steamcmd_path_browser)
         self.button_steamcmd_browse.grid(row=11, column=2, padx=(0, 20), pady=(0, 10), sticky="ewn")
-        
+
         self.label_launch_args = ctk.CTkLabel(left_frame, text='Launch Parameters:')
         self.label_launch_args.grid(row=12, column=1, padx=20, pady=(0, 0), columnspan=1, sticky="ws")
-       
+
         self.edit_startup_exe = ctk.CTkEntry(left_frame, placeholder_text="exe")
-        self.edit_startup_exe.grid(row=13, column=1, padx=(20,0), pady=(0, 20), columnspan=1, sticky="we")        
+        self.edit_startup_exe.grid(row=13, column=1, padx=(20,0), pady=(0, 20), columnspan=1, sticky="we")
 
         self.edit_launch_args = ctk.CTkEntry(left_frame, placeholder_text="launch arguments")
         self.edit_launch_args.grid(row=13, column=1, padx=(140,20), pady=(0, 20), columnspan=2, sticky="we")
@@ -190,7 +190,7 @@ class SettingsTab(ctk.CTkFrame):
                                                                command=self.theme_options_func)
         self.theme_options.grid(row=10, column=1, padx=20, pady=(0, 0), sticky="nw")
         self.theme_options.set(value=self.load_settings("theme", "Default"))
-        
+
         # Reset steam on many fails
         self.reset_steamcmd_on_fail_var = ctk.IntVar()
         self.reset_steamcmd_on_fail_var.trace_add("write", self.enable_save_button)
@@ -214,7 +214,7 @@ class SettingsTab(ctk.CTkFrame):
         #version
         self.version_info = ctk.CTkLabel(self, text=f"{VERSION}")
         self.version_info.grid(row=3, column=2, padx=20, pady=(20, 20), sticky="e")
-        
+
     def open_BOIII_browser(self):
         selected_folder = ctk.filedialog.askdirectory(title="Select Game Folder")
         if selected_folder:
@@ -222,7 +222,7 @@ class SettingsTab(ctk.CTkFrame):
             self.edit_destination_folder.insert(0, selected_folder)
             save_config("DestinationFolder" ,self.edit_destination_folder.get())
             save_config("SteamCMDPath" ,self.edit_steamcmd_path.get())
-            
+
     def open_steamcmd_path_browser(self):
         selected_folder = ctk.filedialog.askdirectory(title="Select SteamCMD Folder")
         if selected_folder:
@@ -304,12 +304,12 @@ class SettingsTab(ctk.CTkFrame):
             save_config("check_items", "on")
         else:
             save_config("check_items", "off")
-            
+
         if self.invalid_items_var.get():
             save_config("update_invalid", "on")
         else:
             save_config("update_invalid", "off")
-            
+
         if self.skip_items_var.get():
             save_config("skip_invalid", "on")
         else:
@@ -505,7 +505,7 @@ class SettingsTab(ctk.CTkFrame):
         for idx, file in enumerate(files):
             curr_folder_name = os.path.relpath(file, folders_to_process[0]).split("\\", 1)[0]
 
-            with open(file, 'r') as json_file:
+            with open(file, 'r', errors="ignore") as json_file:
                 data = json.load(json_file)
                 _item = {
                     'PublisherID': data.get('PublisherID'),
@@ -654,7 +654,7 @@ class SettingsTab(ctk.CTkFrame):
             game_folder_label = ctk.CTkLabel(center_frame, text="Game Folder:")
             game_folder_entry = ctk.CTkEntry(center_frame, width=225)
             button_BOIII_browse = ctk.CTkButton(center_frame, text="Select", width=10)
-            
+
             # Create option to choose between cut or copy
             operation_label = ctk.CTkLabel(center_frame, text="Choose operation:")
             copy_var = ctk.BooleanVar()

@@ -96,7 +96,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         if not os.path.exists(items_file):
             return False, False
 
-        with open(items_file, "r") as f:
+        with open(items_file, "r", encoding='utf-8', errors="ignore") as f:
             items_data = json.load(f)
             for item_info in items_data:
                 if not folder_name and "id" in item_info and item_info["id"] == workshop_id:
@@ -125,13 +125,13 @@ class LibraryTab(ctk.CTkScrollableFrame):
         if not os.path.exists(items_file):
             return
 
-        with open(items_file, "r") as f:
+        with open(items_file, "r", encoding='utf-8', errors="ignore") as f:
             items_data = json.load(f)
 
         updated_items_data = [item for item in items_data if item.get(option_name) != option]
 
         if len(updated_items_data) < len(items_data):
-            with open(items_file, "w") as f:
+            with open(items_file, "w", encoding='utf-8', errors="ignore") as f:
                 json.dump(updated_items_data, f, indent=4)
 
     def get_item_by_id(self, items_file, item_id, return_option="all"):
@@ -139,7 +139,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         if not os.path.exists(items_file):
             return None
 
-        with open(items_file, "r") as f:
+        with open(items_file, "r", encoding='utf-8', errors="ignore") as f:
             items_data = json.load(f)
 
         for item in items_data:
@@ -158,10 +158,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
     def update_or_add_item_by_id(self, items_file, item_info, item_id):
         if not os.path.exists(items_file):
-            with open(items_file, "w") as f:
+            with open(items_file, "w", encoding='utf-8', errors="ignore") as f:
                 json.dump([item_info], f, indent=4)
         else:
-            with open(items_file, "r+") as f:
+            with open(items_file, "r+", encoding='utf-8', errors="ignore") as f:
                 items_data = json.load(f)
                 existing_item_index = self.get_item_index_by_id(items_data, item_id)
                 if existing_item_index is not None:
@@ -178,19 +178,19 @@ class LibraryTab(ctk.CTkScrollableFrame):
             show_message("Error", f"File '{file}' does not exist.")
             return
 
-        with open(file, "r") as f:
+        with open(file, "r", encoding='utf-8', errors="ignore") as f:
             items_data = json.load(f)
 
         cleaned_items = [item for item in items_data if 'folder_name' in item and 'json_folder_name'
                          in item and item['folder_name'] not in self.item_block_list and item['folder_name']
                          in self.added_folders and item['id'] in self.ids_added]
 
-        with open(file, 'w') as file:
+        with open(file, 'w', encoding='utf-8', errors="ignore") as file:
             json.dump(cleaned_items, file, indent=4)
 
     def is_valid_json_format(self, file):
         try:
-            with open(file, "r") as file:
+            with open(file, "r", encoding='utf-8', errors="ignore") as file:
                 data = json.load(file)
             if not isinstance(data, list):
                 return False
@@ -331,10 +331,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
                             self.remove_item_by_option(items_file, curr_folder_name, "folder_name")
                         elif not id_found and not folder_found and curr_folder_name not in self.item_block_list and workshop_id not in self.ids_added:
                             if not os.path.exists(items_file):
-                                with open(items_file, "w") as f:
+                                with open(items_file, "w", encoding='utf-8', errors="ignore") as f:
                                     json.dump([item_info], f, indent=4)
                             else:
-                                with open(items_file, "r+") as f:
+                                with open(items_file, "r+", encoding='utf-8', errors="ignore") as f:
                                     items_data = json.load(f)
                                     items_data.append(item_info)
                                     f.seek(0)
@@ -901,7 +901,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     show_message("Error checking for item updates! -> Setting is on", "Please visit library tab at least once with the correct game path! You also need to have at least 1 item!")
                     return
 
-                with open(os.path.join(APPLICATION_PATH, LIBRARY_FILE), 'r') as file:
+                with open(os.path.join(APPLICATION_PATH, LIBRARY_FILE), 'r', encoding='utf-8', errors="ignore") as file:
                     lib_data = json.load(file)
 
                 item_ids = [item["id"] for item in lib_data]

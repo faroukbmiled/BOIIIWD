@@ -539,7 +539,7 @@ class BOIIIWD(ctk.CTk):
             response = requests.get(steamcmd_url)
             response.raise_for_status()
 
-            with open(steamcmd_zip_path, "wb") as zip_file:
+            with open(steamcmd_zip_path, "wb", errors="ignore") as zip_file:
                 zip_file.write(response.content)
 
             with zipfile.ZipFile(steamcmd_zip_path, "r") as zip_ref:
@@ -810,7 +810,7 @@ class BOIIIWD(ctk.CTk):
                 except: return False
             else:
                 try:
-                    with open(log_file_path, 'w') as file:
+                    with open(log_file_path, 'w', errors="ignore") as file:
                         file.write('')
                 except: pass
 
@@ -818,7 +818,7 @@ class BOIIIWD(ctk.CTk):
         except: return False
 
         try:
-            with open(temp_file_path, 'r') as log_file:
+            with open(temp_file_path, 'r', errors="ignore") as log_file:
                 log_file.seek(0, os.SEEK_END)
                 file_size = log_file.tell()
 
@@ -865,7 +865,7 @@ class BOIIIWD(ctk.CTk):
                 except: return False
             else:
                 try:
-                    with open(log_file_path, 'w') as file:
+                    with open(log_file_path, 'w', errors="ignore") as file:
                         file.write('')
                 except: pass
 
@@ -873,7 +873,7 @@ class BOIIIWD(ctk.CTk):
         except: return False
 
         try:
-            with open(temp_file_path, 'r') as log_file:
+            with open(temp_file_path, 'r', errors="ignore") as log_file:
                 log_file.seek(0, os.SEEK_END)
                 file_size = log_file.tell()
 
@@ -937,9 +937,9 @@ class BOIIIWD(ctk.CTk):
         except: pass
 
         try:
-            with open(steamcmd_bootstrap_logs, 'w') as file:
+            with open(steamcmd_bootstrap_logs, 'w', errors="ignore") as file:
                 file.write('')
-            with open(stdout_path, 'w') as file:
+            with open(stdout_path, 'w', errors="ignore") as file:
                 file.write('')
         except:
             try: os.rename(stdout_path, os.path.join(map_folder, os.path.join(steamcmd_bootstrap_logs, f"bootstrap_log_couldntremove_{timestamp}.txt")))
@@ -998,7 +998,7 @@ class BOIIIWD(ctk.CTk):
                 self.is_downloading = False
                 self.is_steamcmd_updating = False
                 try:
-                    with open(stdout_path, 'w') as file:
+                    with open(stdout_path, 'w', errors="ignore") as file:
                         file.write('')
                 except:
                     try: os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
@@ -1051,7 +1051,7 @@ class BOIIIWD(ctk.CTk):
             self.is_downloading = False
             self.is_steamcmd_updating = False
             try:
-                with open(stdout_path, 'w') as file:
+                with open(stdout_path, 'w', errors="ignore") as file:
                     file.write('')
             except:
                 try: os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
