@@ -23,7 +23,7 @@ def save_config(name, value):
     config.read(CONFIG_FILE_PATH)
     if name and value:
         config.set("Settings", name, value)
-    with open(CONFIG_FILE_PATH, "w") as config_file:
+    with open(CONFIG_FILE_PATH, "w", encoding='utf-8', errors="ignore") as config_file:
         config.write(config_file)
 
 
@@ -81,7 +81,7 @@ def create_update_script(current_exe, new_exe, updater_folder, program_name):
     """
 
     script_path = os.path.join(updater_folder, "boiiiwd_updater.bat")
-    with open(script_path, "w") as script_file:
+    with open(script_path, "w", encoding='utf-8', errors="ignore") as script_file:
         script_file.write(script_content)
 
     return script_path
@@ -232,7 +232,7 @@ def create_default_config():
         "checkforupdates": "on",
         "console": "off"
     }
-    with open(CONFIG_FILE_PATH, "w") as config_file:
+    with open(CONFIG_FILE_PATH, "w", encoding='utf-8', errors="ignore") as config_file:
         config.write(config_file)
 
 
@@ -243,7 +243,7 @@ def get_steamcmd_path():
 
 
 def extract_json_data(json_path, key):
-    with open(json_path, 'r') as json_file:
+    with open(json_path, 'r', encoding='utf-8', errors="ignore") as json_file:
         data = json.load(json_file)
         return data.get(key, '')
 
@@ -362,7 +362,7 @@ def is_steamcmd_initialized():
 
 def get_button_state_colors(file_path, state):
     try:
-        with open(file_path, 'r') as json_file:
+        with open(file_path, 'r', encoding='utf-8', errors="ignore") as json_file:
             data = json.load(json_file)
             if 'BOIIIWD_Globals' in data:
                 boiiiwd_globals = data['BOIIIWD_Globals']

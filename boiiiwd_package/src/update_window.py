@@ -47,7 +47,10 @@ class UpdateWindow(ctk.CTkToplevel):
         super().__init__(master)
         self.title("BOIIIWD Self-Updater")
         _, _, x, y = get_window_size_from_registry()
-        self.geometry(f"400x150+{x}+{y}")
+        try:
+            self.geometry(f"400x150+{x}+{y}")
+        except:
+            self.geometry("400x150")
         if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
             self.after(250, lambda: self.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
         self.protocol("WM_DELETE_WINDOW", self.cancel_update)
@@ -96,7 +99,7 @@ class UpdateWindow(ctk.CTkToplevel):
             self.label_size.configure(text=f"Size: {convert_bytes_to_readable(self.total_size)}")
             zip_path = os.path.join(update_dir, "latest_version.zip")
 
-            with open(zip_path, "wb") as file:
+            with open(zip_path, "wb", errors="ignore") as file:
                 downloaded_size = 0
                 for chunk in response.iter_content(chunk_size=8192):
                     if self.up_cancelled:
