@@ -47,4 +47,4 @@ LIBRARY_FILE = "boiiiwd_library.json"
 RESOURCES_DIR = os.path.join(os.path.dirname(__file__), '..', 'resources')
 UPDATER_FOLDER = "update"
 REGISTRY_KEY_PATH = r"Software\BOIIIWD"
-VERSION = "v0.3.6.1"
+VERSION = "v0.3.6.2"

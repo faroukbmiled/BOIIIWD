@@ -47,10 +47,8 @@ class UpdateWindow(ctk.CTkToplevel):
         super().__init__(master)
         self.title("BOIIIWD Self-Updater")
         _, _, x, y = get_window_size_from_registry()
-        try:
-            self.geometry(f"400x150+{x}+{y}")
-        except:
-            self.geometry("400x150")
+        try: self.geometry(f"400x150+{x}+{y}")
+        except: self.geometry("400x150")
         if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
             self.after(250, lambda: self.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
         self.protocol("WM_DELETE_WINDOW", self.cancel_update)
