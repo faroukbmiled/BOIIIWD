@@ -539,7 +539,7 @@ class BOIIIWD(ctk.CTk):
             response = requests.get(steamcmd_url)
             response.raise_for_status()
 
-            with open(steamcmd_zip_path, "wb", errors="ignore") as zip_file:
+            with open(steamcmd_zip_path, "wb") as zip_file:
                 zip_file.write(response.content)
 
             with zipfile.ZipFile(steamcmd_zip_path, "r") as zip_ref:
