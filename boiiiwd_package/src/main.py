@@ -926,7 +926,6 @@ class BOIIIWD(ctk.CTk):
         self.progress_text.configure(text="0%")
         self.progress_bar.set(0.0)
 
-    # the real deal
     def run_steamcmd_command(self, command, map_folder, wsid, queue=None):
         steamcmd_path = get_steamcmd_path()
         steamcmd_bootstrap_logs = os.path.join(steamcmd_path, "logs", "bootstrap_log.txt")
@@ -965,8 +964,13 @@ class BOIIIWD(ctk.CTk):
                 return
 
         if self.settings_tab.continuous:
+            if self.settings_tab.use_steam_creds_sw.get():
+                if check_config("login_cashed", "off") != "on":
+                    show_message("Please wait...", "A window will open shortly that will propmt you to login!, close it as soon as you're done with logging in!", icon="warning")
+                    initiate_login_process(f"{steamcmd_path}/steamcmd.exe {command}")
             start_time = 0
             while not os.path.exists(map_folder) and not self.settings_tab.stopped:
+                print(f'[logs] attempting : steamcmd.exe {command}')
                 process = subprocess.Popen(
                     [steamcmd_path + "/steamcmd.exe"] + command.split(),
                     stdout=None if self.settings_tab.console else subprocess.PIPE,
@@ -982,6 +986,12 @@ class BOIIIWD(ctk.CTk):
 
                 #wait for process
                 while True:
+                    if self.settings_tab.use_steam_creds_sw.get():
+                        login_check = invalid_password_check(process.stdout, process.stderr, steamcmd_path + "/steamcmd.exe" , command)
+                        if login_check:
+                            show_message("SteamCMD Error", login_check, icon="cancel")
+                            self.stop_download()
+                            return
                     if process.poll() is not None:
                         break
                     if not self.is_downloading:
@@ -1024,6 +1034,11 @@ class BOIIIWD(ctk.CTk):
                             self.fail_threshold = 0
                 continue
         else:
+            if self.settings_tab.use_steam_creds_sw.get():
+                if check_config("login_cashed", "off") != "on":
+                    show_message("Please wait...", "A window will open shortly that will propmt you to login!, close it as soon as you're done with logging in!", icon="warning")
+                    initiate_login_process(f"{steamcmd_path}/steamcmd.exe {command}")
+            start_time = 0
             process = subprocess.Popen(
                 [steamcmd_path + "/steamcmd.exe"] + command.split(),
                 stdout=None if self.settings_tab.console else subprocess.PIPE,
@@ -1036,6 +1051,12 @@ class BOIIIWD(ctk.CTk):
 
             #wait for process
             while True:
+                if self.settings_tab.use_steam_creds_sw.get():
+                    login_check = invalid_password_check(process.stdout, process.stderr, steamcmd_path + "/steamcmd.exe" , command)
+                    if login_check:
+                        show_message("SteamCMD Error", login_check, icon="cancel")
+                        self.stop_download()
+                        return
                 if process.poll() is not None:
                     break
                 if not self.is_downloading:
@@ -1372,7 +1393,11 @@ class BOIIIWD(ctk.CTk):
                                     self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
                                 time.sleep(1)
 
-                command = f"+login anonymous app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
+                if self.settings_tab.use_steam_creds_sw.get():
+                    s_username, s_password = load_steam_creds()
+                    command = f"+login {s_username} {s_password} app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
+                else:
+                    command = f"+login anonymous app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
                 steamcmd_thread = threading.Thread(target=lambda: self.run_steamcmd_command(command, map_folder, workshop_id, queue=True))
                 steamcmd_thread.start()
 
@@ -1643,7 +1668,11 @@ class BOIIIWD(ctk.CTk):
                                 self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
                             time.sleep(1)
 
-            command = f"+login anonymous app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
+            if self.settings_tab.use_steam_creds_sw.get():
+                s_username, s_password = load_steam_creds()
+                command = f"+login {s_username} {s_password} app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
+            else:
+                command = f"+login anonymous app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
             steamcmd_thread = threading.Thread(target=lambda: self.run_steamcmd_command(command, map_folder, workshop_id))
             steamcmd_thread.start()
 

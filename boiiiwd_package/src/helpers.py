@@ -263,31 +263,33 @@ def get_workshop_file_size(workshop_id, raw=None):
     soup = BeautifulSoup(response.text, "html.parser")
     file_size_element = soup.find("div", class_="detailsStatRight")
 
-    try:
-        if raw:
-            file_size_text = file_size_element.get_text(strip=True)
-            file_size_text = file_size_text.replace(",", "")
-            if "GB" in file_size_text:
-                file_size_in_gb = float(file_size_text.replace(" GB", ""))
-                file_size_in_bytes = int(file_size_in_gb * 1024 * 1024 * 1024)
-            else:
-                file_size_in_mb = float(file_size_text.replace(" MB", ""))
-                file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
-            return convert_bytes_to_readable(file_size_in_bytes)
-
-        if file_size_element:
-            file_size_text = file_size_element.get_text(strip=True)
-            file_size_text = file_size_text.replace(",", "")
-            if "GB" in file_size_text:
-                file_size_in_gb = float(file_size_text.replace(" GB", ""))
-                file_size_in_bytes = int(file_size_in_gb * 1024 * 1024 * 1024)
-            else:
-                file_size_in_mb = float(file_size_text.replace(" MB", ""))
-                file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
-            return file_size_in_bytes
+    if not file_size_element:
         return None
+
+    file_size_text = file_size_element.get_text(strip=True).replace(",", "")
+
+    try:
+        if "GB" in file_size_text:
+            file_size_in_gb = float(file_size_text.replace(" GB", ""))
+            file_size_in_bytes = int(file_size_in_gb * 1024 * 1024 * 1024)
+        elif "MB" in file_size_text:
+            file_size_in_mb = float(file_size_text.replace(" MB", ""))
+            file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
+        elif "KB" in file_size_text:
+            file_size_in_kb = float(file_size_text.replace(" KB", ""))
+            file_size_in_bytes = int(file_size_in_kb * 1024)
+        elif "B" in file_size_text:
+            file_size_in_b = float(file_size_text.replace(" B", ""))
+            file_size_in_bytes = int(file_size_in_b)
+        else:
+            raise ValueError(f"Unsupported file size format: {file_size_text}")
+
+        if raw:
+            return convert_bytes_to_readable(file_size_in_bytes)
+        return file_size_in_bytes
+
     except Exception as e:
-        print(e)
+        print(f"Error processing file size: {e}")
         return None
 
 
@@ -582,5 +584,93 @@ def nextnonexistentdir(f, dir=os.path.dirname(os.path.realpath(__file__))):
     root_i_ext = [f, i]
 
     return root_i_ext
+
+def obfuscate(data):
+    try:
+        iv = os.urandom(16)
+        cipher = Cipher(algorithms.AES(BOIIIWD_ENC_KEY), modes.CFB(iv), backend=default_backend())
+        encryptor = cipher.encryptor()
+        encrypted_data = encryptor.update(data.encode('utf-8')) + encryptor.finalize()
+        return base64.b64encode(iv + encrypted_data).decode('utf-8')
+    except Exception as e:
+        print(f"Encryption error: {e}")
+        if data:
+            show_message("Error", "Failed to encrypt data. Make sure your environment key is correct.", icon='error')
+        return ""
+
+def unobfuscate(data):
+    try:
+        encrypted_data = base64.b64decode(data)
+        if len(encrypted_data) < 16:
+            raise ValueError("Encrypted data is too short to contain a valid IV.")
+
+        iv = encrypted_data[:16]
+        encrypted_message = encrypted_data[16:]
+        cipher = Cipher(algorithms.AES(BOIIIWD_ENC_KEY), modes.CFB(iv), backend=default_backend())
+        decryptor = cipher.decryptor()
+        decrypted_data = decryptor.update(encrypted_message) + decryptor.finalize()
+        return decrypted_data.decode('utf-8')
+    except Exception as e:
+        print(f"Decryption error: {e}")
+        if data:
+            show_message("Error", "Failed to decrypt data. Make sure your environment key is correct.", icon='error')
+        return ""
+
+def save_steam_creds(steam_username, steam_password):
+    save_config("13ead2e5e894dd32839df1d494056f7c", obfuscate(steam_username))
+    save_config("d19888d6ac4fb8afb7f40a8031312cd6", obfuscate(steam_password))
+
+def load_steam_creds():
+    user = unobfuscate(check_config("13ead2e5e894dd32839df1d494056f7c", ""))
+    passw = unobfuscate(check_config("d19888d6ac4fb8afb7f40a8031312cd6", ""))
+    return user, passw
+
+def invalid_password_check(stdout_text, stderr_text, steamcmd_path, command):
+    if stdout_text and stderr_text:
+        stdout_lines = stdout_text.readlines()
+        stderr_lines = stderr_text.readlines()
+
+        try:
+            return_error_messages = [
+                "FAILED (Invalid Password)", # 0
+                "FAILED (Rate Limit Exceeded)" # 1
+                "FAILED (Two-factor code mismatch)", # 2
+                "FAILED (Invalid Login Auth Code)", # 3
+                "Invalid Password", # 4
+                "FAILED" # 5
+            ]
+
+            for line in stdout_lines + stderr_lines:
+                for message in return_error_messages:
+                    if message in line:
+                        save_config("login_cashed", "off")
+                        if message == return_error_messages[-1]:
+                            return message + " - Unkown error: " + message
+                        elif message == return_error_messages[1]:
+                            return message + " - Rate limit exceeded, try again later!"
+                        return message + " - Cashed login is now off, try again!"
+
+            return False
+
+        except Exception as e:
+            print(f"Error in invalid_password_check: {e}")
+            return False
+    else:
+        print("No stdout or stderr text provided.")
+        return False
+
+# will be reworked in the furute
+def initiate_login_process(command):
+    try:
+        path = command.split('+login')[0].strip()
+        username = command.split("+login")[1].strip().split(" ")[0]
+        print(f"[Logs] Initiating login process for {username}...")
+        final_cmd = f'start /wait cmd /c "{path} +login {username}"'
+        process = subprocess.run(final_cmd, shell=True)
+        save_config("login_cashed", "on")
+        return True
+    except Exception as e:
+        print(f"Error running command in new window: {e}")
+        return False
 
 # End helper functions
