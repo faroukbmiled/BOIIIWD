@@ -23,7 +23,6 @@ class SettingsTab(ctk.CTkFrame):
         self.steamcmd_reset = False
         self.show_fails = True
         self.check_items_on_launch = False
-        self.anonymous_login = True # ANONYMOUS LOGIN
 
         # Left and right frames, use fg_color="transparent"
         self.grid_rowconfigure(0, weight=1)
@@ -129,7 +128,7 @@ class SettingsTab(ctk.CTkFrame):
         self.use_steam_creds.trace_add("write", self.enable_save_button)
         self.use_steam_creds_sw = ctk.CTkSwitch(left_frame, text="Use Steam Credentials", variable=self.use_steam_creds, command=self.use_steam_creds_inputs)
         self.use_steam_creds_sw.grid(row=2, column=1, padx=(300,0), pady=(20, 0), sticky="nw")
-        self.use_steam_creds_tooltip = CTkToolTip(self.skip_items_ch, message="Use your steam login to download (better dowload stability)")
+        self.use_steam_creds_tooltip = CTkToolTip(self.use_steam_creds_sw, message="Use your steam login to download (better dowload stability)")
         self.use_steam_creds.set(self.load_settings("use_steam_creds", "off"))
 
         # text input fields

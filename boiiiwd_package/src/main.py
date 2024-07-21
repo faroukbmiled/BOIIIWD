@@ -987,7 +987,7 @@ class BOIIIWD(ctk.CTk):
                 #wait for process
                 while True:
                     if self.settings_tab.use_steam_creds_sw.get():
-                        login_check = invalid_password_check(process.stdout, process.stderr, steamcmd_path + "/steamcmd.exe" , command)
+                        login_check = invalid_password_check(process.stdout, process.stderr)
                         if login_check:
                             show_message("SteamCMD Error", login_check, icon="cancel")
                             self.stop_download()
@@ -1052,7 +1052,7 @@ class BOIIIWD(ctk.CTk):
             #wait for process
             while True:
                 if self.settings_tab.use_steam_creds_sw.get():
-                    login_check = invalid_password_check(process.stdout, process.stderr, steamcmd_path + "/steamcmd.exe" , command)
+                    login_check = invalid_password_check(process.stdout, process.stderr)
                     if login_check:
                         show_message("SteamCMD Error", login_check, icon="cancel")
                         self.stop_download()

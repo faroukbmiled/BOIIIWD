@@ -607,6 +607,7 @@ def unobfuscate(data):
         iv = encrypted_data[:16]
         encrypted_message = encrypted_data[16:]
         cipher = Cipher(algorithms.AES(BOIIIWD_ENC_KEY), modes.CFB(iv), backend=default_backend())
+
         decryptor = cipher.decryptor()
         decrypted_data = decryptor.update(encrypted_message) + decryptor.finalize()
         return decrypted_data.decode('utf-8')
@@ -625,7 +626,7 @@ def load_steam_creds():
     passw = unobfuscate(check_config("d19888d6ac4fb8afb7f40a8031312cd6", ""))
     return user, passw
 
-def invalid_password_check(stdout_text, stderr_text, steamcmd_path, command):
+def invalid_password_check(stdout_text, stderr_text):
     if stdout_text and stderr_text:
         stdout_lines = stdout_text.readlines()
         stderr_lines = stderr_text.readlines()
