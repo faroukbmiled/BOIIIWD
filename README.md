@@ -10,7 +10,7 @@
       <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/25174889-4524-455f-9836-f4ea5240e07f" max-width="400" />
     </td>
     <td align="center">
-      <img src="https://github.com/faroukbmiled/BOIIIWD/assets/51106560/df54a0d7-f9ab-4061-b8b7-06d9e5992c90" max-width="400" />
+      <img src="https://github.com/user-attachments/assets/f9ff9fae-00ba-44a9-b138-43d42a267c7d" max-width="400" />
     </td>
   </tr>
 </table>
