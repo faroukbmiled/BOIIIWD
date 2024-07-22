@@ -35,6 +35,9 @@ from cryptography.hazmat.backends import default_backend
 from .CTkListbox.ctk_listbox import CTkListbox
 from .CTkToolTip.ctk_tooltip import CTkToolTip
 
+# winpty
+from winpty import PtyProcess
+import ctypes
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the PyInstaller bootloader
@@ -57,4 +60,4 @@ LIBRARY_FILE = "boiiiwd_library.json"
 RESOURCES_DIR = os.path.join(os.path.dirname(__file__), '..', 'resources')
 UPDATER_FOLDER = "update"
 REGISTRY_KEY_PATH = r"Software\BOIIIWD"
-VERSION = "v0.3.6.3"
+VERSION = "v0.3.7"

@@ -50,9 +50,9 @@ class SettingsTab(ctk.CTkFrame):
         # Show console checkbox
         self.console_var = ctk.BooleanVar()
         self.console_var.trace_add("write", self.enable_save_button)
-        self.checkbox_show_console = ctk.CTkSwitch(left_frame, text="Display SteamCMD console", variable=self.console_var)
+        self.checkbox_show_console = ctk.CTkSwitch(left_frame, text="Display console", variable=self.console_var, command=self.toggle_console_window)
         self.checkbox_show_console.grid(row=1, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.checkbox_show_console_tooltip = CTkToolTip(self.checkbox_show_console, message="Toggle SteamCMD console\nPlease don't close the Console If you want to stop press the Stop button")
+        self.checkbox_show_console_tooltip = CTkToolTip(self.checkbox_show_console, message="Toggle a console window\nPlease don't close the Console If you want to stop press the Stop button")
         self.console_var.set(self.load_settings("console"))
 
         # Show continuous checkbox
@@ -329,15 +329,9 @@ class SettingsTab(ctk.CTkFrame):
         else:
             save_config("checkforupdates", "off")
 
-        if self.checkbox_show_console.get(): # TODO: REMOVE THIS WHEN YOU FIX PROCESS OPEN CONSOLE
-            if self.use_steam_creds_sw.get():
-                show_message("Warning", "You can't use console with steam credentials enabled at the moment (Work in progress)", icon="warning")
-                save_config("console", "off")
-                self.console = False
-                self.console_var.set(False)
-            else:
-                save_config("console", "on")
-                self.console = True
+        if self.checkbox_show_console.get():
+            save_config("console", "on")
+            self.console = True
         else:
             save_config("console", "off")
             self.console = False
@@ -395,6 +389,7 @@ class SettingsTab(ctk.CTkFrame):
 
         if setting == "console":
             if check_config(setting, fallback) == "on":
+                show_console()
                 self.console = True
                 return 1
             else:
@@ -877,8 +872,8 @@ class SettingsTab(ctk.CTkFrame):
                 top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
             _, _, x, y = get_window_size_from_registry()
             top.geometry(f"+{x}+{y}")
-            top.title("Input your Steam credentials")
-            top.geometry("280x150")
+            top.title("Input your Steam Username")
+            top.geometry("280x130")
             top.resizable(False, False)
 
             center_frame = ctk.CTkFrame(top)
@@ -889,25 +884,16 @@ class SettingsTab(ctk.CTkFrame):
             username_entry = ctk.CTkEntry(center_frame, width=200)
             username_entry.grid(row=0, column=1, padx=10, pady=10, sticky='e')
 
-            password_label = ctk.CTkLabel(center_frame, text="Password:")
-            password_label.grid(row=1, column=0, padx=10, pady=10, sticky='w')
-            password_entry = ctk.CTkEntry(center_frame, width=200)
-            password_entry.grid(row=1, column=1, padx=10, pady=10, sticky='e')
-
-            config_username_value ,config_password_value = load_steam_creds()
+            config_username_value = load_steam_creds()
 
             if config_username_value:
                 username_entry.insert(0, config_username_value)
 
-            if config_password_value:
-                password_entry.insert(0, config_password_value)
-
             def save_creds():
                 username_value = username_entry.get()
-                password_value = password_entry.get()
-                if username_value.strip() and password_value.strip():
+                if username_value.strip():
                     save_config("use_steam_creds", "on")
-                    save_steam_creds(username_value, password_value)
+                    save_steam_creds(username_value)
                     top.destroy()
 
             save_button = ctk.CTkButton(center_frame, text="Save", command=save_creds)
@@ -917,3 +903,11 @@ class SettingsTab(ctk.CTkFrame):
 
         except Exception as e:
             print(f"Error: {e}")
+
+    def toggle_console_window(self):
+        if not self.checkbox_show_console.get():
+            hide_console()
+            save_config("console", "off")
+        else:
+            save_config("console", "on")
+            show_console()
