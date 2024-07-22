@@ -932,6 +932,7 @@ class BOIIIWD(ctk.CTk):
         stdout_path = os.path.join(steamcmd_path, "logs", "workshop_log.txt")
         timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         using_creds = self.settings_tab.use_steam_creds_sw.get()
+        console = self.settings_tab.checkbox_show_console.get()
 
         try: os.makedirs(os.path.dirname(stdout_path), exist_ok=True)
         except: pass
@@ -964,7 +965,7 @@ class BOIIIWD(ctk.CTk):
             if using_creds:
                 if check_config("login_cashed", "off") != "on":
                     show_message("Please wait...", "A window will open shortly that will propmt you to login!, close it as soon as you're done with logging in!", icon="warning")
-                    initiate_login_process(f"{steamcmd_path}/steamcmd.exe {command}")
+                    initiate_login_process(f"{steamcmd_path}/steamcmd.exe {command}", console)
             start_time = 0
             while not os.path.exists(map_folder) and not self.settings_tab.stopped:
                 print(f'[logs] attempting : steamcmd.exe {command}')
@@ -1027,7 +1028,7 @@ class BOIIIWD(ctk.CTk):
             if using_creds:
                 if check_config("login_cashed", "off") != "on":
                     show_message("Please wait...", "A window will open shortly that will propmt you to login!, close it as soon as you're done with logging in!", icon="warning")
-                    initiate_login_process(f"{steamcmd_path}/steamcmd.exe {command}")
+                    initiate_login_process(f"{steamcmd_path}/steamcmd.exe {command}", console)
             start_time = 0
             process = PtyProcess.spawn(steamcmd_path + "/steamcmd.exe " + command)
 

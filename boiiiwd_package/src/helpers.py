@@ -663,16 +663,22 @@ def invalid_password_check(stdout_text: str) -> str | bool:
         return False
 
 # will be reworked in the furute
-def initiate_login_process(command):
+def initiate_login_process(command, console):
     try:
+        if console:
+            hide_console()
         path = command.split('+login')[0].strip()
         username = command.split("+login")[1].strip().split(" ")[0]
         print(f"[Logs] Initializing login process for {username}...")
         final_cmd = f'start /wait cmd /c "{path} +login {username}"'
         subprocess.run(final_cmd, shell=True)
         save_config("login_cashed", "on")
+        if console:
+            show_console()
         return True
     except Exception as e:
+        if console:
+            show_console()
         print(f"Error running command in new window: {e}")
         return False
 

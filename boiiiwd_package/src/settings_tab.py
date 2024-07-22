@@ -906,8 +906,10 @@ class SettingsTab(ctk.CTkFrame):
 
     def toggle_console_window(self):
         if not self.checkbox_show_console.get():
+            self.console = False
             hide_console()
             save_config("console", "off")
         else:
+            self.console = True
             save_config("console", "on")
             show_console()
