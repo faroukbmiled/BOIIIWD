@@ -97,7 +97,7 @@ class UpdateWindow(ctk.CTkToplevel):
             self.label_size.configure(text=f"Size: {convert_bytes_to_readable(self.total_size)}")
             zip_path = os.path.join(update_dir, "latest_version.zip")
 
-            with open(zip_path, "wb", errors="ignore") as file:
+            with open(zip_path, "wb") as file:
                 downloaded_size = 0
                 for chunk in response.iter_content(chunk_size=8192):
                     if self.up_cancelled:
