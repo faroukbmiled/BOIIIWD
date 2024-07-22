@@ -310,6 +310,13 @@ def show_message(title, message, icon="warning", _return=False, option_1="No", o
         main_app.app.after(0, callback)
 
 
+def input_popup(title="Input", message="Enter value:"):
+    try:
+        dialog = ctk.CTkInputDialog(text=message, title=title)
+        return dialog.get_input()
+    except Exception as e:
+        print(f"Error: {e}")
+
 def launch_game_func(path, procname="BlackOps3.exe", flags=""):
     if not procname.endswith(('.exe', '.bat', '.sh', '.lnk')):
         procname += '.exe'
@@ -624,25 +631,26 @@ def load_steam_creds():
     user = unobfuscate(check_config("13ead2e5e894dd32839df1d494056f7c", ""))
     return user
 
-def invalid_password_check(stdout_text):
+def invalid_password_check(stdout_text: str) -> str | bool:
     if stdout_text:
         try:
-            return_error_messages = {
+            return_error_messages = [
                 "FAILED (Invalid Password)", # 0
                 "FAILED (Rate Limit Exceeded)", # 1
                 "FAILED (Two-factor code mismatch)", # 2
                 "FAILED (Invalid Login Auth Code)", # 3
                 "Invalid Password", # 4
                 "FAILED", # 5,
-                "password:" # 6
-            }
+                "password:", # 6
+                "Two-factor code:" #7
+            ]
 
             for message in return_error_messages:
                 if message in stdout_text:
                     save_config("login_cashed", "off")
-                    if message == "password:":
+                    if message == (return_error_messages[6] or return_error_messages[7]):
                         return message + " - Password prompt detected, Cashed login is now off, try again!"
-                    elif message == "FAILED (Rate Limit Exceeded)":
+                    elif message == return_error_messages[1]:
                         return message + " - Rate limit exceeded, try again later!"
                     return message + " - Cashed login is now off, try again!"
 
