@@ -113,6 +113,7 @@ def if_internet_available(func=None, launching=False):
 
 @if_internet_available
 def check_for_updates_func(window, ignore_up_todate=False):
+    print(f'[logs] check_for_updates_func invoked...')
     try:
         latest_version = get_latest_release_version()
         current_version = VERSION
@@ -182,6 +183,7 @@ def check_steamcmd():
 
 
 def initialize_steam(master):
+    print(f'[logs] initialize_steam invoked...')
     try:
         steamcmd_path = get_steamcmd_path()
         steamcmd_exe_path = os.path.join(steamcmd_path, "steamcmd.exe")
@@ -258,6 +260,7 @@ def convert_bytes_to_readable(size_in_bytes, no_symb=None):
 
 
 def get_workshop_file_size(workshop_id, raw=None):
+    print(f'[logs] get_workshop_file_size invoked...')
     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}&searchtext="
     response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
@@ -318,6 +321,7 @@ def input_popup(title="Input", message="Enter value:"):
         print(f"Error: {e}")
 
 def launch_game_func(path, procname="BlackOps3.exe", flags=""):
+    print(f'[logs] launch_game_func invoked...')
     if not procname.endswith(('.exe', '.bat', '.sh', '.lnk')):
         procname += '.exe'
     try:
@@ -388,6 +392,7 @@ def get_button_state_colors(file_path, state):
 
 
 def reset_steamcmd(no_warn=None):
+    print(f'[logs] reset_steamcmd invoked...')
     steamcmd_path = get_steamcmd_path()
 
     directories_to_reset = ["steamapps", "dumps",
@@ -592,44 +597,45 @@ def nextnonexistentdir(f, dir=os.path.dirname(os.path.realpath(__file__))):
 
     return root_i_ext
 
+
+def xor_encrypt_decrypt(data, key):
+    key_len = len(key)
+    result = bytearray()
+
+    for i in range(len(data)):
+        result.append(data[i] ^ key[i % key_len])
+
+    return bytes(result)
+
+
 def obfuscate(data):
     try:
-        iv = os.urandom(16)
-        cipher = Cipher(algorithms.AES(BOIIIWD_ENC_KEY), modes.CFB(iv), backend=default_backend())
-        encryptor = cipher.encryptor()
-        encrypted_data = encryptor.update(data.encode('utf-8')) + encryptor.finalize()
-        return base64.b64encode(iv + encrypted_data).decode('utf-8')
+        data_bytes = data.encode('utf-8')
+        encrypted_data = xor_encrypt_decrypt(data_bytes, BOIIIWD_ENC_KEY)
+        return base64.b64encode(encrypted_data).decode('utf-8')
     except Exception as e:
         print(f"Encryption error: {e}")
-        if data:
-            show_message("Error", "Failed to encrypt data. Make sure your environment key is correct.", icon='error')
         return ""
+
 
 def unobfuscate(data):
     try:
         encrypted_data = base64.b64decode(data)
-        if len(encrypted_data) < 16:
-            raise ValueError("Encrypted data is too short to contain a valid IV.")
-
-        iv = encrypted_data[:16]
-        encrypted_message = encrypted_data[16:]
-        cipher = Cipher(algorithms.AES(BOIIIWD_ENC_KEY), modes.CFB(iv), backend=default_backend())
-
-        decryptor = cipher.decryptor()
-        decrypted_data = decryptor.update(encrypted_message) + decryptor.finalize()
+        decrypted_data = xor_encrypt_decrypt(encrypted_data, BOIIIWD_ENC_KEY)
         return decrypted_data.decode('utf-8')
     except Exception as e:
         print(f"Decryption error: {e}")
-        if data:
-            show_message("Error", "Failed to decrypt data. Make sure your environment key is correct.", icon='error')
         return ""
+
 
 def save_steam_creds(steam_username):
     save_config("13ead2e5e894dd32839df1d494056f7c", obfuscate(steam_username))
 
+
 def load_steam_creds():
     user = unobfuscate(check_config("13ead2e5e894dd32839df1d494056f7c", ""))
     return user
+
 
 def invalid_password_check(stdout_text: str) -> str | bool:
     if stdout_text:
@@ -662,8 +668,10 @@ def invalid_password_check(stdout_text: str) -> str | bool:
     else:
         return False
 
+
 # will be reworked in the furute
 def initiate_login_process(command, console):
+    print(f'[logs] initiate_login_process invoked...')
     try:
         if console:
             hide_console()
@@ -689,6 +697,7 @@ def show_console():
     new_console_fd = os.open('CONOUT$', os.O_RDWR | os.O_TEXT)
     sys.stdout = os.fdopen(new_console_fd, 'w')
     sys.stderr = sys.stdout
+
 
 def hide_console():
     hwnd = ctypes.windll.kernel32.GetConsoleWindow()

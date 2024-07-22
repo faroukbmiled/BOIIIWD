@@ -8,7 +8,6 @@ from src.settings_tab import SettingsTab
 class BOIIIWD(ctk.CTk):
     def __init__(self):
         super().__init__()
-
         # configure window
         self.title("BOIII Workshop Downloader - Main")
 
@@ -212,6 +211,8 @@ class BOIIIWD(ctk.CTk):
             self.settings_tab.load_settings("show_fails", "on")
             self.settings_tab.load_settings("skip_already_installed", "on")
         except: pass
+
+        print("[Logs] BOIIIWD is booting...")
 
         if not check_steamcmd():
             self.show_steam_warning_message()
@@ -927,6 +928,7 @@ class BOIIIWD(ctk.CTk):
         self.progress_bar.set(0.0)
 
     def run_steamcmd_command(self, command, map_folder, wsid, queue=None):
+        print("[Logs] run_steamcmd_command invoked")
         steamcmd_path = get_steamcmd_path()
         steamcmd_bootstrap_logs = os.path.join(steamcmd_path, "logs", "bootstrap_log.txt")
         stdout_path = os.path.join(steamcmd_path, "logs", "workshop_log.txt")
@@ -1030,6 +1032,7 @@ class BOIIIWD(ctk.CTk):
                     show_message("Please wait...", "A window will open shortly that will propmt you to login!, close it as soon as you're done with logging in!", icon="warning")
                     initiate_login_process(f"{steamcmd_path}/steamcmd.exe {command}", console)
             start_time = 0
+            print(f'[logs] attempting : steamcmd.exe {command}')
             process = PtyProcess.spawn(steamcmd_path + "/steamcmd.exe " + command)
 
             #wait for process
@@ -1101,6 +1104,7 @@ class BOIIIWD(ctk.CTk):
 
     @if_internet_available
     def download_map(self, update=False, invalid_item_folder=None):
+        print(f'[logs] download_map invoked...')
         self.is_downloading = False
         self.fail_threshold = 0
         if not self.is_pressed:
@@ -1108,10 +1112,12 @@ class BOIIIWD(ctk.CTk):
             self.is_pressed = True
             self.library_tab.load_items(self.settings_tab.edit_destination_folder.get(), dont_add=True)
             if self.use_queue_download():
+                print(f'[logs] queue_download_thread thread being invoked...')
                 self.item_skipped = False
                 start_down_thread = threading.Thread(target=self.queue_download_thread, args=(update,))
                 start_down_thread.start()
             else:
+                print(f'[logs] download_thread thread being invoked...')
                 start_down_thread = threading.Thread(target=self.download_thread, args=(update, invalid_item_folder,))
                 start_down_thread.start()
         else:
@@ -1774,6 +1780,7 @@ class BOIIIWD(ctk.CTk):
             self.progress_bar.set(0.0)
 
     def stop_download(self, on_close=None):
+        print(f'[logs] stop_download invoked...')
         self.settings_tab.stopped = True
         self.queue_stop_button = True
         self.settings_tab.steam_fail_counter = 0

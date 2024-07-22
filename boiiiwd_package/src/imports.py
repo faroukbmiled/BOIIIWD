@@ -27,10 +27,6 @@ from bs4 import BeautifulSoup
 from CTkMessagebox import CTkMessagebox
 from PIL import Image
 
-# Cryptography library
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.backends import default_backend
-
 # Use CTkToolTip and CTkListbox from my repo originally by Akascape (https://github.com/Akascape)
 from .CTkListbox.ctk_listbox import CTkListbox
 from .CTkToolTip.ctk_tooltip import CTkToolTip
