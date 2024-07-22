@@ -113,6 +113,7 @@ def if_internet_available(func=None, launching=False):
 
 @if_internet_available
 def check_for_updates_func(window, ignore_up_todate=False):
+    print(f'[logs] check_for_updates_func invoked...')
     try:
         latest_version = get_latest_release_version()
         current_version = VERSION
@@ -182,6 +183,7 @@ def check_steamcmd():
 
 
 def initialize_steam(master):
+    print(f'[logs] initialize_steam invoked...')
     try:
         steamcmd_path = get_steamcmd_path()
         steamcmd_exe_path = os.path.join(steamcmd_path, "steamcmd.exe")
@@ -258,36 +260,39 @@ def convert_bytes_to_readable(size_in_bytes, no_symb=None):
 
 
 def get_workshop_file_size(workshop_id, raw=None):
+    print(f'[logs] get_workshop_file_size invoked...')
     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}&searchtext="
     response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
     file_size_element = soup.find("div", class_="detailsStatRight")
 
-    try:
-        if raw:
-            file_size_text = file_size_element.get_text(strip=True)
-            file_size_text = file_size_text.replace(",", "")
-            if "GB" in file_size_text:
-                file_size_in_gb = float(file_size_text.replace(" GB", ""))
-                file_size_in_bytes = int(file_size_in_gb * 1024 * 1024 * 1024)
-            else:
-                file_size_in_mb = float(file_size_text.replace(" MB", ""))
-                file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
-            return convert_bytes_to_readable(file_size_in_bytes)
-
-        if file_size_element:
-            file_size_text = file_size_element.get_text(strip=True)
-            file_size_text = file_size_text.replace(",", "")
-            if "GB" in file_size_text:
-                file_size_in_gb = float(file_size_text.replace(" GB", ""))
-                file_size_in_bytes = int(file_size_in_gb * 1024 * 1024 * 1024)
-            else:
-                file_size_in_mb = float(file_size_text.replace(" MB", ""))
-                file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
-            return file_size_in_bytes
+    if not file_size_element:
         return None
+
+    file_size_text = file_size_element.get_text(strip=True).replace(",", "")
+
+    try:
+        if "GB" in file_size_text:
+            file_size_in_gb = float(file_size_text.replace(" GB", ""))
+            file_size_in_bytes = int(file_size_in_gb * 1024 * 1024 * 1024)
+        elif "MB" in file_size_text:
+            file_size_in_mb = float(file_size_text.replace(" MB", ""))
+            file_size_in_bytes = int(file_size_in_mb * 1024 * 1024)
+        elif "KB" in file_size_text:
+            file_size_in_kb = float(file_size_text.replace(" KB", ""))
+            file_size_in_bytes = int(file_size_in_kb * 1024)
+        elif "B" in file_size_text:
+            file_size_in_b = float(file_size_text.replace(" B", ""))
+            file_size_in_bytes = int(file_size_in_b)
+        else:
+            raise ValueError(f"Unsupported file size format: {file_size_text}")
+
+        if raw:
+            return convert_bytes_to_readable(file_size_in_bytes)
+        return file_size_in_bytes
+
     except Exception as e:
-        print(e)
+        print(f"Error processing file size: {e}")
         return None
 
 
@@ -308,7 +313,15 @@ def show_message(title, message, icon="warning", _return=False, option_1="No", o
         main_app.app.after(0, callback)
 
 
+def input_popup(title="Input", message="Enter value:"):
+    try:
+        dialog = ctk.CTkInputDialog(text=message, title=title)
+        return dialog.get_input()
+    except Exception as e:
+        print(f"Error: {e}")
+
 def launch_game_func(path, procname="BlackOps3.exe", flags=""):
+    print(f'[logs] launch_game_func invoked...')
     if not procname.endswith(('.exe', '.bat', '.sh', '.lnk')):
         procname += '.exe'
     try:
@@ -379,6 +392,7 @@ def get_button_state_colors(file_path, state):
 
 
 def reset_steamcmd(no_warn=None):
+    print(f'[logs] reset_steamcmd invoked...')
     steamcmd_path = get_steamcmd_path()
 
     directories_to_reset = ["steamapps", "dumps",
@@ -582,5 +596,117 @@ def nextnonexistentdir(f, dir=os.path.dirname(os.path.realpath(__file__))):
     root_i_ext = [f, i]
 
     return root_i_ext
+
+
+def xor_encrypt_decrypt(data, key):
+    key_len = len(key)
+    result = bytearray()
+
+    for i in range(len(data)):
+        result.append(data[i] ^ key[i % key_len])
+
+    return bytes(result)
+
+
+def obfuscate(data):
+    try:
+        data_bytes = data.encode('utf-8')
+        encrypted_data = xor_encrypt_decrypt(data_bytes, BOIIIWD_ENC_KEY)
+        return base64.b64encode(encrypted_data).decode('utf-8')
+    except Exception as e:
+        print(f"Encryption error: {e}")
+        return ""
+
+
+def unobfuscate(data):
+    try:
+        encrypted_data = base64.b64decode(data)
+        decrypted_data = xor_encrypt_decrypt(encrypted_data, BOIIIWD_ENC_KEY)
+        return decrypted_data.decode('utf-8')
+    except Exception as e:
+        print(f"Decryption error: {e}")
+        return ""
+
+
+def save_steam_creds(steam_username):
+    save_config("13ead2e5e894dd32839df1d494056f7c", obfuscate(steam_username))
+
+
+def load_steam_creds():
+    user = unobfuscate(check_config("13ead2e5e894dd32839df1d494056f7c", ""))
+    return user
+
+
+def invalid_password_check(stdout_text: str) -> str | bool:
+    if stdout_text:
+        try:
+            return_error_messages = [
+                "FAILED (Invalid Password)", # 0
+                "FAILED (Rate Limit Exceeded)", # 1
+                "FAILED (Two-factor code mismatch)", # 2
+                "FAILED (Invalid Login Auth Code)", # 3
+                "Invalid Password", # 4
+                "FAILED", # 5,
+                "password:", # 6
+                "Two-factor code:" #7
+            ]
+
+            for message in return_error_messages:
+                if message in stdout_text:
+                    save_config("login_cashed", "off")
+                    if message == (return_error_messages[6] or return_error_messages[7]):
+                        return message + " - Password prompt detected, Cashed login is now off, try again!"
+                    elif message == return_error_messages[1]:
+                        return message + " - Rate limit exceeded, try again later!"
+                    return message + " - Cashed login is now off, try again!"
+
+            return False
+
+        except Exception as e:
+            print(f"Error in invalid_password_check: {e}")
+            return False
+    else:
+        return False
+
+
+# will be reworked in the furute
+def initiate_login_process(command, console):
+    print(f'[logs] initiate_login_process invoked...')
+    try:
+        if console:
+            hide_console()
+        path = command.split('+login')[0].strip()
+        username = command.split("+login")[1].strip().split(" ")[0]
+        print(f"[Logs] Initializing login process for {username}...")
+        final_cmd = f'start /wait cmd /c "{path} +login {username}"'
+        subprocess.run(final_cmd, shell=True)
+        save_config("login_cashed", "on")
+        if console:
+            show_console()
+        return True
+    except Exception as e:
+        if console:
+            show_console()
+        print(f"Error running command in new window: {e}")
+        return False
+
+
+def show_console():
+    ctypes.windll.kernel32.AllocConsole()
+    new_console_handle = ctypes.windll.kernel32.GetStdHandle(ctypes.c_uint(-11))
+    new_console_fd = os.open('CONOUT$', os.O_RDWR | os.O_TEXT)
+    sys.stdout = os.fdopen(new_console_fd, 'w')
+    sys.stderr = sys.stdout
+
+
+def hide_console():
+    hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+
+    if hwnd:
+        ctypes.windll.user32.ShowWindow(hwnd, 0)
+        ctypes.windll.kernel32.FreeConsole()
+
+    sys.stdout = sys.__stdout__
+    sys.stderr = sys.__stderr__
 
 # End helper functions

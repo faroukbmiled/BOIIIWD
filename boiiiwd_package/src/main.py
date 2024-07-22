@@ -8,7 +8,6 @@ from src.settings_tab import SettingsTab
 class BOIIIWD(ctk.CTk):
     def __init__(self):
         super().__init__()
-
         # configure window
         self.title("BOIII Workshop Downloader - Main")
 
@@ -212,6 +211,8 @@ class BOIIIWD(ctk.CTk):
             self.settings_tab.load_settings("show_fails", "on")
             self.settings_tab.load_settings("skip_already_installed", "on")
         except: pass
+
+        print("[Logs] BOIIIWD is booting...")
 
         if not check_steamcmd():
             self.show_steam_warning_message()
@@ -926,12 +927,14 @@ class BOIIIWD(ctk.CTk):
         self.progress_text.configure(text="0%")
         self.progress_bar.set(0.0)
 
-    # the real deal
     def run_steamcmd_command(self, command, map_folder, wsid, queue=None):
+        print("[Logs] run_steamcmd_command invoked")
         steamcmd_path = get_steamcmd_path()
         steamcmd_bootstrap_logs = os.path.join(steamcmd_path, "logs", "bootstrap_log.txt")
         stdout_path = os.path.join(steamcmd_path, "logs", "workshop_log.txt")
         timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        using_creds = self.settings_tab.use_steam_creds_sw.get()
+        console = self.settings_tab.checkbox_show_console.get()
 
         try: os.makedirs(os.path.dirname(stdout_path), exist_ok=True)
         except: pass
@@ -947,10 +950,6 @@ class BOIIIWD(ctk.CTk):
             try: os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
             except: pass
 
-        show_console = subprocess.CREATE_NO_WINDOW
-        if self.settings_tab.console:
-            show_console = subprocess.CREATE_NEW_CONSOLE
-
         if os.path.exists(map_folder):
             try:
                 try:
@@ -965,24 +964,29 @@ class BOIIIWD(ctk.CTk):
                 return
 
         if self.settings_tab.continuous:
+            if using_creds:
+                if check_config("login_cashed", "off") != "on":
+                    show_message("Please wait...", "A window will open shortly that will propmt you to login!, close it as soon as you're done with logging in!", icon="warning")
+                    initiate_login_process(f"{steamcmd_path}/steamcmd.exe {command}", console)
             start_time = 0
             while not os.path.exists(map_folder) and not self.settings_tab.stopped:
-                process = subprocess.Popen(
-                    [steamcmd_path + "/steamcmd.exe"] + command.split(),
-                    stdout=None if self.settings_tab.console else subprocess.PIPE,
-                    stderr=None if self.settings_tab.console else subprocess.PIPE,
-                    text=True,
-                    bufsize=1,
-                    universal_newlines=True,
-                    creationflags=show_console
-                )
+                print(f'[logs] attempting : steamcmd.exe {command}')
+                process = PtyProcess.spawn(steamcmd_path + "/steamcmd.exe " + command)
 
-                if process.poll() is not None:
+                if process.isalive() is False:
                     continue
 
                 #wait for process
                 while True:
-                    if process.poll() is not None:
+                    buff = process.nb_read()
+                    print("[Logs] steamcmd output: ", buff) if buff else None
+                    if using_creds:
+                        login_check = invalid_password_check(buff)
+                        if login_check:
+                            show_message("SteamCMD Error", login_check, icon="cancel")
+                            self.stop_download()
+                            return
+                    if process.isalive() is False:
                         break
                     if not self.is_downloading:
                         if self.check_if_steamcmd_updating(steamcmd_bootstrap_logs):
@@ -994,7 +998,6 @@ class BOIIIWD(ctk.CTk):
                     elapsed_time = time.time() - start_time
                     time.sleep(1)
 
-                # print("Broken freeeee!")
                 self.is_downloading = False
                 self.is_steamcmd_updating = False
                 try:
@@ -1024,19 +1027,25 @@ class BOIIIWD(ctk.CTk):
                             self.fail_threshold = 0
                 continue
         else:
-            process = subprocess.Popen(
-                [steamcmd_path + "/steamcmd.exe"] + command.split(),
-                stdout=None if self.settings_tab.console else subprocess.PIPE,
-                stderr=None if self.settings_tab.console else subprocess.PIPE,
-                text=True,
-                bufsize=1,
-                universal_newlines=True,
-                creationflags=show_console
-            )
+            if using_creds:
+                if check_config("login_cashed", "off") != "on":
+                    show_message("Please wait...", "A window will open shortly that will propmt you to login!, close it as soon as you're done with logging in!", icon="warning")
+                    initiate_login_process(f"{steamcmd_path}/steamcmd.exe {command}", console)
+            start_time = 0
+            print(f'[logs] attempting : steamcmd.exe {command}')
+            process = PtyProcess.spawn(steamcmd_path + "/steamcmd.exe " + command)
 
             #wait for process
             while True:
-                if process.poll() is not None:
+                buff = process.nb_read()
+                print("[Logs] steamcmd output: ", buff) if buff else None
+                if using_creds:
+                    login_check = invalid_password_check(buff)
+                    if login_check:
+                        show_message("SteamCMD Error", login_check, icon="cancel")
+                        self.stop_download()
+                        return
+                if process.isalive() is False:
                     break
                 if not self.is_downloading:
                     if self.check_if_steamcmd_updating(steamcmd_bootstrap_logs):
@@ -1044,10 +1053,11 @@ class BOIIIWD(ctk.CTk):
                     if self.check_steamcmd_stdout(stdout_path, wsid):
                         start_time = time.time()
                         self.is_downloading = True
+                        self.is_steamcmd_updating = False
                 elapsed_time = time.time() - start_time
                 time.sleep(1)
 
-            # print("Broken freeeee!")
+            print("[Logs] Broken freeeee!")
             self.is_downloading = False
             self.is_steamcmd_updating = False
             try:
@@ -1065,7 +1075,9 @@ class BOIIIWD(ctk.CTk):
             self.button_download.configure(state="normal")
             self.button_stop.configure(state="disabled")
 
-        return process.returncode
+        # return process.returncode # OLD RETURN FROM SUBPROCESS
+        # return process.exitstatus
+        return 0
 
     def show_init_message(self):
         def callback():
@@ -1092,6 +1104,7 @@ class BOIIIWD(ctk.CTk):
 
     @if_internet_available
     def download_map(self, update=False, invalid_item_folder=None):
+        print(f'[logs] download_map invoked...')
         self.is_downloading = False
         self.fail_threshold = 0
         if not self.is_pressed:
@@ -1099,10 +1112,12 @@ class BOIIIWD(ctk.CTk):
             self.is_pressed = True
             self.library_tab.load_items(self.settings_tab.edit_destination_folder.get(), dont_add=True)
             if self.use_queue_download():
+                print(f'[logs] queue_download_thread thread being invoked...')
                 self.item_skipped = False
                 start_down_thread = threading.Thread(target=self.queue_download_thread, args=(update,))
                 start_down_thread.start()
             else:
+                print(f'[logs] download_thread thread being invoked...')
                 start_down_thread = threading.Thread(target=self.download_thread, args=(update, invalid_item_folder,))
                 start_down_thread.start()
         else:
@@ -1372,7 +1387,11 @@ class BOIIIWD(ctk.CTk):
                                     self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
                                 time.sleep(1)
 
-                command = f"+login anonymous app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
+                if self.settings_tab.use_steam_creds_sw.get():
+                    s_username = load_steam_creds()
+                    command = f"+login {s_username} +workshop_download_item 311210 {workshop_id} validate +quit"
+                else:
+                    command = f"+login anonymous app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
                 steamcmd_thread = threading.Thread(target=lambda: self.run_steamcmd_command(command, map_folder, workshop_id, queue=True))
                 steamcmd_thread.start()
 
@@ -1643,7 +1662,11 @@ class BOIIIWD(ctk.CTk):
                                 self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d}"))
                             time.sleep(1)
 
-            command = f"+login anonymous app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
+            if self.settings_tab.use_steam_creds_sw.get():
+                s_username = load_steam_creds()
+                command = f"+login {s_username} +workshop_download_item 311210 {workshop_id} validate +quit"
+            else:
+                command = f"+login anonymous app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
             steamcmd_thread = threading.Thread(target=lambda: self.run_steamcmd_command(command, map_folder, workshop_id))
             steamcmd_thread.start()
 
@@ -1757,6 +1780,7 @@ class BOIIIWD(ctk.CTk):
             self.progress_bar.set(0.0)
 
     def stop_download(self, on_close=None):
+        print(f'[logs] stop_download invoked...')
         self.settings_tab.stopped = True
         self.queue_stop_button = True
         self.settings_tab.steam_fail_counter = 0

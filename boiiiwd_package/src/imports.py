@@ -9,6 +9,7 @@ import sys
 import threading
 import time
 import webbrowser
+import base64
 import zipfile
 
 from datetime import datetime
@@ -30,6 +31,9 @@ from PIL import Image
 from .CTkListbox.ctk_listbox import CTkListbox
 from .CTkToolTip.ctk_tooltip import CTkToolTip
 
+# winpty
+from .winpty import PtyProcess
+import ctypes
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the PyInstaller bootloader
@@ -39,6 +43,11 @@ if getattr(sys, 'frozen', False):
 else:
     APPLICATION_PATH = os.path.dirname(os.path.abspath(__file__))
 
+# default enc key, change this to whatever you want in your ENV
+DEFAULT_ENV_KEY = 'iDd40QsvCwsntXuLniIbNd6cAJEcALd85QTEgEhIc1c='
+BOIIIWD_ENC_KEY = base64.urlsafe_b64decode(os.getenv('BOIIIWD_ENC_KEY', DEFAULT_ENV_KEY))
+
+# Constants
 CONFIG_FILE_PATH = "config.ini"
 GITHUB_REPO = "faroukbmiled/BOIIIWD"
 ITEM_INFO_API = "https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/"
@@ -47,4 +56,4 @@ LIBRARY_FILE = "boiiiwd_library.json"
 RESOURCES_DIR = os.path.join(os.path.dirname(__file__), '..', 'resources')
 UPDATER_FOLDER = "update"
 REGISTRY_KEY_PATH = r"Software\BOIIIWD"
-VERSION = "v0.3.6.2"
+VERSION = "v0.3.7.1"

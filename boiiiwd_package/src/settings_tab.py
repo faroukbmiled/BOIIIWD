@@ -1,3 +1,4 @@
+from xml.sax.xmlreader import InputSource
 from src import library_tab
 from src.update_window import check_for_updates_func
 from src.imports import *
@@ -49,9 +50,9 @@ class SettingsTab(ctk.CTkFrame):
         # Show console checkbox
         self.console_var = ctk.BooleanVar()
         self.console_var.trace_add("write", self.enable_save_button)
-        self.checkbox_show_console = ctk.CTkSwitch(left_frame, text="Display SteamCMD console", variable=self.console_var)
+        self.checkbox_show_console = ctk.CTkSwitch(left_frame, text="Display console", variable=self.console_var, command=self.toggle_console_window)
         self.checkbox_show_console.grid(row=1, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.checkbox_show_console_tooltip = CTkToolTip(self.checkbox_show_console, message="Toggle SteamCMD console\nPlease don't close the Console If you want to stop press the Stop button")
+        self.checkbox_show_console_tooltip = CTkToolTip(self.checkbox_show_console, message="Toggle a console window\nPlease don't close the Console If you want to stop press the Stop button")
         self.console_var.set(self.load_settings("console"))
 
         # Show continuous checkbox
@@ -76,7 +77,7 @@ class SettingsTab(ctk.CTkFrame):
         self.estimated_progress_cb = ctk.CTkSwitch(left_frame, text="Estimated progress bar", variable=self.estimated_progress_var)
         self.estimated_progress_cb.grid(row=4, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.estimated_progress_var_tooltip = CTkToolTip(self.estimated_progress_cb, message="This will change how to progress bar works by estimating how long the download will take\
-            \nThis is not accurate ,it's better than with it off which is calculating the downloaded folder size which steamcmd dumps the full size rigth mostly")
+            \nThis is not accurate ,it's better than with it off which is calculating the downloaded folder size which steamcmd dumps the full size mostly")
         self.estimated_progress_var.set(self.load_settings("estimated_progress", "on"))
 
         # Show fails checkbox
@@ -121,6 +122,14 @@ class SettingsTab(ctk.CTkFrame):
         self.skip_items_ch.grid(row=1, column=1, padx=(300,0), pady=(20, 0), sticky="nw")
         self.skip_items_tooltip = CTkToolTip(self.skip_items_ch, message="Skip invalid items")
         self.skip_items_var.set(self.load_settings("skip_invalid", "off"))
+
+        # USING CREDENTIALS
+        self.use_steam_creds = ctk.BooleanVar()
+        self.use_steam_creds.trace_add("write", self.enable_save_button)
+        self.use_steam_creds_sw = ctk.CTkSwitch(left_frame, text="Use Steam Credentials", variable=self.use_steam_creds, command=self.use_steam_creds_inputs)
+        self.use_steam_creds_sw.grid(row=2, column=1, padx=(300,0), pady=(20, 0), sticky="nw")
+        self.use_steam_creds_tooltip = CTkToolTip(self.use_steam_creds_sw, message="Use your steam login to download (better dowload stability)")
+        self.use_steam_creds.set(self.load_settings("use_steam_creds", "off"))
 
         # text input fields
         self.label_destination_folder = ctk.CTkLabel(left_frame, text='Enter Game folder:')
@@ -380,6 +389,7 @@ class SettingsTab(ctk.CTkFrame):
 
         if setting == "console":
             if check_config(setting, fallback) == "on":
+                show_console()
                 self.console = True
                 return 1
             else:
@@ -850,3 +860,56 @@ class SettingsTab(ctk.CTkFrame):
 
         except Exception as e:
             show_message("Error", f"{e}", icon="cancel")
+
+    def use_steam_creds_inputs(self):
+        try:
+            if self.use_steam_creds_sw.get() == 0:
+                save_config("use_steam_creds", "off")
+                save_config("login_cashed", "off")
+                return
+            top = ctk.CTkToplevel(self)
+            if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
+                top.after(210, lambda: top.iconbitmap(os.path.join(RESOURCES_DIR, "ryuk.ico")))
+            _, _, x, y = get_window_size_from_registry()
+            top.geometry(f"+{x}+{y}")
+            top.title("Input your Steam Username")
+            top.geometry("280x130")
+            top.resizable(False, False)
+
+            center_frame = ctk.CTkFrame(top)
+            center_frame.pack(expand=True, fill=ctk.BOTH, padx=20, pady=20)
+
+            username_label = ctk.CTkLabel(center_frame, text="Username:")
+            username_label.grid(row=0, column=0, padx=10, pady=10, sticky='w')
+            username_entry = ctk.CTkEntry(center_frame, width=200)
+            username_entry.grid(row=0, column=1, padx=10, pady=10, sticky='e')
+
+            config_username_value = load_steam_creds()
+
+            if config_username_value:
+                username_entry.insert(0, config_username_value)
+
+            def save_creds():
+                username_value = username_entry.get()
+                if username_value.strip():
+                    save_config("use_steam_creds", "on")
+                    save_steam_creds(username_value)
+                    top.destroy()
+
+            save_button = ctk.CTkButton(center_frame, text="Save", command=save_creds)
+            save_button.grid(row=2, column=0, columnspan=2, pady=20)
+            top.after(150, top.focus_force)
+            top.after(250, top.focus_force)
+
+        except Exception as e:
+            print(f"Error: {e}")
+
+    def toggle_console_window(self):
+        if not self.checkbox_show_console.get():
+            self.console = False
+            hide_console()
+            save_config("console", "off")
+        else:
+            self.console = True
+            save_config("console", "on")
+            show_console()
