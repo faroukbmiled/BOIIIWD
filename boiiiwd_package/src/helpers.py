@@ -637,8 +637,6 @@ def invalid_password_check(stdout_text):
                 "password:" # 6
             }
 
-            print("[Logs] steamcmd output: ",stdout_text)
-
             for message in return_error_messages:
                 if message in stdout_text:
                     save_config("login_cashed", "off")
@@ -670,16 +668,13 @@ def initiate_login_process(command):
         print(f"Error running command in new window: {e}")
         return False
 
+
 def show_console():
     ctypes.windll.kernel32.AllocConsole()
-    hwnd = ctypes.windll.kernel32.GetConsoleWindow()
-
-    if hwnd:
-        ctypes.windll.user32.ShowWindow(hwnd, 5)
-        new_stdout = open(os.dup(1), 'w')
-        new_stderr = open(os.dup(2), 'w')
-        sys.stdout = new_stdout
-        sys.stderr = new_stderr
+    new_console_handle = ctypes.windll.kernel32.GetStdHandle(ctypes.c_uint(-11))
+    new_console_fd = os.open('CONOUT$', os.O_RDWR | os.O_TEXT)
+    sys.stdout = os.fdopen(new_console_fd, 'w')
+    sys.stderr = sys.stdout
 
 def hide_console():
     hwnd = ctypes.windll.kernel32.GetConsoleWindow()

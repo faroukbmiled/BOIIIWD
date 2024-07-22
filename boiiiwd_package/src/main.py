@@ -975,8 +975,10 @@ class BOIIIWD(ctk.CTk):
 
                 #wait for process
                 while True:
+                    buff = process.nb_read()
+                    print("[Logs] steamcmd output: ", buff) if buff else None
                     if using_creds:
-                        login_check = invalid_password_check(process.nb_read())
+                        login_check = invalid_password_check(buff)
                         if login_check:
                             show_message("SteamCMD Error", login_check, icon="cancel")
                             self.stop_download()
@@ -1031,8 +1033,10 @@ class BOIIIWD(ctk.CTk):
 
             #wait for process
             while True:
+                buff = process.nb_read()
+                print("[Logs] steamcmd output: ", buff) if buff else None
                 if using_creds:
-                    login_check = invalid_password_check(process.nb_read())
+                    login_check = invalid_password_check(buff)
                     if login_check:
                         show_message("SteamCMD Error", login_check, icon="cancel")
                         self.stop_download()
