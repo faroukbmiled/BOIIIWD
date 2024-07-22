@@ -36,7 +36,7 @@ from .CTkListbox.ctk_listbox import CTkListbox
 from .CTkToolTip.ctk_tooltip import CTkToolTip
 
 # winpty
-from winpty import PtyProcess
+from .winpty import PtyProcess
 import ctypes
 
 if getattr(sys, 'frozen', False):
