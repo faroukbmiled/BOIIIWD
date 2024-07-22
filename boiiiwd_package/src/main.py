@@ -919,8 +919,7 @@ class BOIIIWD(ctk.CTk):
         self.is_downloading = False
         self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
 
-        subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    creationflags=subprocess.CREATE_NO_WINDOW)
+        subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], creationflags=subprocess.CREATE_NO_WINDOW)
         self.skip_button.grid_remove()
         self.after(2, self.status_text.configure(text=f"Status: Skipping..."))
         self.label_speed.configure(text="Network Speed: 0 KB/s")
@@ -1789,12 +1788,10 @@ class BOIIIWD(ctk.CTk):
         self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
 
         if on_close:
-            subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                       creationflags=subprocess.CREATE_NO_WINDOW)
+            subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], creationflags=subprocess.CREATE_NO_WINDOW)
             return
 
-        subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                       creationflags=subprocess.CREATE_NO_WINDOW)
+        subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], creationflags=subprocess.CREATE_NO_WINDOW)
 
         self.button_download.configure(state="normal")
         self.button_stop.configure(state="disabled")
