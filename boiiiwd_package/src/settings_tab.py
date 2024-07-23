@@ -865,7 +865,7 @@ class SettingsTab(ctk.CTkFrame):
         try:
             if self.use_steam_creds_sw.get() == 0:
                 save_config("use_steam_creds", "off")
-                save_config("login_cashed", "off")
+                save_config("login_cached", "off")
                 return
             top = ctk.CTkToplevel(self)
             if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.ico")):
@@ -895,11 +895,17 @@ class SettingsTab(ctk.CTkFrame):
                     save_config("use_steam_creds", "on")
                     save_steam_creds(username_value)
                     top.destroy()
+                else:
+                    self.use_steam_creds.set(False)
+                    save_config("use_steam_creds", "off")
+                    save_config("login_cached", "off")
+                    top.destroy()
 
             save_button = ctk.CTkButton(center_frame, text="Save", command=save_creds)
             save_button.grid(row=2, column=0, columnspan=2, pady=20)
             top.after(150, top.focus_force)
             top.after(250, top.focus_force)
+            top.protocol("WM_DELETE_WINDOW", save_creds)
 
         except Exception as e:
             print(f"Error: {e}")
