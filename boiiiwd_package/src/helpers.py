@@ -653,7 +653,7 @@ def invalid_password_check(stdout_text: str) -> str | bool:
 
             for message in return_error_messages:
                 if message in stdout_text:
-                    save_config("login_cashed", "off")
+                    save_config("login_cached", "off")
                     if message == (return_error_messages[6] or return_error_messages[7]):
                         return message + " - Password prompt detected, Cashed login is now off, try again!"
                     elif message == return_error_messages[1]:
@@ -669,7 +669,7 @@ def invalid_password_check(stdout_text: str) -> str | bool:
         return False
 
 
-# will be reworked in the furute
+# will be reworked in the future
 def initiate_login_process(command, console):
     print(f'[logs] initiate_login_process invoked...')
     try:
@@ -680,7 +680,7 @@ def initiate_login_process(command, console):
         print(f"[Logs] Initializing login process for {username}...")
         final_cmd = f'start /wait cmd /c "{path} +login {username}"'
         subprocess.run(final_cmd, shell=True)
-        save_config("login_cashed", "on")
+        save_config("login_cached", "on")
         if console:
             show_console()
         return True

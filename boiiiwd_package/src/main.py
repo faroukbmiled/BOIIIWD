@@ -934,6 +934,7 @@ class BOIIIWD(ctk.CTk):
         timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         using_creds = self.settings_tab.use_steam_creds_sw.get()
         console = self.settings_tab.checkbox_show_console.get()
+        steamcmd_restared_counter = -1 # So first run dont count
 
         try: os.makedirs(os.path.dirname(stdout_path), exist_ok=True)
         except: pass
@@ -964,11 +965,12 @@ class BOIIIWD(ctk.CTk):
 
         if self.settings_tab.continuous:
             if using_creds:
-                if check_config("login_cashed", "off") != "on":
+                if check_config("login_cached", "off") != "on":
                     show_message("Please wait...", "A window will open shortly that will propmt you to login!, close it as soon as you're done with logging in!", icon="warning")
                     initiate_login_process(f"{steamcmd_path}/steamcmd.exe {command}", console)
             start_time = 0
             while not os.path.exists(map_folder) and not self.settings_tab.stopped:
+                steamcmd_restared_counter += 1
                 print(f'[logs] attempting : steamcmd.exe {command}')
                 process = PtyProcess.spawn(steamcmd_path + "/steamcmd.exe " + command)
 
@@ -994,9 +996,10 @@ class BOIIIWD(ctk.CTk):
                             start_time = time.time()
                             self.is_downloading = True
                             self.is_steamcmd_updating = False
-                    elapsed_time = time.time() - start_time
+                    elapsed_time = time.time() - start_time if start_time > 0 else 0
                     time.sleep(1)
 
+                print("[Logs] Broken free!")
                 self.is_downloading = False
                 self.is_steamcmd_updating = False
                 try:
@@ -1006,20 +1009,28 @@ class BOIIIWD(ctk.CTk):
                     try: os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
                     except: pass
 
+                print(f"[Logs] steamcmd restart counter: {steamcmd_restared_counter}")
+                if steamcmd_restared_counter >= STEAMCMD_WARNING_COUNTER and not os.path.exists(map_folder):
+                    show_message("Download will continue", "SteamCMD has been restarted 20 times and failed to download the map/mod,\
+                        it will keep trying anyway or Reset SteamCMD from settings", icon="cancel")
                 if not self.settings_tab.stopped:
+                    print(f"[Logs] steamcmd elapsed time is at: {elapsed_time}")
                     self.settings_tab.steam_fail_counter = self.settings_tab.steam_fail_counter + 1
-                    if elapsed_time < 20 and elapsed_time > 0 and not os.path.exists(map_folder):
-                        self.fail_threshold = self.fail_threshold + 1
+                    if elapsed_time < SECONDS_UNTIL_FAIL_COUNTS and not os.path.exists(map_folder):
+                        self.fail_threshold += 1
 
                 if self.settings_tab.steam_fail_counter_toggle:
                     try:
                         if self.fail_threshold >= int(self.settings_tab.steam_fail_number):
+                            show_message("SteamCMD Error", f"SteamCMD has failed to download the map/mod {self.fail_threshold} times,\
+                                resetting steamcmd and continuing!, fine tune 'Download Attempts' in settings if needed", icon="cancel")
+                            print(f"[Logs] steamcmd fail threshold reached: {self.fail_threshold}, resetting steamcmd and continuing!")
                             reset_steamcmd(no_warn=True)
                             self.settings_tab.steamcmd_reset = True
                             self.settings_tab.steam_fail_counter = 0
                             self.fail_threshold = 0
                     except:
-                        if self.fail_threshold >= 25:
+                        if self.fail_threshold >= FAIL_THRESHOLD_FALLBACK:
                             reset_steamcmd(no_warn=True)
                             self.settings_tab.steamcmd_reset = True
                             self.settings_tab.steam_fail_counter = 0
@@ -1027,7 +1038,7 @@ class BOIIIWD(ctk.CTk):
                 continue
         else:
             if using_creds:
-                if check_config("login_cashed", "off") != "on":
+                if check_config("login_cached", "off") != "on":
                     show_message("Please wait...", "A window will open shortly that will propmt you to login!, close it as soon as you're done with logging in!", icon="warning")
                     initiate_login_process(f"{steamcmd_path}/steamcmd.exe {command}", console)
             start_time = 0
@@ -1053,10 +1064,10 @@ class BOIIIWD(ctk.CTk):
                         start_time = time.time()
                         self.is_downloading = True
                         self.is_steamcmd_updating = False
-                elapsed_time = time.time() - start_time
+                elapsed_time = time.time() - start_time if start_time > 0 else 0
                 time.sleep(1)
 
-            print("[Logs] Broken freeeee!")
+            print("[Logs] Broken free!")
             self.is_downloading = False
             self.is_steamcmd_updating = False
             try:
@@ -1263,8 +1274,10 @@ class BOIIIWD(ctk.CTk):
                     est_downloaded_bytes = 0
                     file_size = ws_file_size if ws_file_size is not None else 1
                     item_name = get_item_name(workshop_id) if get_item_name(workshop_id) else "Error getting name"
+                    loop_counter = 0
 
                     while not self.settings_tab.stopped:
+                        loop_counter += 1
                         if self.settings_tab.steamcmd_reset:
                             self.settings_tab.steamcmd_reset = False
                             previous_net_speed = 0
@@ -1336,8 +1349,8 @@ class BOIIIWD(ctk.CTk):
                             previous_net_speed = current_net_speed_text
 
                             current_net_speed = net_speed_bytes
-                            down_cap = 150000000
-                            if current_net_speed >= down_cap:
+                            if loop_counter <= 1 and current_net_speed >= DOWN_CAP:
+                                print(f"[Logs] down_cap hit at: {current_net_speed} - Loop counter: {loop_counter}")
                                 current_net_speed = 10
 
                             est_downloaded_bytes += current_net_speed
@@ -1566,8 +1579,10 @@ class BOIIIWD(ctk.CTk):
                 est_downloaded_bytes = 0
                 start_time = time.time()
                 file_size = ws_file_size if ws_file_size is not None else 1
+                loop_counter = 0
 
                 while not self.settings_tab.stopped:
+                    loop_counter += 1
                     if self.settings_tab.steamcmd_reset:
                         self.settings_tab.steamcmd_reset = False
                         previous_net_speed = 0
@@ -1614,8 +1629,8 @@ class BOIIIWD(ctk.CTk):
                         previous_net_speed = current_net_speed_text
 
                         current_net_speed = net_speed_bytes
-                        down_cap = 150000000
-                        if current_net_speed >= down_cap:
+                        if loop_counter <= 1 and current_net_speed >= DOWN_CAP:
+                            print(f"[Logs] down_cap hit at: {current_net_speed} - Loop counter: {loop_counter}")
                             current_net_speed = 10
 
                         est_downloaded_bytes += current_net_speed
