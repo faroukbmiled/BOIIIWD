@@ -113,7 +113,7 @@ def if_internet_available(func=None, launching=False):
 
 @if_internet_available
 def check_for_updates_func(window, ignore_up_todate=False):
-    print(f'[logs] check_for_updates_func invoked...')
+    print(f'[{get_current_datetime()}] [Logs] check_for_updates_func invoked...')
     try:
         latest_version = get_latest_release_version()
         current_version = VERSION
@@ -156,6 +156,7 @@ def check_for_updates_func(window, ignore_up_todate=False):
                 "Error!", "An error occured while checking for updates!\nCheck your internet and try again")
 
     except Exception as e:
+        print(f"[{get_current_datetime()}] [logs] error in check_for_updates_func: {e}")
         show_message("Error", f"Error while checking for updates: \n{e}", icon="cancel")
 
 
@@ -183,7 +184,7 @@ def check_steamcmd():
 
 
 def initialize_steam(master):
-    print(f'[logs] initialize_steam invoked...')
+    print(f'[{get_current_datetime()}] [Logs] initialize_steam invoked...')
     try:
         steamcmd_path = get_steamcmd_path()
         steamcmd_exe_path = os.path.join(steamcmd_path, "steamcmd.exe")
@@ -260,7 +261,7 @@ def convert_bytes_to_readable(size_in_bytes, no_symb=None):
 
 
 def get_workshop_file_size(workshop_id, raw=None):
-    print(f'[logs] get_workshop_file_size invoked...')
+    print(f'[{get_current_datetime()}] [Logs] get_workshop_file_size invoked...')
     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}&searchtext="
     response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
@@ -292,7 +293,7 @@ def get_workshop_file_size(workshop_id, raw=None):
         return file_size_in_bytes
 
     except Exception as e:
-        print(f"Error processing file size: {e}")
+        print(f"[{get_current_datetime()}] [logs] error in get_workshop_file_size: {e}")
         return None
 
 
@@ -318,10 +319,10 @@ def input_popup(title="Input", message="Enter value:"):
         dialog = ctk.CTkInputDialog(text=message, title=title)
         return dialog.get_input()
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"[{get_current_datetime()}] [logs] error in input_popup: {e}")
 
 def launch_game_func(path, procname="BlackOps3.exe", flags=""):
-    print(f'[logs] launch_game_func invoked...')
+    print(f'[{get_current_datetime()}] [Logs] launch_game_func invoked...')
     if not procname.endswith(('.exe', '.bat', '.sh', '.lnk')):
         procname += '.exe'
     try:
@@ -334,6 +335,7 @@ def launch_game_func(path, procname="BlackOps3.exe", flags=""):
         show_message(
             "Please wait!", "The game has launched in the background it will open up in a sec!", icon="info")
     except Exception as e:
+        print(f"[{get_current_datetime()}] [logs] error in launch_game_func: {e}")
         show_message(f"Error: Failed to launch game", f"Failed to start {procname}\n\nMake sure the game path is correct.\n\n{e}")
 
 
@@ -342,6 +344,7 @@ def remove_tree(folder_path, show_error=None):
         try:
             shutil.rmtree(folder_path)
         except Exception as e:
+            print(f"[{get_current_datetime()}] [logs] error in remove_tree: {e}")
             show_message("Error!", f"An error occurred while trying to remove files:\n{e}", icon="cancel")
     try:
         shutil.rmtree(folder_path)
@@ -392,7 +395,7 @@ def get_button_state_colors(file_path, state):
 
 
 def reset_steamcmd(no_warn=None):
-    print(f'[logs] reset_steamcmd invoked...')
+    print(f'[{get_current_datetime()}] [Logs] reset_steamcmd invoked...')
     steamcmd_path = get_steamcmd_path()
 
     directories_to_reset = ["steamapps", "dumps",
@@ -671,13 +674,13 @@ def invalid_password_check(stdout_text: str) -> str | bool:
 
 # will be reworked in the future
 def initiate_login_process(command, console):
-    print(f'[logs] initiate_login_process invoked...')
+    print(f'[{get_current_datetime()}] [Logs] initiate_login_process invoked...')
     try:
         if console:
             hide_console()
         path = command.split('+login')[0].strip()
         username = command.split("+login")[1].strip().split(" ")[0]
-        print(f"[Logs] Initializing login process for {username}...")
+        print(f"[{get_current_datetime()}] [Logs] Initializing login process for {username}...")
         final_cmd = f'start /wait cmd /c "{path} +login {username}"'
         subprocess.run(final_cmd, shell=True)
         save_config("login_cached", "on")
@@ -708,5 +711,13 @@ def hide_console():
 
     sys.stdout = sys.__stdout__
     sys.stderr = sys.__stderr__
+
+
+def get_current_datetime():
+    try:
+        return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    except Exception as e:
+        print(f"[{get_current_datetime()}] [Logs] Error in get_current_datetime: {e}")
+        return ""
 
 # End helper functions
