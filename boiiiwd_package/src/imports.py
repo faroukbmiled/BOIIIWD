@@ -22,6 +22,8 @@ import psutil
 import requests
 import socket
 import winreg
+import ctypes
+import shlex
 from bs4 import BeautifulSoup
 
 from CTkMessagebox import CTkMessagebox
@@ -33,7 +35,6 @@ from .CTkToolTip.ctk_tooltip import CTkToolTip
 
 # winpty, sorry to my linux friends, blame Steamcmd for their awful output buffering
 from src.winpty_patch import PtyProcess
-import ctypes
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the PyInstaller bootloader

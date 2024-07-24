@@ -243,19 +243,20 @@ class SettingsTab(ctk.CTkFrame):
     def reset_steamcmd_on_fail_func(self, option: str):
         if option == "Custom":
             try:
-                save_config("reset_on_fail", "10")
+                default_val = check_config("reset_on_fail", "10")
                 def callback():
-                    msg = CTkMessagebox(title="config.ini", message="change reset_on_fail value to whatever you want", icon="info", option_1="No", option_2="Ok", sound=True)
-                    response = msg.get()
-                    if response == "No":
-                        return
-                    elif response == "Ok":
-                        os.system(f"notepad {os.path.join(APPLICATION_PATH, 'config.ini')}")
+                    input_value = input_popup("Number of fails", "Enter a number of failed attempts before resetting SteamCMD (higher number is recommended)")
+                    if input_value and input_value.strip() and input_value.isdigit():
+                        save_config("reset_on_fail", str(input_value))
+                        self.reset_steamcmd_on_fail.set(input_value)
+                    elif input_value is not None:
+                        show_message("Invalid input", "Please enter a valid number")
+                        self.reset_steamcmd_on_fail.set(default_val)
                     else:
-                        return
+                        self.reset_steamcmd_on_fail.set(default_val)
                 self.after(0, callback)
-            except:
-                show_message("Couldn't open config.ini" ,"you can do so by yourself and change reset_on_fail value to whatever you want")
+            except Exception as e:
+                print(f"[{get_current_datetime()}] [Logs] Error in reset_steamcmd_on_fail_func: {e}")
         else:
             return
 
@@ -298,6 +299,7 @@ class SettingsTab(ctk.CTkFrame):
         try: self.save_button.configure(state='normal')
         except: pass
 
+    # TODO: cant be bothered to refactor this, at a later date maybe
     def save_settings(self):
         self.save_button.configure(state='disabled')
 
@@ -375,11 +377,16 @@ class SettingsTab(ctk.CTkFrame):
             value = self.reset_steamcmd_on_fail.get()
             if value == "Disable":
                 self.steam_fail_counter_toggle = False
+            elif value == "Custom":
+                self.steam_fail_counter_toggle = True
+                self.steam_fail_number = int(check_config("reset_on_fail", "10"))
+                self.reset_steamcmd_on_fail.set(check_config("reset_on_fail", "10"))
             else:
                 self.steam_fail_counter_toggle = True
                 self.steam_fail_number = int(value)
             save_config("reset_on_fail", value)
 
+    # TODO: cant be bothered to refactor this, at a later date maybe
     def load_settings(self, setting, fallback=None):
         if setting == "folder_naming":
             if check_config(setting, fallback) == "1":
@@ -859,6 +866,7 @@ class SettingsTab(ctk.CTkFrame):
             top.after(150, top.focus_force)
 
         except Exception as e:
+            print(f"[{get_current_datetime()}] [logs] error in workshop_to_gamedir_toplevel: {e}")
             show_message("Error", f"{e}", icon="cancel")
 
     def use_steam_creds_inputs(self):

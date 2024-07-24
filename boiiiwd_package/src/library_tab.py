@@ -232,7 +232,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         return (0, item_name) if item_type == "map" else (1, item_name)
 
     def load_items(self, gameFolder, dont_add=False):
-        print("[Logs] Library: load_items invoked...")
+        print(f"[{get_current_datetime()}] [Logs] Library: load_items invoked...")
         if self.refresh_next_time and not dont_add:
             self.refresh_next_time = False
             status = self.refresh_items()
@@ -375,7 +375,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         return "No items in current selected folder"
 
     def update_item(self, gameFolder, id, item_type, foldername):
-        print("[Logs] Library: update_item invoked...")
+        print(f"[{get_current_datetime()}] [Logs] Library: update_item invoked...")
         try:
             if item_type == "map":
                 folder_path = Path(gameFolder) / "usermaps" / f"{foldername}"
@@ -448,7 +448,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 self.remove_item_by_option(items_file, id)
 
     def refresh_items(self):
-        print("[Logs] Library: refresh_items invoked...")
+        print(f"[{get_current_datetime()}] [Logs] Library: refresh_items invoked...")
         main_app.app.title("BOIII Workshop Downloader - Library  ➜  Loading... ⏳")
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
             label.destroy()
