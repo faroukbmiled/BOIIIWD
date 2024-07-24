@@ -1012,9 +1012,6 @@ class BOIIIWD(ctk.CTk):
                     except: pass
 
                 print(f"[{get_current_datetime()}] [Logs] steamcmd restart counter: {steamcmd_restared_counter}")
-                if steamcmd_restared_counter >= STEAMCMD_WARNING_COUNTER and not os.path.exists(map_folder):
-                    show_message("Download will continue", "SteamCMD has been restarted 20 times and failed to download the map/mod,\
-                        it will keep trying anyway or Reset SteamCMD from settings", icon="cancel")
                 if not self.settings_tab.stopped:
                     print(f"[{get_current_datetime()}] [Logs] steamcmd elapsed time is at: {elapsed_time}")
                     self.settings_tab.steam_fail_counter = self.settings_tab.steam_fail_counter + 1
@@ -1025,7 +1022,7 @@ class BOIIIWD(ctk.CTk):
                     try:
                         if self.fail_threshold >= int(self.settings_tab.steam_fail_number):
                             show_message("SteamCMD Error", f"SteamCMD has failed to download the map/mod {self.fail_threshold} times,\
-                                resetting steamcmd and continuing!, fine tune 'Download Attempts' in settings if needed", icon="cancel")
+                                resetting steamcmd and continuing!, fine tune 'Download Attempts' in settings if needed")
                             print(f"[{get_current_datetime()}] [Logs] steamcmd fail threshold reached: {self.fail_threshold}, resetting steamcmd and continuing!")
                             reset_steamcmd(no_warn=True)
                             self.settings_tab.steamcmd_reset = True
