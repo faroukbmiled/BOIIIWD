@@ -60,5 +60,5 @@ REGISTRY_KEY_PATH = r"Software\BOIIIWD"
 STEAMCMD_WARNING_COUNTER = 20  # how many times steamcmd fails before showing a non breaking warning
 SECONDS_UNTIL_FAIL_COUNTS = 15  # Minimum steamcmd runtime in seconds before a failed attempt counts as a fail (+1 to fail counter)
 FAIL_THRESHOLD_FALLBACK = 25
-DOWN_CAP = 15000000  # 15MB, workaround for steamcmd's awful download speed psutil net_io_counters
+DOWN_CAP = 15000000  # 15MB, workaround for psutil net_io_counters
 VERSION = "v0.3.7.3"

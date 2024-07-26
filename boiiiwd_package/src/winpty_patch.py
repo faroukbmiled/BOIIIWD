@@ -2,7 +2,6 @@
 # This function uses select to avoid blocking if there's no data to read.
 
 import select
-from time import sleep
 from winpty import PtyProcess as OriginalPtyProcess
 
 
