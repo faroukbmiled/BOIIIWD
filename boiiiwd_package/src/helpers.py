@@ -720,4 +720,8 @@ def get_current_datetime():
         print(f"[Logs] Error in get_current_datetime: {e}")
         return ""
 
+def kill_steamcmd():
+    try: subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], creationflags=subprocess.CREATE_NO_WINDOW)
+    except Exception as e: print(f'[{get_current_datetime()}] [Logs] Error in kill_steamcmd: {e}')
+
 # End helper functions

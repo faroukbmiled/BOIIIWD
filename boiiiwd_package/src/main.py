@@ -919,7 +919,7 @@ class BOIIIWD(ctk.CTk):
         self.is_downloading = False
         self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
 
-        subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], creationflags=subprocess.CREATE_NO_WINDOW)
+        kill_steamcmd()
         self.skip_button.grid_remove()
         self.after(2, self.status_text.configure(text=f"Status: Skipping..."))
         self.label_speed.configure(text="Network Speed: 0 KB/s")
@@ -933,7 +933,7 @@ class BOIIIWD(ctk.CTk):
         except EOFError as e:
             print(f"[{get_current_datetime()}] [Logs] error reading process output: {e}")
             try: process.kill()
-            except: pass
+            except: kill_steamcmd()
             return "EOFError"
         except Exception as e:
             print(f"[{get_current_datetime()}] [Logs] error reading process output: {e}")
@@ -1822,10 +1822,10 @@ class BOIIIWD(ctk.CTk):
         self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
 
         if on_close:
-            subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], creationflags=subprocess.CREATE_NO_WINDOW)
+            kill_steamcmd()
             return
 
-        subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], creationflags=subprocess.CREATE_NO_WINDOW)
+        kill_steamcmd()
 
         self.button_download.configure(state="normal")
         self.button_stop.configure(state="disabled")
