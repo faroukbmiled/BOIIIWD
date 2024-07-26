@@ -1,4 +1,3 @@
-import os
 import PyInstaller.__main__
 
 NAME = "BOIIIWD"
@@ -21,9 +20,5 @@ PyInstaller.__main__.run([
     "--add-data", "boiiiwd_package/src:settings_tab",
     "--add-data", "boiiiwd_package/src:update_window",
     "--add-data", "boiiiwd_package/src:main",
+    "--distpath", ".",
 ])
-
-# create symbolic hardlink to main directory
-if os.path.exists("BOIIIWD.exe"):
-    os.remove("BOIIIWD.exe")
-os.link('dist/BOIIIWD.exe', 'BOIIIWD.exe')
