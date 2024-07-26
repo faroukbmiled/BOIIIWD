@@ -919,12 +919,25 @@ class BOIIIWD(ctk.CTk):
         self.is_downloading = False
         self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
 
-        subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], creationflags=subprocess.CREATE_NO_WINDOW)
+        kill_steamcmd()
         self.skip_button.grid_remove()
         self.after(2, self.status_text.configure(text=f"Status: Skipping..."))
         self.label_speed.configure(text="Network Speed: 0 KB/s")
         self.progress_text.configure(text="0%")
         self.progress_bar.set(0.0)
+
+    def process_output_reader(self, process: PatchedPtyProcess):
+        try:
+            buff = process.nb_read()
+            return buff
+        except EOFError as e:
+            print(f"[{get_current_datetime()}] [Logs] error reading process output: {e}")
+            try: process.kill()
+            except: kill_steamcmd()
+            return "EOFError"
+        except Exception as e:
+            print(f"[{get_current_datetime()}] [Logs] error reading process output: {e}")
+            return ""
 
     def run_steamcmd_command(self, command, map_folder, wsid, queue=None):
         print(f"[{get_current_datetime()}] [Logs] run_steamcmd_command invoked")
@@ -934,6 +947,7 @@ class BOIIIWD(ctk.CTk):
         timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         using_creds = self.settings_tab.use_steam_creds_sw.get()
         console = self.settings_tab.checkbox_show_console.get()
+        elapsed_time = 0
         steamcmd_restared_counter = -1 # So first run dont count
 
         try: os.makedirs(os.path.dirname(stdout_path), exist_ok=True)
@@ -981,7 +995,9 @@ class BOIIIWD(ctk.CTk):
 
                 #wait for process
                 while True:
-                    buff = process.nb_read()
+                    buff = self.process_output_reader(process)
+                    if buff == "EOFError":
+                        break
                     print(f"[{get_current_datetime()}] [Logs] steamcmd output: ", buff) if buff else None
                     if using_creds:
                         login_check = invalid_password_check(buff)
@@ -1048,7 +1064,9 @@ class BOIIIWD(ctk.CTk):
 
             #wait for process
             while True:
-                buff = process.nb_read()
+                buff = self.process_output_reader(process)
+                if buff == "EOFError":
+                    break
                 print(f"[{get_current_datetime()}] [Logs] steamcmd output: ", buff) if buff else None
                 if using_creds:
                     login_check = invalid_password_check(buff)
@@ -1804,10 +1822,10 @@ class BOIIIWD(ctk.CTk):
         self.after(1, self.label_file_size.configure(text=f"File size: 0KB"))
 
         if on_close:
-            subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], creationflags=subprocess.CREATE_NO_WINDOW)
+            kill_steamcmd()
             return
 
-        subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], creationflags=subprocess.CREATE_NO_WINDOW)
+        kill_steamcmd()
 
         self.button_download.configure(state="normal")
         self.button_stop.configure(state="disabled")

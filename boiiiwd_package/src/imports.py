@@ -34,7 +34,7 @@ from .CTkListbox.ctk_listbox import CTkListbox
 from .CTkToolTip.ctk_tooltip import CTkToolTip
 
 # winpty, sorry to my linux friends, blame Steamcmd for their awful output buffering
-from src.winpty_patch import PtyProcess
+from src.winpty_patch import PtyProcess, PatchedPtyProcess
 
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the PyInstaller bootloader
@@ -58,7 +58,7 @@ RESOURCES_DIR = os.path.join(os.path.dirname(__file__), '..', 'resources')
 UPDATER_FOLDER = "update"
 REGISTRY_KEY_PATH = r"Software\BOIIIWD"
 STEAMCMD_WARNING_COUNTER = 20  # how many times steamcmd fails before showing a non breaking warning
-SECONDS_UNTIL_FAIL_COUNTS = 20  # Minimum steamcmd runtime in seconds before a failed attempt counts as a fail (+1 to fail counter)
+SECONDS_UNTIL_FAIL_COUNTS = 15  # Minimum steamcmd runtime in seconds before a failed attempt counts as a fail (+1 to fail counter)
 FAIL_THRESHOLD_FALLBACK = 25
-DOWN_CAP = 15000000  # 15MB, workaround for steamcmd's awful download speed psutil net_io_counters
-VERSION = "v0.3.7.2"
+DOWN_CAP = 15000000  # 15MB, workaround for psutil net_io_counters
+VERSION = "v0.3.7.3"
