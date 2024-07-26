@@ -717,7 +717,7 @@ def get_current_datetime():
     try:
         return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     except Exception as e:
-        print(f"[{get_current_datetime()}] [Logs] Error in get_current_datetime: {e}")
+        print(f"[Logs] Error in get_current_datetime: {e}")
         return ""
 
 # End helper functions
