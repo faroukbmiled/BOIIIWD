@@ -40,5 +40,6 @@ jobs:
         with:
           files: Release.zip
           draft: true
+          token: ${{ secrets.PAT }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT }}
