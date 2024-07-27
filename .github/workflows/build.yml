@@ -32,7 +32,7 @@ jobs:
 
       - name: Create ZIP file
         run: |
-          powershell Compress-Archive -Path dist\BOIIIWD.exe -DestinationPath Release.zip
+          powershell Compress-Archive -Path BOIIIWD.exe -DestinationPath Release.zip
 
       - name: Release
         uses: softprops/action-gh-release@v2
