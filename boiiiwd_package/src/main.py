@@ -1028,6 +1028,7 @@ class BOIIIWD(ctk.CTk):
                     except: pass
 
                 print(f"[{get_current_datetime()}] [Logs] steamcmd restart counter: {steamcmd_restared_counter}")
+                print(f"[{get_current_datetime()}] [Logs] steamcmd fail counter: {self.fail_threshold}")
                 if not self.settings_tab.stopped:
                     print(f"[{get_current_datetime()}] [Logs] steamcmd elapsed time is at: {elapsed_time}")
                     self.settings_tab.steam_fail_counter = self.settings_tab.steam_fail_counter + 1
