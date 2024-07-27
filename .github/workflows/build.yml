@@ -35,11 +35,14 @@ jobs:
           powershell Compress-Archive -Path BOIIIWD.exe -DestinationPath Release.zip
 
       - name: Release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+        uses: ncipollo/release-action@v1
         with:
-          files: Release.zip
+          artifacts: "Release.zip"
           draft: true
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          generateReleaseNotes: true
           token: ${{ secrets.PAT }}
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
+          token: ${{ secrets.PAT }}
