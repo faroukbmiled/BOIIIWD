@@ -26,6 +26,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Extract version
+        id: get_version
+        run: |
+          $version = (Get-Content boiiiwd_package/src/imports.py | Select-String -Pattern 'VERSION = "(.*)"' | ForEach-Object { $_.Matches[0].Groups[1].Value })
+          echo "VERSION=$version" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8
+
       - name: Build executable
         run: |
           python build.py
@@ -37,13 +43,13 @@ jobs:
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-            artifacts: "Release.zip"
-            draft: true
-            allowUpdates: true
-            artifactErrorsFailBuild: true
-            generateReleaseNotes: true
-            token: ${{ secrets.PAT }}
-            tag: test
-            name: Release "test"
+          artifacts: "Release.zip"
+          draft: true
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          generateReleaseNotes: true
+          token: ${{ secrets.PAT }}
+          tag: ${{ env.VERSION }}
+          name: ${{ env.VERSION }}
         env:
-            GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_TOKEN: ${{ secrets.PAT }}
