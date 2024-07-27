@@ -37,12 +37,13 @@ jobs:
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "Release.zip"
-          draft: true
-          allowUpdates: true
-          artifactErrorsFailBuild: true
-          generateReleaseNotes: true
-          token: ${{ secrets.PAT }}
+            artifacts: "Release.zip"
+            draft: true
+            allowUpdates: true
+            artifactErrorsFailBuild: true
+            generateReleaseNotes: true
+            token: ${{ secrets.PAT }}
+            tag: test
+            name: Release "test"
         env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
-          token: ${{ secrets.PAT }}
+            GITHUB_TOKEN: ${{ secrets.PAT }}
