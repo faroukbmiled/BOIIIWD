@@ -49,8 +49,7 @@ jobs:
           allowUpdates: true
           artifactErrorsFailBuild: true
           generateReleaseNotes: true
-          token: ${{ secrets.PAT }}
           tag: ${{ env.VERSION }}
           name: ${{ env.VERSION }}
         env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
