@@ -65,7 +65,7 @@ class BOIIIWD(ctk.CTk):
         self.library_tab = LibraryTab(self, corner_radius=3)
 
         # create sidebar frame with widgets
-        font = "Comic Sans MS"
+        font = "Segoe UI"
         if os.path.exists(os.path.join(RESOURCES_DIR, "ryuk.png")):
             ryuks_icon = os.path.join(RESOURCES_DIR, "ryuk.png")
             self.sidebar_icon = ctk.CTkImage(light_image=Image.open(ryuks_icon), dark_image=Image.open(ryuks_icon), size=(40, 40))
@@ -75,9 +75,9 @@ class BOIIIWD(ctk.CTk):
         self.sidebar_frame.grid(row=0, column=0, rowspan=3, padx=(10, 20), pady=(10, 10), sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(4, weight=1)
         self.logo_label = ctk.CTkLabel(self.sidebar_frame, text='',image=self.sidebar_icon)
-        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
-        self.txt_label = ctk.CTkLabel(self.sidebar_frame, text="- Sidebar -", font=(font, 17))
-        self.txt_label.grid(row=1, column=0, padx=20, pady=(20, 10))
+        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 5))
+        self.txt_label = ctk.CTkLabel(self.sidebar_frame, text=f"BOIIIWD {VERSION}", font=(font, 11), text_color=("gray60", "gray60"))
+        self.txt_label.grid(row=1, column=0, padx=20, pady=(0, 10))
         self.sidebar_main = ctk.CTkButton(self.sidebar_frame, height=28)
         self.sidebar_main.grid(row=2, column=0, padx=10, pady=(20, 6))
         if self.queue_tab_enabled:
@@ -93,8 +93,8 @@ class BOIIIWD(ctk.CTk):
         # create optionsframe
         self.optionsframe = ctk.CTkFrame(self)
         self.optionsframe.grid(row=0, column=1, rowspan=1, padx=(0, 20), pady=(20, 0), sticky="nsew")
-        self.txt_main = ctk.CTkLabel(self.optionsframe, text="💎 BOIIIWD 💎", font=(font, 20))
-        self.txt_main.grid(row=0, column=1, columnspan=1, padx=0, pady=(20, 20), sticky="n")
+        self.txt_main = ctk.CTkLabel(self.optionsframe, text="B O I I I W D", font=("Segoe UI", 26, "bold"), text_color=("#1a1a2e", "#e0e0e0"))
+        self.txt_main.grid(row=0, column=1, columnspan=3, padx=0, pady=(12, 12), sticky="n")
         self.queueframe.grid(row=1, column=1, rowspan=1, padx=(0, 20), pady=(20, 0), sticky="nsew")
 
         # create slider and progressbar frame
@@ -109,7 +109,7 @@ class BOIIIWD(ctk.CTk):
         self.slider_progressbar_frame.rowconfigure(2, weight=1)
         self.slider_progressbar_frame.rowconfigure(3, weight=1)
 
-        self.label_speed = ctk.CTkLabel(master=self.slider_progressbar_frame, text="Awaiting Download!")
+        self.label_speed = ctk.CTkLabel(master=self.slider_progressbar_frame, text="Ready")
         self.label_speed.grid(row=1, column=0, padx=20, pady=(0, 10), sticky="w")
         self.elapsed_time = ctk.CTkLabel(master=self.slider_progressbar_frame, text="", anchor="center")
         self.elapsed_time.grid(row=1, column=1, padx=20, pady=(0, 10), sticky="nsew")  # Use "nsew" to center label
@@ -137,20 +137,21 @@ class BOIIIWD(ctk.CTk):
         self.optionsframe.rowconfigure(3, weight=0)
         self.optionsframe.rowconfigure(4, weight=0)
 
-        self.label_workshop_id = ctk.CTkLabel(master=self.optionsframe, text="Enter a Workshop ID or Link to download:\n")
-        self.label_workshop_id.grid(row=1, column=1, padx=(10, 5), pady=(10, 0), columnspan=1, sticky="ws")
+        self.label_workshop_id = ctk.CTkLabel(master=self.optionsframe, text="Workshop ID or URL:")
+        self.label_workshop_id.grid(row=1, column=1, padx=(10, 5), pady=(10, 5), columnspan=1, sticky="ws")
 
         self.check_if_changed = ctk.StringVar()
         self.check_if_changed.trace_add("write", self.id_changed_handler)
-        self.edit_workshop_id = ctk.CTkEntry(master=self.optionsframe, textvariable=self.check_if_changed)
+        self.edit_workshop_id = ctk.CTkEntry(master=self.optionsframe, textvariable=self.check_if_changed, placeholder_text="e.g. 123456789 or workshop URL")
         self.edit_workshop_id.grid(row=2, column=1, padx=(5, 5), pady=(0, 10), columnspan=1, sticky="ewn")
 
-        self.button_browse = ctk.CTkButton(master=self.optionsframe, text="Workshop", command=self.open_browser, width=10)
-        self.button_browse.grid(row=2, column=2, padx=(5, 5), pady=(0, 10), sticky="en")
-        self.button_browse_tooltip = CTkToolTip(self.button_browse, message="Will open steam workshop in your browser")
-
         self.info_button = ctk.CTkButton(master=self.optionsframe, text="Details", command=self.show_map_info, width=10)
-        self.info_button.grid(row=2, column=3, padx=(5, 10), pady=(0, 10), sticky="wn")
+        self.info_button.grid(row=2, column=2, padx=(5, 5), pady=(0, 10), sticky="en")
+        self.info_button_tooltip = CTkToolTip(self.info_button, message="View item details")
+
+        self.button_browse = ctk.CTkButton(master=self.optionsframe, text="Workshop", command=self.open_browser, width=10)
+        self.button_browse.grid(row=2, column=3, padx=(5, 10), pady=(0, 10), sticky="wn")
+        self.button_browse_tooltip = CTkToolTip(self.button_browse, message="Open Steam Workshop in browser")
 
         # set default values
         self.active_color = get_button_state_colors(check_custom_theme(check_config("theme", fallback="boiiiwd_theme.json")), "button_active_state_color")
@@ -171,9 +172,9 @@ class BOIIIWD(ctk.CTk):
         self.fail_threshold = 0
 
         # sidebar windows buttons
-        self.sidebar_main.configure(command=self.main_button_event, text="Main ⬇️", fg_color=(self.active_color), state="active")
-        self.sidebar_library.configure(text="Library 📙", command=self.library_button_event)
-        if self.queue_tab_enabled: self.sidebar_queue.configure(text="Queue 🚧", command=self.queue_button_event)
+        self.sidebar_main.configure(command=self.main_button_event, text="Download", fg_color=(self.active_color), state="active")
+        self.sidebar_library.configure(text="Library", command=self.library_button_event)
+        if self.queue_tab_enabled: self.sidebar_queue.configure(text="Queue", command=self.queue_button_event)
         sidebar_settings_button_image = os.path.join(RESOURCES_DIR, "sett10.png")
         self.sidebar_settings.configure(command=self.settings_button_event, text="", image=ctk.CTkImage(Image.open(sidebar_settings_button_image), size=(int(35), int(35))), fg_color="transparent", width=45, height=45)
         self.sidebar_settings_tooltip = CTkToolTip(self.sidebar_settings, message="Settings")
@@ -206,7 +207,7 @@ class BOIIIWD(ctk.CTk):
             self.settings_tab.load_settings("clean_on_finish", "on")
             self.settings_tab.load_settings("continuous_download", "on")
             self.settings_tab.load_settings("console", "off")
-            self.settings_tab.load_settings("estimated_progress", "on")
+            self.settings_tab.load_settings("use_estimated_progress", "off")
             self.settings_tab.load_settings("reset_on_fail", "10")
             self.settings_tab.load_settings("show_fails", "on")
             self.settings_tab.load_settings("skip_already_installed", "on")
@@ -311,9 +312,10 @@ class BOIIIWD(ctk.CTk):
 
     def save_window_size_position(self):
         geometry = self.geometry()
-        match = re.match(r"(\d+)x(\d+)\+(\d+)\+(\d+)", geometry)
+        # Handle negative coordinates (second monitor): 920x560+-1620+252
+        match = re.match(r"(\d+)x(\d+)\+(-?\d+)\+(-?\d+)", geometry)
         if match:
-            width, height, x, y = map(int, match.groups())
+            width, height, x, y = int(match.group(1)), int(match.group(2)), int(match.group(3)), int(match.group(4))
             save_window_size_to_registry(width, height, x, y)
         else:
             print("Invalid geometry format:", geometry)
@@ -370,10 +372,10 @@ class BOIIIWD(ctk.CTk):
         self.library_tab.grid_remove()
 
     def show_library_widgets(self):
-        self.title("BOIII Workshop Downloader - Library  ➜  Loading... ⏳")
+        self.title("BOIII Workshop Downloader - Library - Loading...")
         status = self.library_tab.load_items(self.settings_tab.edit_destination_folder.get())
         self.library_tab.grid(row=0, rowspan=3, column=1, padx=(0, 20), pady=(20, 20), sticky="nsew")
-        self.title(f"BOIII Workshop Downloader - Library  ➜  {status}")
+        self.title(f"BOIII Workshop Downloader - Library - {status}")
 
     def show_queue_widgets(self):
         self.title("BOIII Workshop Downloader - Queue")
@@ -426,7 +428,7 @@ class BOIIIWD(ctk.CTk):
     def load_configs(self):
         if os.path.exists(CONFIG_FILE_PATH):
             destination_folder = check_config("DestinationFolder", "")
-            steamcmd_path = check_config("SteamCMDPath", APPLICATION_PATH)
+            steamcmd_path = check_config("SteamCMDPath", STEAMCMD_DIR)
             startup_exe = check_config("GameExecutable", "BlackOps3")
             launch_params = check_config("LaunchParameters", None)
             new_appearance_mode = check_config("appearance", "Dark")
@@ -456,7 +458,7 @@ class BOIIIWD(ctk.CTk):
             scaling_int = math.trunc(scaling_float)
             self.settings_tab.scaling_optionemenu.set(f"{scaling_int}%")
             self.settings_tab.edit_steamcmd_path.delete(0, "end")
-            self.settings_tab.edit_steamcmd_path.insert(0, APPLICATION_PATH)
+            self.settings_tab.edit_steamcmd_path.insert(0, STEAMCMD_DIR)
             self.settings_tab.edit_startup_exe.delete(0, "end")
             self.settings_tab.edit_startup_exe.insert(0, "BlackOps3")
             create_default_config()
@@ -511,8 +513,9 @@ class BOIIIWD(ctk.CTk):
 
     def show_steam_warning_message(self):
         def callback():
-            msg = CTkMessagebox(title="Warning", message="steamcmd.exe was not found in the specified directory.\nPress Download to get it or Press Cancel and select it from there!.",
-                                icon="warning", option_1="Cancel", option_2="Download", sound=True)
+            msg = CTkMessagebox(master=self, title="Warning", message="steamcmd.exe was not found in the specified directory.\nPress Download to get it or Cancel to select it manually.",
+                                icon="warning", option_1="Cancel", option_2="Download", sound=True,
+                                button_width=85, button_height=28)
             response = msg.get()
             if response == "Cancel":
                 return
@@ -529,12 +532,14 @@ class BOIIIWD(ctk.CTk):
 
     @if_internet_available
     def download_steamcmd(self):
+        # Create scmd folder if it doesn't exist
+        os.makedirs(STEAMCMD_DIR, exist_ok=True)
         self.settings_tab.edit_steamcmd_path.delete(0, "end")
-        self.settings_tab.edit_steamcmd_path.insert(0, APPLICATION_PATH)
+        self.settings_tab.edit_steamcmd_path.insert(0, STEAMCMD_DIR)
         save_config("DestinationFolder" ,self.settings_tab.edit_destination_folder.get())
         save_config("SteamCMDPath" ,self.settings_tab.edit_steamcmd_path.get())
         steamcmd_url = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip"
-        steamcmd_zip_path = os.path.join(APPLICATION_PATH, "steamcmd.zip")
+        steamcmd_zip_path = os.path.join(STEAMCMD_DIR, "steamcmd.zip")
 
         try:
             response = requests.get(steamcmd_url)
@@ -544,12 +549,13 @@ class BOIIIWD(ctk.CTk):
                 zip_file.write(response.content)
 
             with zipfile.ZipFile(steamcmd_zip_path, "r") as zip_ref:
-                zip_ref.extractall(APPLICATION_PATH)
+                zip_ref.extractall(STEAMCMD_DIR)
 
             if check_steamcmd():
                 os.remove(fr"{steamcmd_zip_path}")
                 def inti_steam():
-                    msg = CTkMessagebox(title="Success", message="SteamCMD has been downloaded ,Press ok to initialize it.", icon="info", option_1="No", option_2="Ok", sound=True)
+                    msg = CTkMessagebox(master=self, title="Success", message="SteamCMD has been downloaded. Press Ok to initialize it.", icon="info", option_1="No", option_2="Ok", sound=True,
+                                        button_width=80, button_height=28)
                     response = msg.get()
                     if response == "No":
                         pass
@@ -560,14 +566,16 @@ class BOIIIWD(ctk.CTk):
                         pass
                 self.after(0, inti_steam)
             else:
-                show_message("Error", "Failed to find steamcmd.exe after extraction.\nMake you sure to select the correct SteamCMD path (by default current BOIIIWD path)", icon="cancel")
+                show_message("Error", "Failed to find steamcmd.exe after extraction.\nMake sure to select the correct SteamCMD path (default: scmd folder)", icon="cancel")
                 os.remove(fr"{steamcmd_zip_path}")
         except requests.exceptions.RequestException as e:
             show_message("Error", f"Failed to download SteamCMD: {e}", icon="cancel")
-            os.remove(fr"{steamcmd_zip_path}")
+            try: os.remove(fr"{steamcmd_zip_path}")
+            except: pass
         except zipfile.BadZipFile:
             show_message("Error", "Failed to extract SteamCMD. The downloaded file might be corrupted.", icon="cancel")
-            os.remove(fr"{steamcmd_zip_path}")
+            try: os.remove(fr"{steamcmd_zip_path}")
+            except: pass
 
     @if_internet_available
     def show_map_info(self):
@@ -964,6 +972,37 @@ class BOIIIWD(ctk.CTk):
             try: os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
             except: pass
 
+        # Pre-download cleanup: clear SteamCMD caches
+        content_log_path = os.path.join(steamcmd_path, "logs", "content_log.txt")
+        try:
+            with open(content_log_path, 'w', errors="ignore") as file:
+                file.write('')
+        except:
+            pass
+
+        for folder_name in ["depotcache", "appcache"]:
+            folder_path = os.path.join(steamcmd_path, folder_name)
+            if os.path.exists(folder_path):
+                try:
+                    shutil.rmtree(folder_path)
+                except:
+                    pass
+
+        acf_file = os.path.join(steamcmd_path, "steamapps", "workshop", "appworkshop_311210.acf")
+        if os.path.exists(acf_file):
+            try:
+                os.remove(acf_file)
+            except:
+                pass
+
+        for subfolder in [f"content/311210/{wsid}", "temp/311210"]:
+            folder_path = os.path.join(steamcmd_path, "steamapps", "workshop", subfolder)
+            if os.path.exists(folder_path):
+                try:
+                    shutil.rmtree(folder_path)
+                except:
+                    pass
+
         if os.path.exists(map_folder):
             try:
                 try:
@@ -1111,7 +1150,8 @@ class BOIIIWD(ctk.CTk):
 
     def show_init_message(self):
         def callback():
-            msg = CTkMessagebox(title="Warning", message="SteamCMD is not initialized, Press OK to do so!\nProgram may go unresponsive until SteamCMD is finished downloading.", icon="info", option_1="No", option_2="Ok", sound=True)
+            msg = CTkMessagebox(master=self, title="Warning", message="SteamCMD is not initialized. Press Ok to initialize.\nApp may be unresponsive during download.", icon="info", option_1="No", option_2="Ok", sound=True,
+                                button_width=80, button_height=28)
             response = msg.get()
             if response == "No":
                 return
@@ -1124,7 +1164,8 @@ class BOIIIWD(ctk.CTk):
 
     def show_complete_message(self, message):
         def callback():
-            msg = CTkMessagebox(title="Downloads Complete", message=message, icon="info", option_1="Launch", option_2="Ok", sound=True)
+            msg = CTkMessagebox(master=self, title="Downloads Complete", message=message, icon="info", option_1="Launch", option_2="Ok", sound=True,
+                                button_width=80, button_height=28)
             response = msg.get()
             if response=="Launch":
                 launch_game_func(self.settings_tab.edit_destination_folder.get().strip(), self.settings_tab.edit_startup_exe.get(), self.settings_tab.edit_launch_args.get())
@@ -1295,6 +1336,9 @@ class BOIIIWD(ctk.CTk):
                     file_size = ws_file_size if ws_file_size is not None else 1
                     item_name = get_item_name(workshop_id) if get_item_name(workshop_id) else "Error getting name"
                     loop_counter = 0
+                    dump_monitor_started = False
+                    download_start_time_for_monitor = None
+                    progress_tracking_start = None
 
                     while not self.settings_tab.stopped:
                         loop_counter += 1
@@ -1302,6 +1346,8 @@ class BOIIIWD(ctk.CTk):
                             self.settings_tab.steamcmd_reset = False
                             previous_net_speed = 0
                             est_downloaded_bytes = 0
+                            dump_monitor_started = False
+                            progress_tracking_start = None
 
                         if self.item_skipped:
                             if index > 0:
@@ -1310,9 +1356,9 @@ class BOIIIWD(ctk.CTk):
                                 prev_item_path = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "downloads", "311210", previous_item)
                                 prev_item_path_2 = os.path.join(get_steamcmd_path(), "steamapps", "workshop", "content", "311210", previous_item)
                                 if os.path.exists(prev_item_path):
-                                    prev_item_size = sum(os.path.getsize(os.path.join(prev_item_path, f)) for f in os.listdir(prev_item_path))
+                                    prev_item_size = get_folder_size(prev_item_path)
                                 elif os.path.exists(prev_item_path_2):
-                                    prev_item_size = sum(os.path.getsize(os.path.join(prev_item_path_2, f)) for f in os.listdir(prev_item_path_2))
+                                    prev_item_size = get_folder_size(prev_item_path_2)
                                 if prev_item_size == 0 or not prev_item_size:
                                     prev_item_size = items_ws_sizes[previous_item]
                                 if prev_item_size:
@@ -1339,15 +1385,29 @@ class BOIIIWD(ctk.CTk):
                             time.sleep(1)
                             if self.is_downloading:
                                 self.is_steamcmd_updating = False
+                                download_start_time_for_monitor = time.time()
                                 break
 
+                        if self.is_downloading and not self.settings_tab.estimated_progress and not dump_monitor_started:
+                            dump_monitor_started = True
+                            progress_tracking_start = time.time()
+                            def run_dump_monitor():
+                                monitor_content_log_for_dump(get_steamcmd_path(), workshop_id, download_start_time_for_monitor, lambda: self.settings_tab.stopped)
+                            threading.Thread(target=run_dump_monitor, daemon=True).start()
+
+                        if progress_tracking_start and time.time() - progress_tracking_start < 2:
+                            continue
+
                         try:
-                            current_size = sum(os.path.getsize(os.path.join(download_folder, f)) for f in os.listdir(download_folder))
-                        except:
-                            try:
-                                current_size = sum(os.path.getsize(os.path.join(map_folder, f)) for f in os.listdir(map_folder))
-                            except:
+                            current_size = 0
+                            if os.path.exists(download_folder):
+                                current_size = get_folder_size(download_folder)
+                            if current_size == 0 and os.path.exists(map_folder):
+                                current_size = get_folder_size(map_folder)
+                            if current_size == 0:
                                 continue
+                        except:
+                            continue
 
                         progress = int(current_size / file_size * 100)
 
@@ -1423,7 +1483,7 @@ class BOIIIWD(ctk.CTk):
                     s_username = load_steam_creds()
                     command = f"+login {s_username} +workshop_download_item 311210 {workshop_id} validate +quit"
                 else:
-                    command = f"+login anonymous app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
+                    command = f"+login anonymous +workshop_download_item 311210 {workshop_id} validate +quit"
                 steamcmd_thread = threading.Thread(target=lambda: self.run_steamcmd_command(command, map_folder, workshop_id, queue=True))
                 steamcmd_thread.start()
 
@@ -1483,9 +1543,8 @@ class BOIIIWD(ctk.CTk):
                         except Exception as E:
                             show_message("Error", f"Error copying files: {E}", icon="cancel")
 
-                        if self.settings_tab.clean_on_finish:
-                            remove_tree(map_folder)
-                            remove_tree(download_folder)
+                        # Clean up SteamCMD data for this workshop ID (patch files, temp, downloads, content)
+                        cleanup_steamcmd_data(workshop_id)
 
                         self.library_tab.update_item(self.settings_tab.edit_destination_folder.get(), workshop_id, mod_type, folder_name)
 
@@ -1600,6 +1659,9 @@ class BOIIIWD(ctk.CTk):
                 start_time = time.time()
                 file_size = ws_file_size if ws_file_size is not None else 1
                 loop_counter = 0
+                dump_monitor_started = False
+                download_start_time_for_monitor = None
+                progress_tracking_start = None
 
                 while not self.settings_tab.stopped:
                     loop_counter += 1
@@ -1607,6 +1669,8 @@ class BOIIIWD(ctk.CTk):
                         self.settings_tab.steamcmd_reset = False
                         previous_net_speed = 0
                         est_downloaded_bytes = 0
+                        dump_monitor_started = False
+                        progress_tracking_start = None
 
                     while not self.is_downloading and not self.settings_tab.stopped:
                         if self.is_steamcmd_updating:
@@ -1622,15 +1686,29 @@ class BOIIIWD(ctk.CTk):
                         time.sleep(1)
                         if self.is_downloading:
                             self.is_steamcmd_updating = False
+                            download_start_time_for_monitor = time.time()
                             break
 
+                    if self.is_downloading and not self.settings_tab.estimated_progress and not dump_monitor_started:
+                        dump_monitor_started = True
+                        progress_tracking_start = time.time()
+                        def run_dump_monitor():
+                            monitor_content_log_for_dump(get_steamcmd_path(), workshop_id, download_start_time_for_monitor, lambda: self.settings_tab.stopped)
+                        threading.Thread(target=run_dump_monitor, daemon=True).start()
+
+                    if progress_tracking_start and time.time() - progress_tracking_start < 2:
+                        continue
+
                     try:
-                        current_size = sum(os.path.getsize(os.path.join(download_folder, f)) for f in os.listdir(download_folder))
-                    except:
-                        try:
-                            current_size = sum(os.path.getsize(os.path.join(map_folder, f)) for f in os.listdir(map_folder))
-                        except:
+                        current_size = 0
+                        if os.path.exists(download_folder):
+                            current_size = get_folder_size(download_folder)
+                        if current_size == 0 and os.path.exists(map_folder):
+                            current_size = get_folder_size(map_folder)
+                        if current_size == 0:
                             continue
+                    except:
+                        continue
 
                     progress = int(current_size / file_size * 100)
 
@@ -1700,7 +1778,7 @@ class BOIIIWD(ctk.CTk):
                 s_username = load_steam_creds()
                 command = f"+login {s_username} +workshop_download_item 311210 {workshop_id} validate +quit"
             else:
-                command = f"+login anonymous app_update 311210 +workshop_download_item 311210 {workshop_id} validate +quit"
+                command = f"+login anonymous +workshop_download_item 311210 {workshop_id} validate +quit"
             steamcmd_thread = threading.Thread(target=lambda: self.run_steamcmd_command(command, map_folder, workshop_id))
             steamcmd_thread.start()
 
@@ -1765,9 +1843,8 @@ class BOIIIWD(ctk.CTk):
                     except Exception as E:
                         show_message("Error", f"Error copying files: {E}", icon="cancel")
 
-                    if self.settings_tab.clean_on_finish:
-                        remove_tree(map_folder)
-                        remove_tree(download_folder)
+                    # Clean up SteamCMD data for this workshop ID (patch files, temp, downloads, content)
+                    cleanup_steamcmd_data(workshop_id)
 
                     if not invalid_item_folder:
                         self.library_tab.update_item(self.settings_tab.edit_destination_folder.get(), workshop_id, mod_type, folder_name)

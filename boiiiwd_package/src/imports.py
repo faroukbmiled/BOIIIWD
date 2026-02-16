@@ -41,8 +41,11 @@ if getattr(sys, 'frozen', False):
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
     APPLICATION_PATH = os.path.dirname(sys.executable)
+    # For frozen apps, resources are in _MEIPASS/resources
+    RESOURCES_DIR = os.path.join(sys._MEIPASS, 'resources')
 else:
     APPLICATION_PATH = os.path.dirname(os.path.abspath(__file__))
+    RESOURCES_DIR = os.path.join(os.path.dirname(__file__), '..', 'resources')
 
 # default enc key, change this to whatever you want in your ENV
 DEFAULT_ENV_KEY = 'iDd40QsvCwsntXuLniIbNd6cAJEcALd85QTEgEhIc1c='
@@ -54,11 +57,11 @@ GITHUB_REPO = "faroukbmiled/BOIIIWD"
 ITEM_INFO_API = "https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/"
 LATEST_RELEASE_URL = "https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip"
 LIBRARY_FILE = "boiiiwd_library.json"
-RESOURCES_DIR = os.path.join(os.path.dirname(__file__), '..', 'resources')
+STEAMCMD_DIR = os.path.join(APPLICATION_PATH, "scmd")
 UPDATER_FOLDER = "update"
 REGISTRY_KEY_PATH = r"Software\BOIIIWD"
 STEAMCMD_WARNING_COUNTER = 20  # how many times steamcmd fails before showing a non breaking warning
 SECONDS_UNTIL_FAIL_COUNTS = 15  # Minimum steamcmd runtime in seconds before a failed attempt counts as a fail (+1 to fail counter)
 FAIL_THRESHOLD_FALLBACK = 25
 DOWN_CAP = 15000000  # 15MB, workaround for psutil net_io_counters
-VERSION = "v0.3.7.3"
+VERSION = "v0.3.8.0"

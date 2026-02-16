@@ -11,7 +11,9 @@ def check_for_updates_func(window, ignore_up_todate=False):
         int_current_version = int(current_version.replace("v", "").replace(".", ""))
 
         if latest_version and int_latest_version > int_current_version:
-            msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1), sound=True)
+            msg_box = CTkMessagebox(master=main_app.app, title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}",
+                                    option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1), sound=True,
+                                    button_width=70, button_height=28)
 
             result = msg_box.get()
 
@@ -28,12 +30,14 @@ def check_for_updates_func(window, ignore_up_todate=False):
         elif int_latest_version < int_current_version:
             if ignore_up_todate:
                 return
-            msg_box = CTkMessagebox(title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="Ok", sound=True)
+            msg_box = CTkMessagebox(master=main_app.app, title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}",
+                                    option_1="Ok", sound=True, button_width=80, button_height=28)
             result = msg_box.get()
         elif int_latest_version == int_current_version:
             if ignore_up_todate:
                 return
-            msg_box = CTkMessagebox(title="Up to Date!", message="No Updates Available!", option_1="Ok", sound=True)
+            msg_box = CTkMessagebox(master=main_app.app, title="Up to Date!", message="No Updates Available!",
+                                    option_1="Ok", sound=True, button_width=80, button_height=28)
             result = msg_box.get()
 
         else:
@@ -117,7 +121,8 @@ class UpdateWindow(ctk.CTkToplevel):
                     zip_ref.extractall(update_dir)
                 self.label_download.configure(text="Update Downloaded successfully!")
                 def update_msg():
-                    msg = CTkMessagebox(title="Success!", message="Update Downloaded successfully!\nPress ok to install it", icon="info", option_1="No", option_2="Ok", sound=True)
+                    msg = CTkMessagebox(master=main_app.app, title="Success!", message="Update downloaded successfully!\nPress Ok to install it.", icon="info", option_1="No", option_2="Ok", sound=True,
+                                        button_width=80, button_height=28)
                     response = msg.get()
                     if response == "No":
                         self.destroy()

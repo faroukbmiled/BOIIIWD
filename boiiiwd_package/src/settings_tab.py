@@ -31,6 +31,7 @@ class SettingsTab(ctk.CTkFrame):
         left_frame = ctk.CTkFrame(self)
         left_frame.grid(row=0, column=0, columnspan=2, padx=(20, 20), pady=(20, 0), sticky="nsew")
         left_frame.grid_columnconfigure(1, weight=1)
+        left_frame.grid_columnconfigure(2, weight=1)
         right_frame = ctk.CTkFrame(self)
         right_frame.grid(row=0, column=2, padx=(0, 20), pady=(20, 0), sticky="nsew")
         right_frame.grid_columnconfigure(1, weight=1)
@@ -52,7 +53,7 @@ class SettingsTab(ctk.CTkFrame):
         self.console_var.trace_add("write", self.enable_save_button)
         self.checkbox_show_console = ctk.CTkSwitch(left_frame, text="Display console", variable=self.console_var, command=self.toggle_console_window)
         self.checkbox_show_console.grid(row=1, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.checkbox_show_console_tooltip = CTkToolTip(self.checkbox_show_console, message="Toggle a console window\nPlease don't close the Console If you want to stop press the Stop button")
+        self.checkbox_show_console_tooltip = CTkToolTip(self.checkbox_show_console, message="Show console window (use Stop button to cancel, don't close console)")
         self.console_var.set(self.load_settings("console"))
 
         # Show continuous checkbox
@@ -60,7 +61,7 @@ class SettingsTab(ctk.CTkFrame):
         self.continuous_var.trace_add("write", self.enable_save_button)
         self.checkbox_continuous = ctk.CTkSwitch(left_frame, text="Continuous download", variable=self.continuous_var)
         self.checkbox_continuous.grid(row=2, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.checkbox_continuous_tooltip = CTkToolTip(self.checkbox_continuous, message="This will make sure that the download restarts and resumes! until it finishes if steamcmd crashes randomly (it will not redownload from the start)")
+        self.checkbox_continuous_tooltip = CTkToolTip(self.checkbox_continuous, message="Auto-restart downloads if SteamCMD crashes (resumes, doesn't restart)")
         self.continuous_var.set(self.load_settings("continuous_download"))
 
         # clean on finish checkbox
@@ -68,7 +69,7 @@ class SettingsTab(ctk.CTkFrame):
         self.clean_checkbox_var.trace_add("write", self.enable_save_button)
         self.clean_checkbox = ctk.CTkSwitch(left_frame, text="Clean on finish", variable=self.clean_checkbox_var)
         self.clean_checkbox.grid(row=3, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.clean_checkbox_tooltip = CTkToolTip(self.clean_checkbox, message="Cleans the map that have been downloaded and installed from steamcmd's steamapps folder ,to save space")
+        self.clean_checkbox_tooltip = CTkToolTip(self.clean_checkbox, message="Delete downloaded files from SteamCMD folder after install to save space")
         self.clean_checkbox_var.set(self.load_settings("clean_on_finish", "on"))
 
         # Show estimated_progress checkbox
@@ -76,24 +77,23 @@ class SettingsTab(ctk.CTkFrame):
         self.estimated_progress_var.trace_add("write", self.enable_save_button)
         self.estimated_progress_cb = ctk.CTkSwitch(left_frame, text="Estimated progress bar", variable=self.estimated_progress_var)
         self.estimated_progress_cb.grid(row=4, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.estimated_progress_var_tooltip = CTkToolTip(self.estimated_progress_cb, message="This will change how to progress bar works by estimating how long the download will take\
-            \nThis is not accurate ,it's better than with it off which is calculating the downloaded folder size which steamcmd dumps the full size mostly")
-        self.estimated_progress_var.set(self.load_settings("estimated_progress", "on"))
+        self.estimated_progress_var_tooltip = CTkToolTip(self.estimated_progress_cb, message="Use estimated progress based on elapsed time. When OFF, uses real-time folder size tracking (more accurate but may occasionally jump)")
+        self.estimated_progress_var.set(self.load_settings("use_estimated_progress", "off"))
 
         # Show fails checkbox
         self.show_fails_var = ctk.BooleanVar()
         self.show_fails_var.trace_add("write", self.enable_save_button)
         self.show_fails_cb = ctk.CTkSwitch(left_frame, text="Show fails", variable=self.show_fails_var)
         self.show_fails_cb.grid(row=5, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.show_fails_tooltip = CTkToolTip(self.show_fails_cb, message="Display how many times steamcmd has failed/crashed\nIf the number is getting high quickly then try pressing Reset SteamCMD and try again, otherwise its fine")
-        self.estimated_progress_var.set(self.load_settings("show_fails", "on"))
+        self.show_fails_tooltip = CTkToolTip(self.show_fails_cb, message="Show SteamCMD failure count (reset SteamCMD if count rises quickly)")
+        self.show_fails_var.set(self.load_settings("show_fails", "on"))
 
         # Show skip_already_installed maps checkbox
         self.skip_already_installed_var = ctk.BooleanVar()
         self.skip_already_installed_var.trace_add("write", self.enable_save_button)
         self.skip_already_installed_ch = ctk.CTkSwitch(left_frame, text="Skip already installed maps", variable=self.skip_already_installed_var)
         self.skip_already_installed_ch.grid(row=6, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.skip_already_installed_ch_tooltip = CTkToolTip(self.skip_already_installed_ch, message="If on it will not download installed maps,\nthis can miss sometimes if you remove maps manually and not from library tab while the app is running")
+        self.skip_already_installed_ch_tooltip = CTkToolTip(self.skip_already_installed_ch, message="Skip downloading maps already in library")
         self.skip_already_installed_var.set(self.load_settings("skip_already_installed", "on"))
 
         # check items for update on launch
@@ -101,17 +101,15 @@ class SettingsTab(ctk.CTkFrame):
         self.check_items_var.trace_add("write", self.enable_save_button)
         self.check_items_ch = ctk.CTkSwitch(left_frame, text="Check library items on launch", variable=self.check_items_var)
         self.check_items_ch.grid(row=7, column=1, padx=20, pady=(20, 0), sticky="nw")
-        self.check_items_tooltip = CTkToolTip(self.check_items_ch, message="This will show a window on launch of items that have pending updates -> you can open it manually from library tab")
+        self.check_items_tooltip = CTkToolTip(self.check_items_ch, message="Check for item updates on startup")
         self.check_items_var.set(self.load_settings("check_items", "off"))
 
-
-        # TODO: get windows size to padx for the following checkboxes
 
         # update invalid
         self.invalid_items_var = ctk.BooleanVar()
         self.invalid_items_var.trace_add("write", self.enable_save_button)
         self.invalid_items_ch = ctk.CTkSwitch(left_frame, text="Update invalid items", variable=self.invalid_items_var)
-        self.invalid_items_ch.grid(row=0, column=1, padx=(300,0), pady=(20, 0), sticky="nw")
+        self.invalid_items_ch.grid(row=0, column=2, padx=20, pady=(20, 0), sticky="nw")
         self.invalid_items_tooltip = CTkToolTip(self.invalid_items_ch, message="Allow updating invalid items from the details tab")
         self.invalid_items_var.set(self.load_settings("update_invalid", "off"))
 
@@ -119,7 +117,7 @@ class SettingsTab(ctk.CTkFrame):
         self.skip_items_var = ctk.BooleanVar()
         self.skip_items_var.trace_add("write", self.enable_save_button)
         self.skip_items_ch = ctk.CTkSwitch(left_frame, text="Skip invalid items", variable=self.skip_items_var)
-        self.skip_items_ch.grid(row=1, column=1, padx=(300,0), pady=(20, 0), sticky="nw")
+        self.skip_items_ch.grid(row=1, column=2, padx=20, pady=(20, 0), sticky="nw")
         self.skip_items_tooltip = CTkToolTip(self.skip_items_ch, message="Skip invalid items")
         self.skip_items_var.set(self.load_settings("skip_invalid", "off"))
 
@@ -127,8 +125,8 @@ class SettingsTab(ctk.CTkFrame):
         self.use_steam_creds = ctk.BooleanVar()
         self.use_steam_creds.trace_add("write", self.enable_save_button)
         self.use_steam_creds_sw = ctk.CTkSwitch(left_frame, text="Use Steam Credentials", variable=self.use_steam_creds, command=self.use_steam_creds_inputs)
-        self.use_steam_creds_sw.grid(row=2, column=1, padx=(300,0), pady=(20, 0), sticky="nw")
-        self.use_steam_creds_tooltip = CTkToolTip(self.use_steam_creds_sw, message="Use your steam login to download (better dowload stability)")
+        self.use_steam_creds_sw.grid(row=2, column=2, padx=20, pady=(20, 0), sticky="nw")
+        self.use_steam_creds_tooltip = CTkToolTip(self.use_steam_creds_sw, message="Use your Steam login for better download stability")
         self.use_steam_creds.set(self.load_settings("use_steam_creds", "off"))
 
         # text input fields
@@ -172,11 +170,11 @@ class SettingsTab(ctk.CTkFrame):
 
         self.reset_steamcmd = ctk.CTkButton(right_frame, text="Reset SteamCMD", command=self.settings_reset_steamcmd)
         self.reset_steamcmd.grid(row=3, column=1, padx=20, pady=(10, 0), sticky="n")
-        self.reset_steamcmd_tooltip = CTkToolTip(self.reset_steamcmd, message="This will remove steamapps folder + all the maps that are potentioaly corrupted\nor not so use at ur own risk (could fix some issues as well)")
+        self.reset_steamcmd_tooltip = CTkToolTip(self.reset_steamcmd, message="Removes steamapps folder and potentially corrupted maps. Use with caution.")
 
         self.workshop_to_gamedir = ctk.CTkButton(right_frame, text="Workshop Transfer", command=self.workshop_to_gamedir_toplevel)
         self.workshop_to_gamedir.grid(row=4, column=1, padx=20, pady=(10, 0), sticky="n")
-        self.workshop_to_gamedir_tooltip = CTkToolTip(self.workshop_to_gamedir, message="Copy/Move maps and mods from Workshop to the game directory (opens up a window)")
+        self.workshop_to_gamedir_tooltip = CTkToolTip(self.workshop_to_gamedir, message="Transfer items from Steam Workshop folder to game directory")
 
         # appearance
         self.appearance_mode_label = ctk.CTkLabel(right_frame, text="Appearance:", anchor="w")
@@ -286,93 +284,54 @@ class SettingsTab(ctk.CTkFrame):
 
         if option != "Custom":
             if show_message("Restart to take effect!", f"{option} theme has been set, please restart to take effect", icon="info", _return=True, option_1="Ok", option_2="Restart"):
-                try:
-                    p = psutil.Process(os.getpid())
-                    for handler in p.open_files() + p.connections():
-                        os.close(handler.fd)
-                except Exception:
-                    pass
-                python = sys.executable
+                self.restart_app()
+
+    def restart_app(self):
+        """Restart the application properly for both frozen and script modes."""
+        if getattr(sys, 'frozen', False):
+            # For PyInstaller frozen apps, clear _PYI_ env vars so new process
+            # is treated as fresh instance, not worker subprocess
+            env = os.environ.copy()
+            for key in list(env.keys()):
+                if key.startswith('_PYI_'):
+                    del env[key]
+
+            subprocess.Popen([sys.executable], env=env)
+            os._exit(0)
+        else:
+            python = sys.executable
             os.execl(python, python, *sys.argv)
 
     def enable_save_button(self, *args):
         try: self.save_button.configure(state='normal')
         except: pass
 
-    # TODO: cant be bothered to refactor this, at a later date maybe
     def save_settings(self):
         self.save_button.configure(state='disabled')
 
         save_config("GameExecutable", str(self.edit_startup_exe.get()) if not isNullOrWhiteSpace(self.edit_startup_exe.get()) else "BlackOps3")
         save_config("LaunchParameters", str(self.edit_launch_args.get()) if not isNullOrWhiteSpace(self.edit_launch_args.get()) else " ")
+        save_config("folder_naming", "0" if self.folder_options.get() == "PublisherID" else "1")
 
-        if self.folder_options.get() == "PublisherID":
-            save_config("folder_naming", "0")
-        else:
-            save_config("folder_naming", "1")
+        bool_settings = [
+            ("check_items", self.check_items_var, None),
+            ("update_invalid", self.invalid_items_var, None),
+            ("skip_invalid", self.skip_items_var, None),
+            ("checkforupdates", self.check_updates_checkbox, None),
+            ("console", self.checkbox_show_console, "console"),
+            ("skip_already_installed", self.skip_already_installed_ch, "skip_already_installed"),
+            ("clean_on_finish", self.clean_checkbox, "clean_on_finish"),
+            ("continuous_download", self.checkbox_continuous, "continuous"),
+            ("use_estimated_progress", self.estimated_progress_cb, "estimated_progress"),
+            ("show_fails", self.show_fails_cb, "show_fails"),
+        ]
+        for config_key, var, attr in bool_settings:
+            value = var.get()
+            save_config(config_key, "on" if value else "off")
+            if attr:
+                setattr(self, attr, value)
 
-        if self.check_items_var.get():
-            save_config("check_items", "on")
-        else:
-            save_config("check_items", "off")
-
-        if self.invalid_items_var.get():
-            save_config("update_invalid", "on")
-        else:
-            save_config("update_invalid", "off")
-
-        if self.skip_items_var.get():
-            save_config("skip_invalid", "on")
-        else:
-            save_config("skip_invalid", "off")
-
-        if self.check_updates_checkbox.get():
-            save_config("checkforupdates", "on")
-        else:
-            save_config("checkforupdates", "off")
-
-        if self.checkbox_show_console.get():
-            save_config("console", "on")
-            self.console = True
-        else:
-            save_config("console", "off")
-            self.console = False
-
-        if self.skip_already_installed_ch.get():
-            save_config("skip_already_installed", "on")
-            self.skip_already_installed = True
-        else:
-            save_config("skip_already_installed", "off")
-            self.skip_already_installed = False
-
-        if self.clean_checkbox.get():
-            save_config("clean_on_finish", "on")
-            self.clean_on_finish = True
-        else:
-            save_config("clean_on_finish", "off")
-            self.clean_on_finish = False
-
-        if self.checkbox_continuous.get():
-            save_config("continuous_download", "on")
-            self.continuous = True
-        else:
-            save_config("continuous_download", "off")
-            self.continuous = False
-
-        if self.estimated_progress_cb.get():
-            save_config("estimated_progress", "on")
-            self.estimated_progress = True
-        else:
-            save_config("estimated_progress", "off")
-            self.estimated_progress = False
-
-        if self.show_fails_cb.get():
-            save_config("show_fails", "on")
-            self.show_fails = True
-        else:
-            save_config("show_fails", "off")
-            self.show_fails = False
-
+        # Handle reset_on_fail separately due to special logic
         if self.reset_steamcmd_on_fail.get():
             value = self.reset_steamcmd_on_fail.get()
             if value == "Disable":
@@ -386,92 +345,60 @@ class SettingsTab(ctk.CTkFrame):
                 self.steam_fail_number = int(value)
             save_config("reset_on_fail", value)
 
-    # TODO: cant be bothered to refactor this, at a later date maybe
     def load_settings(self, setting, fallback=None):
+        # Special case: folder_naming returns string
         if setting == "folder_naming":
-            if check_config(setting, fallback) == "1":
-                return "FolderName"
-            else:
-                return "PublisherID"
+            return "FolderName" if check_config(setting, fallback) == "1" else "PublisherID"
 
+        # Special case: console needs to call show_console()
         if setting == "console":
-            if check_config(setting, fallback) == "on":
+            is_on = check_config(setting, fallback) == "on"
+            if is_on:
                 show_console()
-                self.console = True
-                return 1
-            else:
-                self.console = False
-                return 0
+            self.console = is_on
+            return 1 if is_on else 0
 
-        if setting == "continuous_download":
-            if check_config(setting, "on") == "on":
-                self.continuous = True
-                return 1
-            else:
-                self.continuous = False
-                return 0
-
-        if setting == "clean_on_finish":
-            if check_config(setting, fallback) == "on":
-                self.clean_on_finish = True
-                return 1
-            else:
-                self.clean_on_finish = False
-                return 0
-        if setting == "estimated_progress":
-            if check_config(setting, fallback) == "on":
-                self.estimated_progress = True
-                return 1
-            else:
-                self.estimated_progress = False
-                return 0
-
+        # Special case: reset_on_fail has complex logic
         if setting == "reset_on_fail":
             option = check_config(setting, fallback)
-            if option == "Disable" or option == "Custom":
+            if option in ("Disable", "Custom"):
                 self.steam_fail_counter_toggle = False
                 return "Disable"
-            else:
-                try:
-                    self.steam_fail_number = int(option)
-                    self.steam_fail_counter_toggle = True
-                    return option
-                except:
-                    self.steam_fail_counter_toggle = True
-                    self.steam_fail_number = 10
-                    return "10"
+            try:
+                self.steam_fail_number = int(option)
+                self.steam_fail_counter_toggle = True
+                return option
+            except:
+                self.steam_fail_counter_toggle = True
+                self.steam_fail_number = 10
+                return "10"
 
-        if setting == "show_fails":
-            if check_config(setting, fallback) == "on":
-                self.show_fails = True
-                return 1
-            else:
-                self.show_fails = False
-                return 0
-
-        if setting == "skip_already_installed":
-            if check_config(setting, fallback) == "on":
-                self.skip_already_installed = True
-                return 1
-            else:
-                self.skip_already_installed = False
-                return 0
-
+        # Special case: theme returns theme name string
         if setting == "theme":
             theme_config = check_config("theme", "boiiiwd_theme.json")
-
             if os.path.exists(os.path.join(APPLICATION_PATH, theme_config)):
                 return "Custom"
-
             if theme_config == "boiiiwd_theme.json":
                 return "Default"
-
             match = re.match(r'boiiiwd_(\w+)\.json', theme_config)
-            if match:
-                theme_name = match.group(1).capitalize()
-                return theme_name
-        else:
-            return 1 if check_config(setting, fallback) == "on" else 0
+            return match.group(1).capitalize() if match else "Default"
+
+        # Bool settings with instance attribute mapping
+        bool_settings = {
+            "continuous_download": ("continuous", "on"),
+            "clean_on_finish": ("clean_on_finish", None),
+            "use_estimated_progress": ("estimated_progress", None),
+            "show_fails": ("show_fails", None),
+            "skip_already_installed": ("skip_already_installed", None),
+        }
+        if setting in bool_settings:
+            attr, default_fallback = bool_settings[setting]
+            is_on = check_config(setting, default_fallback or fallback) == "on"
+            setattr(self, attr, is_on)
+            return 1 if is_on else 0
+
+        # Default: simple on/off check
+        return 1 if check_config(setting, fallback) == "on" else 0
 
     def boiiiwd_custom_theme(self, disable_only=None):
         file_to_rename = os.path.join(APPLICATION_PATH, "boiiiwd_theme.json")
@@ -604,13 +531,13 @@ class SettingsTab(ctk.CTkFrame):
         return 1
 
     def change_folder_naming(self, option):
-        main_app.app.title("BOIII Workshop Downloader - Settings  ➜  Loading... ⏳")
+        main_app.app.title("BOIII Workshop Downloader - Settings - Loading...")
         try:
             if os.path.exists(self.edit_destination_folder.get()):
                 lib = main_app.app.library_tab.load_items(self.edit_destination_folder.get(), dont_add=True)
                 if not "No items" in lib:
                     if show_message("Renaming", "Would you like to rename all your exisiting item folders now?", _return=True):
-                        main_app.app.title("BOIII Workshop Downloader - Settings  ➜  Renaming... ⏳")
+                        main_app.app.title("BOIII Workshop Downloader - Settings - Renaming...")
                         try : ren_return = self.rename_all_folders(option)
                         except Exception as er: show_message("Error!", f"Error occured when renaming\n{er}"); return
                         if ren_return == 0:
@@ -634,7 +561,7 @@ class SettingsTab(ctk.CTkFrame):
         self.check_updates_var.set(self.load_settings("checkforupdates"))
         self.console_var.set(self.load_settings("console"))
         self.reset_steamcmd_on_fail.set(value=self.load_settings("reset_on_fail", "10"))
-        self.estimated_progress_var.set(self.load_settings("estimated_progress", "on"))
+        self.estimated_progress_var.set(self.load_settings("use_estimated_progress", "off"))
         self.clean_checkbox_var.set(self.load_settings("clean_on_finish", "on"))
         self.continuous_var.set(self.load_settings("continuous_download"))
         self.show_fails_var.set(self.load_settings("show_fails", "on"))

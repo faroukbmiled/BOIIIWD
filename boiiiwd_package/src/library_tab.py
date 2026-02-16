@@ -14,7 +14,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
         self.radiobutton_variable = ctk.StringVar()
         self.no_items_label = ctk.CTkLabel(self, text="", anchor="w")
-        self.filter_entry = ctk.CTkEntry(self, placeholder_text="Your search query here, or type in mod or map to only see that")
+        self.filter_entry = ctk.CTkEntry(self, placeholder_text="Search... (type 'mod' or 'map' to filter)")
         self.filter_entry.bind("<KeyRelease>", self.filter_items)
         self.filter_entry.grid(row=0, column=0,  padx=(10, 20), pady=(10, 20), sticky="we")
         filter_refresh_button_image = os.path.join(RESOURCES_DIR, "Refresh_icon.svg.png")
@@ -38,6 +38,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.added_folders = set()
         self.ids_added = set()
         self.refresh_next_time = False
+        # Image cache
+        self._image_cache = {}
 
     def add_item(self, item, image=None, workshop_id=None, folder=None, invalid_warn=False):
         label = ctk.CTkLabel(self, text=item, image=image, compound="left", padx=5, anchor="w")
@@ -45,8 +47,8 @@ class LibraryTab(ctk.CTkScrollableFrame):
         button_view = ctk.CTkButton(self, text="Details", width=55, height=24, fg_color="#3d3f42")
         button.configure(command=lambda: self.remove_item(item, folder, workshop_id))
         button_view.configure(command=lambda: self.show_map_info(workshop_id, folder ,invalid_warn))
-        button_view_tooltip = CTkToolTip(button_view, message="Opens up a window that shows basic details")
-        button_tooltip = CTkToolTip(button, message="Removes the map/mod from your game")
+        button_view_tooltip = CTkToolTip(button_view, message="View item details")
+        button_tooltip = CTkToolTip(button, message="Remove from library")
         label.grid(row=len(self.label_list) + 1, column=0, pady=(0, 10), padx=(5, 10), sticky="w")
         button.grid(row=len(self.button_list) + 1, column=1, pady=(0, 10), padx=(50, 10), sticky="e")
         button_view.grid(row=len(self.button_view_list) + 1, column=1, pady=(0, 10), padx=(10, 75), sticky="w")
@@ -210,10 +212,19 @@ class LibraryTab(ctk.CTkScrollableFrame):
         os.rename(file_path, new_file_path)
 
     def filter_items(self, event):
-        filter_text = self.filter_entry.get().lower()
+        filter_text = self.filter_entry.get().lower().strip()
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
             item_text = label.cget("text").lower()
-            if filter_text in item_text:
+            show = False
+            # "map" and "mod" filters
+            if filter_text == "map":
+                show = "type: map" in item_text
+            elif filter_text == "mod":
+                show = "type: mod" in item_text
+            else:
+                show = filter_text in item_text
+
+            if show:
                 label.grid()
                 button.grid()
                 button_view_list.grid()
@@ -223,7 +234,10 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 button.grid_remove()
 
     def add_item_helper(self, text, image_path, workshop_id, folder, invalid_warn=False, item_type=None):
-        image = ctk.CTkImage(Image.open(image_path))
+        # Use cached image if available
+        if image_path not in self._image_cache:
+            self._image_cache[image_path] = ctk.CTkImage(Image.open(image_path))
+        image = self._image_cache[image_path]
         self.add_item(text, image=image, workshop_id=workshop_id, folder=folder, invalid_warn=invalid_warn)
 
     # sort by type then alphabet (name), index 5 is type 0 is name/text
@@ -250,6 +264,12 @@ class LibraryTab(ctk.CTkScrollableFrame):
         map_img = os.path.join(RESOURCES_DIR, "map_image.png")
         b_mod_img = os.path.join(RESOURCES_DIR, "b_mod_image.png")
         b_map_img = os.path.join(RESOURCES_DIR, "b_map_image.png")
+
+        # Pre-cache all images
+        for img_path in [mod_img, map_img, b_mod_img, b_map_img]:
+            if img_path not in self._image_cache:
+                self._image_cache[img_path] = ctk.CTkImage(Image.open(img_path))
+
         map_count = 0
         mod_count = 0
         total_size = 0
@@ -268,11 +288,13 @@ class LibraryTab(ctk.CTkScrollableFrame):
                 if json_path.exists():
 
                     curr_folder_name = zone_path.parent.name
-                    workshop_id = extract_json_data(json_path, "PublisherID") or "None"
-                    name = re.sub(r'\^\d', '', extract_json_data(json_path, "Title")) or "None"
+                    # Bulk extract all JSON fields in one read for better performance
+                    json_data = extract_json_data_bulk(json_path, ["PublisherID", "Title", "Type", "FolderName"])
+                    workshop_id = json_data.get("PublisherID") or "None"
+                    name = re.sub(r'\^\d', '', json_data.get("Title") or "") or "None"
                     name = name[:60] + "..." if len(name) > 60 else name
-                    item_type = extract_json_data(json_path, "Type") or "None"
-                    folder_name = extract_json_data(json_path, "FolderName") or "None"
+                    item_type = json_data.get("Type") or "None"
+                    folder_name = json_data.get("FolderName") or "None"
                     folder_size_bytes = get_folder_size(zone_path.parent)
                     size = convert_bytes_to_readable(folder_size_bytes)
                     total_size += folder_size_bytes
@@ -387,12 +409,13 @@ class LibraryTab(ctk.CTkScrollableFrame):
             for zone_path in folder_path.glob("*/zone"):
                 json_path = zone_path / "workshop.json"
                 if json_path.exists():
-                    workshop_id = extract_json_data(json_path, "PublisherID")
+                    json_data = extract_json_data_bulk(json_path, ["PublisherID", "Title", "Type", "FolderName"])
+                    workshop_id = json_data.get("PublisherID")
                     if workshop_id == id:
-                        name = extract_json_data(json_path, "Title").replace(">", "").replace("^", "")
+                        name = (json_data.get("Title") or "").replace(">", "").replace("^", "")
                         name = name[:60] + "..." if len(name) > 60 else name
-                        item_type = extract_json_data(json_path, "Type")
-                        folder_name = extract_json_data(json_path, "FolderName")
+                        item_type = json_data.get("Type")
+                        folder_name = json_data.get("FolderName")
                         size = convert_bytes_to_readable(get_folder_size(zone_path.parent))
                         text_to_add = f"{name} | Type: {item_type.capitalize()}"
                         mode_type = "ZM" if item_type == "map" and folder_name.startswith("zm") else "MP" if folder_name.startswith("mp") and item_type == "map" else None
@@ -449,7 +472,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
     def refresh_items(self):
         print(f"[{get_current_datetime()}] [Logs] Library: refresh_items invoked...")
-        main_app.app.title("BOIII Workshop Downloader - Library  ➜  Loading... ⏳")
+        main_app.app.title("BOIII Workshop Downloader - Library - Loading...")
         for label, button, button_view_list in zip(self.label_list, self.button_list, self.button_view_list):
             label.destroy()
             button.destroy()
@@ -462,7 +485,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
         self.ids_added.clear()
 
         status = self.load_items( main_app.app.settings_tab.edit_destination_folder.get().strip())
-        main_app.app.title(f"BOIII Workshop Downloader - Library  ➜  {status}")
+        main_app.app.title(f"BOIII Workshop Downloader - Library - {status}")
         # main_app library event needs a return for status => when refresh_next_time is true
         return status
 

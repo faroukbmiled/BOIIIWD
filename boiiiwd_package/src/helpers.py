@@ -89,11 +89,25 @@ def create_update_script(current_exe, new_exe, updater_folder, program_name):
 
 def if_internet_available(func=None, launching=False):
     def check_internet():
+        endpoints = [
+            ("1.1.1.1", 53),        # Cloudflare DNS
+            ("8.8.8.8", 53),        # Google DNS
+            ("9.9.9.9", 53),        # Quad9 DNS
+            ("208.67.222.222", 53), # OpenDNS
+        ]
+        for host, port in endpoints:
+            try:
+                socket.create_connection((host, port), timeout=2)
+                return True
+            except:
+                continue
+        # Fallback: try HTTP request
         try:
-            socket.create_connection(("8.8.8.8", 53), timeout=3)
+            requests.head("https://steamcommunity.com", timeout=3)
             return True
         except:
-            return False
+            pass
+        return False
 
     if func == "return":
         return check_internet()
@@ -123,7 +137,9 @@ def check_for_updates_func(window, ignore_up_todate=False):
             current_version.replace("v", "").replace(".", ""))
 
         if latest_version and int_latest_version > int_current_version:
-            msg_box = CTkMessagebox(title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1), sound=True)
+            msg_box = CTkMessagebox(master=main_app.app, title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}",
+                                    option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1), sound=True,
+                                    button_width=70, button_height=28)
 
             result = msg_box.get()
 
@@ -142,13 +158,14 @@ def check_for_updates_func(window, ignore_up_todate=False):
         elif int_latest_version < int_current_version:
             if ignore_up_todate:
                 return
-            msg_box = CTkMessagebox(title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}", option_1="Ok", sound=True)
+            msg_box = CTkMessagebox(master=main_app.app, title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}",
+                                    option_1="Ok", sound=True, button_width=80, button_height=28)
             result = msg_box.get()
         elif int_latest_version == int_current_version:
             if ignore_up_todate:
                 return
-            msg_box = CTkMessagebox(
-                title="Up to Date!", message="No Updates Available!", option_1="Ok", sound=True)
+            msg_box = CTkMessagebox(master=main_app.app, title="Up to Date!", message="No Updates Available!",
+                                    option_1="Ok", sound=True, button_width=80, button_height=28)
             result = msg_box.get()
 
         else:
@@ -230,7 +247,7 @@ def convert_speed(speed_bytes):
 def create_default_config():
     config = configparser.ConfigParser()
     config["Settings"] = {
-        "SteamCMDPath": APPLICATION_PATH,
+        "SteamCMDPath": STEAMCMD_DIR,
         "DestinationFolder": "",
         "checkforupdates": "on",
         "console": "off"
@@ -242,13 +259,23 @@ def create_default_config():
 def get_steamcmd_path():
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_PATH)
-    return config.get("Settings", "SteamCMDPath", fallback=APPLICATION_PATH)
+    return config.get("Settings", "SteamCMDPath", fallback=STEAMCMD_DIR)
 
 
 def extract_json_data(json_path, key):
     with open(json_path, 'r', encoding='utf-8', errors="ignore") as json_file:
         data = json.load(json_file)
         return data.get(key, '')
+
+
+def extract_json_data_bulk(json_path, keys):
+    """Extract multiple keys from JSON file in one read - more efficient for multiple fields."""
+    try:
+        with open(json_path, 'r', encoding='utf-8', errors="ignore") as json_file:
+            data = json.load(json_file)
+            return {key: data.get(key, '') for key in keys}
+    except:
+        return {key: '' for key in keys}
 
 
 def convert_bytes_to_readable(size_in_bytes, no_symb=None):
@@ -299,8 +326,9 @@ def get_workshop_file_size(workshop_id, raw=None):
 
 def show_message(title, message, icon="warning", _return=False, option_1="No", option_2="Ok"):
     if _return:
-        msg = CTkMessagebox(title=title, message=message, icon=icon,
-                            option_1=option_1, option_2=option_2, sound=True)
+        msg = CTkMessagebox(master=main_app.app, title=title, message=message, icon=icon,
+                            option_1=option_1, option_2=option_2, sound=True,
+                            button_width=80, button_height=28)
         response = msg.get()
         if response == option_1:
             return False
@@ -310,7 +338,8 @@ def show_message(title, message, icon="warning", _return=False, option_1="No", o
             return False
     else:
         def callback():
-            CTkMessagebox(title=title, message=message, icon=icon, sound=True)
+            CTkMessagebox(master=main_app.app, title=title, message=message, icon=icon, sound=True,
+                          button_width=80, button_height=28)
         main_app.app.after(0, callback)
 
 
@@ -359,11 +388,25 @@ def convert_seconds(seconds):
 
 
 def get_folder_size(folder_path):
+    """Calculate folder size using Windows API for real-time accuracy."""
     total_size = 0
-    for path, dirs, files in os.walk(folder_path):
-        for f in files:
-            fp = os.path.join(path, f)
-            total_size += os.stat(fp).st_size
+    try:
+        for root, dirs, files in os.walk(folder_path):
+            for filename in files:
+                filepath = os.path.join(root, filename)
+                try:
+                    # force Windows to update metadata
+                    with open(filepath, 'rb') as f:
+                        f.seek(0, 2)  # Seek to end
+                        total_size += f.tell()
+                except (OSError, PermissionError, IOError):
+                    # try stat as fallback
+                    try:
+                        total_size += os.path.getsize(filepath)
+                    except:
+                        pass
+    except (OSError, PermissionError):
+        pass
     return total_size
 
 
@@ -723,5 +766,116 @@ def get_current_datetime():
 def kill_steamcmd():
     try: subprocess.run(['taskkill', '/F', '/IM', 'steamcmd.exe'], creationflags=subprocess.CREATE_NO_WINDOW)
     except Exception as e: print(f'[{get_current_datetime()}] [Logs] Error in kill_steamcmd: {e}')
+
+
+def cleanup_steamcmd_data(workshop_id):
+    """Clean up SteamCMD data after successful download."""
+    steamcmd_path = get_steamcmd_path()
+    steamapps_path = os.path.join(steamcmd_path, "steamapps")
+
+    # Clean patch files
+    try:
+        for filename in os.listdir(steamapps_path):
+            if filename.startswith("state_311210_") and filename.endswith(".patch") and workshop_id in filename:
+                try:
+                    os.remove(os.path.join(steamapps_path, filename))
+                except:
+                    pass
+    except:
+        pass
+
+    # Clean manifest
+    acf_file = os.path.join(steamapps_path, "workshop", "appworkshop_311210.acf")
+    if os.path.exists(acf_file):
+        try:
+            os.remove(acf_file)
+        except:
+            pass
+
+    # Clean folders
+    folders_to_clean = [
+        os.path.join(steamapps_path, "workshop", "temp", "311210"),
+        os.path.join(steamapps_path, "workshop", "downloads", "311210", workshop_id),
+        os.path.join(steamapps_path, "workshop", "content", "311210", workshop_id),
+        os.path.join(steamcmd_path, "depotcache")
+    ]
+    for folder in folders_to_clean:
+        if os.path.exists(folder):
+            try:
+                shutil.rmtree(folder)
+            except:
+                pass
+
+
+def parse_steam_log_timestamp(line):
+    """Parse timestamp from steam content_log line like '[2026-02-16 12:34:56]'"""
+    try:
+        # Extract timestamp between brackets
+        match = re.match(r'\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]', line)
+        if match:
+            timestamp_str = match.group(1)
+            return datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+    except:
+        pass
+    return None
+
+
+def monitor_content_log_for_dump(steamcmd_path, workshop_id, download_start_time, stop_flag):
+    """
+    Monitor content_log.txt for when SteamCMD finishes dumping files to downloads folder.
+    When dump is complete (line contains "AppID 311210 update started" and "download 0/"),
+    clear the downloads folder so progress tracking starts fresh.
+
+    Args:
+        steamcmd_path: Path to steamcmd folder
+        workshop_id: Workshop ID being downloaded
+        download_start_time: When the download started (time.time())
+        stop_flag: Callable that returns True if we should stop monitoring
+    """
+    content_log_path = os.path.join(steamcmd_path, "logs", "content_log.txt")
+    downloads_folder = os.path.join(steamcmd_path, "steamapps", "workshop", "downloads", "311210", workshop_id)
+
+    # Wait for log file to exist
+    wait_count = 0
+    while not os.path.exists(content_log_path) and wait_count < 30:
+        if stop_flag():
+            return False
+        time.sleep(1)
+        wait_count += 1
+
+    if not os.path.exists(content_log_path):
+        print(f"[{get_current_datetime()}] [Logs] content_log.txt not found, skipping dump monitor")
+        return False
+
+    try:
+        with open(content_log_path, 'r', encoding='utf-8', errors='ignore') as file:
+            while not stop_flag():
+                line = file.readline()
+                if not line:
+                    time.sleep(0.05)  # Fast polling
+                    continue
+
+                if "AppID 311210" not in line or "download 0/" not in line:
+                    continue
+
+                log_time = parse_steam_log_timestamp(line)
+                if log_time is None:
+                    continue
+
+                download_start_datetime = datetime.fromtimestamp(download_start_time).replace(microsecond=0)
+                if log_time >= download_start_datetime:
+                    print(f"[{get_current_datetime()}] [Logs] Dump complete detected, clearing downloads folder")
+                    if os.path.exists(downloads_folder):
+                        try:
+                            shutil.rmtree(downloads_folder)
+                        except:
+                            pass
+                    return True
+
+    except Exception as e:
+        print(f"[{get_current_datetime()}] [Logs] Error in monitor_content_log_for_dump: {e}")
+
+    return False
+
 
 # End helper functions

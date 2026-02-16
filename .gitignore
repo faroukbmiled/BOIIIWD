@@ -160,10 +160,14 @@ cython_debug/
 #.idea/
 
 # Other
+claude.md
+.claude/
 *.ini
 *.conf
 .vscode
 test/
-steamcmd
+steamcmd/
+scmd/
 boiiiwd_library.json
 *.exe
+*.txt
