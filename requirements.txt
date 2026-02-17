@@ -1,0 +1,9 @@
+beautifulsoup4==4.12.2
+CTkMessagebox==2.5
+customtkinter==5.2.1
+psutil==5.9.6
+pyinstaller==6.15.0
+requests==2.31.0
+ujson==5.8.0
+pillow>=9.0.0
+pexpect>=4.8.0
