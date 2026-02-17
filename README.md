@@ -28,7 +28,7 @@ unzip Linux.zip && chmod +x BOIIIWD
 ./BOIIIWD
 ```
 - See [Linux Branch](https://github.com/faroukbmiled/BOIIIWD/tree/linux) for source code and documentation
-- **Requirements:** `python3-tk`, `lib32gcc-s1`
+- **Requirements:** `python3-tk`, `lib32gcc-s1` (Debian/Ubuntu) or `tk`, `lib32-gcc-libs` (Arch)
 - **Note:** Linux support is experimental and may have issues
 
 ## Features:
