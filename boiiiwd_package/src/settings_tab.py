@@ -846,11 +846,19 @@ class SettingsTab(ctk.CTkFrame):
             print(f"Error: {e}")
 
     def toggle_console_window(self):
-        if not self.checkbox_show_console.get():
-            self.console = False
-            hide_console()
-            save_config("console", "off")
-        else:
+        # Use the variable directly for consistency
+        is_on = self.console_var.get()
+        if is_on:
             self.console = True
             save_config("console", "on")
-            show_console()
+            try:
+                show_console()
+            except Exception as e:
+                print(f"Failed to show console: {e}")
+        else:
+            self.console = False
+            save_config("console", "off")
+            try:
+                hide_console()
+            except Exception as e:
+                print(f"Failed to hide console: {e}")

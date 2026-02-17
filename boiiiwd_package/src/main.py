@@ -972,36 +972,13 @@ class BOIIIWD(ctk.CTk):
             try: os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
             except: pass
 
-        # Pre-download cleanup: clear SteamCMD caches
+        # Clear content_log.txt for dump monitor to read fresh lines
         content_log_path = os.path.join(steamcmd_path, "logs", "content_log.txt")
         try:
             with open(content_log_path, 'w', errors="ignore") as file:
                 file.write('')
         except:
             pass
-
-        for folder_name in ["depotcache", "appcache"]:
-            folder_path = os.path.join(steamcmd_path, folder_name)
-            if os.path.exists(folder_path):
-                try:
-                    shutil.rmtree(folder_path)
-                except:
-                    pass
-
-        acf_file = os.path.join(steamcmd_path, "steamapps", "workshop", "appworkshop_311210.acf")
-        if os.path.exists(acf_file):
-            try:
-                os.remove(acf_file)
-            except:
-                pass
-
-        for subfolder in [f"content/311210/{wsid}", "temp/311210"]:
-            folder_path = os.path.join(steamcmd_path, "steamapps", "workshop", subfolder)
-            if os.path.exists(folder_path):
-                try:
-                    shutil.rmtree(folder_path)
-                except:
-                    pass
 
         if os.path.exists(map_folder):
             try:
@@ -1044,6 +1021,11 @@ class BOIIIWD(ctk.CTk):
                             show_message("SteamCMD Error", login_check, icon="cancel")
                             self.stop_download()
                             return
+                    # Check for download failure - will trigger retry via fail counter
+                    if check_download_failed(buff):
+                        print(f"[{get_current_datetime()}] [Logs] Download failed detected, will retry...")
+                        self.fail_threshold += 1
+                        break
                     if process.isalive() is False:
                         break
                     if not self.is_downloading:
@@ -1103,6 +1085,7 @@ class BOIIIWD(ctk.CTk):
             process = PtyProcess.spawn(command_args)
 
             #wait for process
+            download_failed_detected = False
             while True:
                 buff = self.process_output_reader(process)
                 if buff == "EOFError":
@@ -1114,6 +1097,11 @@ class BOIIIWD(ctk.CTk):
                         show_message("SteamCMD Error", login_check, icon="cancel")
                         self.stop_download()
                         return
+                # Check for download failure
+                if check_download_failed(buff):
+                    print(f"[{get_current_datetime()}] [Logs] Download failed detected!")
+                    download_failed_detected = True
+                    break
                 if process.isalive() is False:
                     break
                 if not self.is_downloading:
@@ -1136,7 +1124,9 @@ class BOIIIWD(ctk.CTk):
                 try: os.rename(stdout_path, os.path.join(map_folder, os.path.join(stdout_path, f"workshop_log_couldntremove_{timestamp}.txt")))
                 except: pass
 
-            if not os.path.exists(map_folder):
+            if download_failed_detected:
+                show_message("Download Failed", "SteamCMD reported download failure.\nTry again or enable 'Continuous Download' in settings for automatic retries.", icon="cancel")
+            elif not os.path.exists(map_folder):
                 show_message("SteamCMD has terminated", "SteamCMD has been terminated\nAnd failed to download the map/mod, try again or enable continuous download in settings")
 
         self.settings_tab.stopped = True
@@ -1339,6 +1329,7 @@ class BOIIIWD(ctk.CTk):
                     dump_monitor_started = False
                     download_start_time_for_monitor = None
                     progress_tracking_start = None
+                    self.dump_info = {}
 
                     while not self.settings_tab.stopped:
                         loop_counter += 1
@@ -1348,6 +1339,7 @@ class BOIIIWD(ctk.CTk):
                             est_downloaded_bytes = 0
                             dump_monitor_started = False
                             progress_tracking_start = None
+                            self.dump_info = {}
 
                         if self.item_skipped:
                             if index > 0:
@@ -1386,17 +1378,22 @@ class BOIIIWD(ctk.CTk):
                             if self.is_downloading:
                                 self.is_steamcmd_updating = False
                                 download_start_time_for_monitor = time.time()
+                                # Initialize network counter baseline when download starts
+                                previous_net_speed = psutil.net_io_counters().bytes_recv
                                 break
 
                         if self.is_downloading and not self.settings_tab.estimated_progress and not dump_monitor_started:
                             dump_monitor_started = True
                             progress_tracking_start = time.time()
                             def run_dump_monitor():
-                                monitor_content_log_for_dump(get_steamcmd_path(), workshop_id, download_start_time_for_monitor, lambda: self.settings_tab.stopped)
+                                monitor_content_log_for_dump(get_steamcmd_path(), workshop_id, download_start_time_for_monitor, lambda: self.settings_tab.stopped, self.dump_info)
                             threading.Thread(target=run_dump_monitor, daemon=True).start()
 
-                        if progress_tracking_start and time.time() - progress_tracking_start < 2:
-                            continue
+                        # Wait for dump monitor to clear folder (or timeout after 15s)
+                        if progress_tracking_start and not self.dump_info.get('cleared'):
+                            if time.time() - progress_tracking_start < 15:
+                                time.sleep(0.1)
+                                continue
 
                         try:
                             current_size = 0
@@ -1424,31 +1421,29 @@ class BOIIIWD(ctk.CTk):
                             time_elapsed = time.time() - start_time
                             raw_net_speed = psutil.net_io_counters().bytes_recv
 
-                            current_net_speed_text = raw_net_speed
-                            net_speed_bytes = current_net_speed_text - previous_net_speed
-                            previous_net_speed = current_net_speed_text
+                            net_speed_bytes = raw_net_speed - previous_net_speed
+                            previous_net_speed = raw_net_speed
 
-                            current_net_speed = net_speed_bytes
-                            if loop_counter <= 1 and current_net_speed >= DOWN_CAP:
-                                print(f"[{get_current_datetime()}] [Logs] down_cap hit at: {current_net_speed} - Loop counter: {loop_counter}")
-                                current_net_speed = 10
+                            MAX_REALISTIC_SPEED = 500 * 1024 * 1024
+                            speed_valid = 0 < net_speed_bytes < MAX_REALISTIC_SPEED
 
-                            est_downloaded_bytes += current_net_speed
+                            if speed_valid:
+                                est_downloaded_bytes += net_speed_bytes
+                                net_speed, speed_unit = convert_speed(net_speed_bytes)
+                                speed_text = f"Network Speed: {net_speed:.2f} {speed_unit}"
+                            else:
+                                speed_text = "Network Speed: Calculating..."
 
                             percentage_complete = (est_downloaded_bytes / file_size) * 100
-
                             progress = min(percentage_complete / 100, 0.99)
-
-                            net_speed, speed_unit = convert_speed(net_speed_bytes)
 
                             elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
 
-                            # print(f"raw_net {raw_net_speed}\ncurrent_net_speed: {current_net_speed}\nest_downloaded_bytes {est_downloaded_bytes}\npercentage_complete {percentage_complete}\nprogress {progress}")
                             self.after(1, self.status_text.configure(
                                 text=f"Status: Total size: ~{convert_bytes_to_readable(self.total_queue_size)} | ID: {workshop_id} | {item_name} | Downloading {current_number}/{total_items}"))
                             self.after(1, self.progress_bar.set(progress))
-                            self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
-                            self.after(1, lambda p=min(percentage_complete ,99): self.progress_text.configure(text=f"{p:.2f}%"))
+                            self.after(1, lambda t=speed_text: self.label_speed.configure(text=t))
+                            self.after(1, lambda p=min(percentage_complete, 99): self.progress_text.configure(text=f"{p:.2f}%"))
                             if self.settings_tab.show_fails:
                                 self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.fail_threshold}"))
                             else:
@@ -1662,6 +1657,7 @@ class BOIIIWD(ctk.CTk):
                 dump_monitor_started = False
                 download_start_time_for_monitor = None
                 progress_tracking_start = None
+                self.dump_info = {}  # Will hold {'bytes_cached': X, 'bytes_total': Y} from dump monitor
 
                 while not self.settings_tab.stopped:
                     loop_counter += 1
@@ -1671,6 +1667,7 @@ class BOIIIWD(ctk.CTk):
                         est_downloaded_bytes = 0
                         dump_monitor_started = False
                         progress_tracking_start = None
+                        self.dump_info = {}
 
                     while not self.is_downloading and not self.settings_tab.stopped:
                         if self.is_steamcmd_updating:
@@ -1687,17 +1684,21 @@ class BOIIIWD(ctk.CTk):
                         if self.is_downloading:
                             self.is_steamcmd_updating = False
                             download_start_time_for_monitor = time.time()
+                            previous_net_speed = psutil.net_io_counters().bytes_recv
                             break
 
                     if self.is_downloading and not self.settings_tab.estimated_progress and not dump_monitor_started:
                         dump_monitor_started = True
                         progress_tracking_start = time.time()
                         def run_dump_monitor():
-                            monitor_content_log_for_dump(get_steamcmd_path(), workshop_id, download_start_time_for_monitor, lambda: self.settings_tab.stopped)
+                            monitor_content_log_for_dump(get_steamcmd_path(), workshop_id, download_start_time_for_monitor, lambda: self.settings_tab.stopped, self.dump_info)
                         threading.Thread(target=run_dump_monitor, daemon=True).start()
 
-                    if progress_tracking_start and time.time() - progress_tracking_start < 2:
-                        continue
+                    # Wait for dump monitor to clear folder (or timeout after 15s)
+                    if progress_tracking_start and not self.dump_info.get('cleared'):
+                        if time.time() - progress_tracking_start < 15:
+                            time.sleep(0.1)
+                            continue
 
                     try:
                         current_size = 0
@@ -1710,6 +1711,7 @@ class BOIIIWD(ctk.CTk):
                     except:
                         continue
 
+                    # Simple progress calculation - dump folder is cleared so progress starts from 0
                     progress = int(current_size / file_size * 100)
 
                     if progress > 100:
@@ -1722,29 +1724,27 @@ class BOIIIWD(ctk.CTk):
                         time_elapsed = time.time() - start_time
                         raw_net_speed = psutil.net_io_counters().bytes_recv
 
-                        current_net_speed_text = raw_net_speed
-                        net_speed_bytes = current_net_speed_text - previous_net_speed
-                        previous_net_speed = current_net_speed_text
+                        net_speed_bytes = raw_net_speed - previous_net_speed
+                        previous_net_speed = raw_net_speed
 
-                        current_net_speed = net_speed_bytes
-                        if loop_counter <= 1 and current_net_speed >= DOWN_CAP:
-                            print(f"[{get_current_datetime()}] [Logs] down_cap hit at: {current_net_speed} - Loop counter: {loop_counter}")
-                            current_net_speed = 10
+                        MAX_REALISTIC_SPEED = 500 * 1024 * 1024
+                        speed_valid = 0 < net_speed_bytes < MAX_REALISTIC_SPEED
 
-                        est_downloaded_bytes += current_net_speed
+                        if speed_valid:
+                            est_downloaded_bytes += net_speed_bytes
+                            net_speed, speed_unit = convert_speed(net_speed_bytes)
+                            speed_text = f"Network Speed: {net_speed:.2f} {speed_unit}"
+                        else:
+                            speed_text = "Network Speed: Calculating..."
 
                         percentage_complete = (est_downloaded_bytes / file_size) * 100
 
                         progress = min(percentage_complete / 100, 0.99)
 
-                        net_speed, speed_unit = convert_speed(net_speed_bytes)
-
                         elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
 
-                        # print(f"raw_net {raw_net_speed}\ncurrent_net_speed: {current_net_speed}\nest_downloaded_bytes {est_downloaded_bytes}\npercentage_complete {percentage_complete}\nprogress {progress}")
-
                         self.after(1, self.progress_bar.set(progress))
-                        self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
+                        self.after(1, lambda t=speed_text: self.label_speed.configure(text=t))
                         self.after(1, lambda p=min(percentage_complete ,99): self.progress_text.configure(text=f"{p:.2f}%"))
                         if self.settings_tab.show_fails:
                             self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.fail_threshold}"))
@@ -1755,7 +1755,7 @@ class BOIIIWD(ctk.CTk):
                     else:
                         if not self.settings_tab.stopped:
                             time_elapsed = time.time() - start_time
-                            progress = int(current_size / file_size * 100)
+                            # progress already calculated above with offset
                             self.after(1, lambda v=progress / 100.0: self.progress_bar.set(v))
 
                             current_net_speed = psutil.net_io_counters().bytes_recv
@@ -1763,10 +1763,18 @@ class BOIIIWD(ctk.CTk):
                             net_speed_bytes = current_net_speed - previous_net_speed
                             previous_net_speed = current_net_speed
 
-                            net_speed, speed_unit = convert_speed(net_speed_bytes)
+                            MAX_REALISTIC_SPEED = 500 * 1024 * 1024
+                            speed_valid = 0 < net_speed_bytes < MAX_REALISTIC_SPEED
+
+                            if speed_valid:
+                                net_speed, speed_unit = convert_speed(net_speed_bytes)
+                                speed_text = f"Network Speed: {net_speed:.2f} {speed_unit}"
+                            else:
+                                speed_text = "Network Speed: Calculating..."
+
                             elapsed_hours, elapsed_minutes, elapsed_seconds = convert_seconds(time_elapsed)
 
-                            self.after(1, lambda v=net_speed: self.label_speed.configure(text=f"Network Speed: {v:.2f} {speed_unit}"))
+                            self.after(1, lambda t=speed_text: self.label_speed.configure(text=t))
                             self.after(1, lambda p=progress: self.progress_text.configure(text=f"{p}%"))
                             if self.settings_tab.show_fails:
                                 self.after(1, lambda h=elapsed_hours, m=elapsed_minutes, s=elapsed_seconds: self.elapsed_time.configure(text=f"Elapsed Time: {int(h):02d}:{int(m):02d}:{int(s):02d} - Fails: {self.fail_threshold}"))

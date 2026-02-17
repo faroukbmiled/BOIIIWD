@@ -715,6 +715,14 @@ def invalid_password_check(stdout_text: str) -> str | bool:
         return False
 
 
+def check_download_failed(stdout_text: str) -> bool:
+    """Check if steamcmd output indicates download failure."""
+    if stdout_text:
+        if "ERROR!" in stdout_text and "Download item" in stdout_text and "failed" in stdout_text:
+            return True
+    return False
+
+
 # will be reworked in the future
 def initiate_login_process(command, console):
     print(f'[{get_current_datetime()}] [Logs] initiate_login_process invoked...')
@@ -738,18 +746,26 @@ def initiate_login_process(command, console):
 
 
 def show_console():
-    ctypes.windll.kernel32.AllocConsole()
-    new_console_handle = ctypes.windll.kernel32.GetStdHandle(ctypes.c_uint(-11))
-    new_console_fd = os.open('CONOUT$', os.O_RDWR | os.O_TEXT)
-    sys.stdout = os.fdopen(new_console_fd, 'w')
-    sys.stderr = sys.stdout
+    hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+    if hwnd:
+        ctypes.windll.user32.ShowWindow(hwnd, 5)  # SW_SHOW
+    else:
+        # Allocate new console
+        ctypes.windll.kernel32.AllocConsole()
+
+    try:
+        new_console_fd = os.open('CONOUT$', os.O_RDWR | os.O_TEXT)
+        sys.stdout = os.fdopen(new_console_fd, 'w')
+        sys.stderr = sys.stdout
+    except OSError:
+        pass
 
 
 def hide_console():
     hwnd = ctypes.windll.kernel32.GetConsoleWindow()
 
     if hwnd:
-        ctypes.windll.user32.ShowWindow(hwnd, 0)
+        ctypes.windll.user32.ShowWindow(hwnd, 0)  # SW_HIDE
         ctypes.windll.kernel32.FreeConsole()
 
     sys.stdout = sys.__stdout__
@@ -820,62 +836,61 @@ def parse_steam_log_timestamp(line):
     return None
 
 
-def monitor_content_log_for_dump(steamcmd_path, workshop_id, download_start_time, stop_flag):
+def monitor_content_log_for_dump(steamcmd_path, workshop_id, download_start_time, stop_flag, result_holder):
     """
-    Monitor content_log.txt for when SteamCMD finishes dumping files to downloads folder.
-    When dump is complete (line contains "AppID 311210 update started" and "download 0/"),
-    clear the downloads folder so progress tracking starts fresh.
-
-    Args:
-        steamcmd_path: Path to steamcmd folder
-        workshop_id: Workshop ID being downloaded
-        download_start_time: When the download started (time.time())
-        stop_flag: Callable that returns True if we should stop monitoring
+    Monitor content_log.txt for download start signal.
+    When we see 'download X/Y', IMMEDIATELY clear the folder - that's our window before files get locked.
     """
     content_log_path = os.path.join(steamcmd_path, "logs", "content_log.txt")
     downloads_folder = os.path.join(steamcmd_path, "steamapps", "workshop", "downloads", "311210", workshop_id)
+
+    print(f"[{get_current_datetime()}] [DumpMon] Started monitoring for workshop {workshop_id}")
+    download_start_datetime = datetime.fromtimestamp(download_start_time).replace(microsecond=0)
 
     # Wait for log file to exist
     wait_count = 0
     while not os.path.exists(content_log_path) and wait_count < 30:
         if stop_flag():
-            return False
-        time.sleep(1)
+            return
+        time.sleep(0.5)
         wait_count += 1
 
     if not os.path.exists(content_log_path):
-        print(f"[{get_current_datetime()}] [Logs] content_log.txt not found, skipping dump monitor")
-        return False
+        print(f"[{get_current_datetime()}] [DumpMon] content_log.txt not found")
+        return
 
     try:
         with open(content_log_path, 'r', encoding='utf-8', errors='ignore') as file:
+            file.seek(0, 2)
+
             while not stop_flag():
                 line = file.readline()
                 if not line:
-                    time.sleep(0.05)  # Fast polling
+                    time.sleep(0.05)
                     continue
 
-                if "AppID 311210" not in line or "download 0/" not in line:
-                    continue
+                if "AppID 311210" in line and "download" in line:
+                    log_time = parse_steam_log_timestamp(line)
+                    if log_time and log_time >= download_start_datetime:
+                        print(f"[{get_current_datetime()}] [DumpMon] Got signal: {line.strip()[:80]}")
 
-                log_time = parse_steam_log_timestamp(line)
-                if log_time is None:
-                    continue
-
-                download_start_datetime = datetime.fromtimestamp(download_start_time).replace(microsecond=0)
-                if log_time >= download_start_datetime:
-                    print(f"[{get_current_datetime()}] [Logs] Dump complete detected, clearing downloads folder")
-                    if os.path.exists(downloads_folder):
-                        try:
-                            shutil.rmtree(downloads_folder)
-                        except:
-                            pass
-                    return True
+                        if os.path.exists(downloads_folder):
+                            folder_size = get_folder_size(downloads_folder)
+                            print(f"[{get_current_datetime()}] [DumpMon] Clearing {folder_size/1024/1024:.2f}MB NOW")
+                            try:
+                                shutil.rmtree(downloads_folder)
+                                print(f"[{get_current_datetime()}] [DumpMon] Cleared!")
+                                result_holder['cleared'] = True
+                            except Exception as e:
+                                print(f"[{get_current_datetime()}] [DumpMon] Clear failed: {e}")
+                                result_holder['cleared'] = True  # Proceed anyway to avoid 15s wait
+                        else:
+                            # No folder to clear, proceed
+                            result_holder['cleared'] = True
+                        return
 
     except Exception as e:
-        print(f"[{get_current_datetime()}] [Logs] Error in monitor_content_log_for_dump: {e}")
-
-    return False
+        print(f"[{get_current_datetime()}] [DumpMon] Error: {e}")
 
 
 # End helper functions
