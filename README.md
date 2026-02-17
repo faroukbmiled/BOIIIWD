@@ -22,10 +22,14 @@
 - [Optional] Run as script: `python boiiiwd_package\boiiiwd.py`
 
 ### Linux (Experimental)
-- Download [Linux.zip](https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Linux.zip)
+```bash
+wget https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Linux.zip 
+unzip Linux.zip && chmod +x BOIIIWD
+./BOIIIWD
+```
 - See [Linux Branch](https://github.com/faroukbmiled/BOIIIWD/tree/linux) for source code and documentation
+- **Requirements:** `python3-tk`, `lib32gcc-s1`
 - **Note:** Linux support is experimental and may have issues
-- **Requirements:** `python3-tk`, `lib32gcc-s1` (see Linux branch README for details)
 
 ## Features:
 - Improved download stability
