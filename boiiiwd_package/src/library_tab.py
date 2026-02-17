@@ -491,7 +491,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
     def view_item(self, workshop_id):
         url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
-        webbrowser.open(url)
+        safe_open_url(url)
 
     def show_no_items_message(self, only_up=False):
         self.update_button.configure(state="disabled")
@@ -688,7 +688,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     top.destroy()
 
                 def view_map_mod():
-                    webbrowser.open(url)
+                    safe_open_url(url)
 
                 def show_description(event):
                     def main_thread():
@@ -810,7 +810,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
                     date_updated_label_tooltip = CTkToolTip(date_updated_label, message="View changelogs", topmost=True)
                     date_updated_label.configure(cursor="hand2")
                     date_updated_label.bind("<Button-1>", lambda e:
-                        webbrowser.open(f"https://steamcommunity.com/sharedfiles/filedetails/changelog/{workshop_id}"))
+                        safe_open_url(f"https://steamcommunity.com/sharedfiles/filedetails/changelog/{workshop_id}"))
                 else:
                     date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
                 date_updated_label.grid(row=6, column=0, columnspan=2, sticky="w", padx=20, pady=2.5)
@@ -1005,7 +1005,7 @@ class LibraryTab(ctk.CTkScrollableFrame):
 
             def open_url(id_part, e=None):
                 url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={id_part}"
-                webbrowser.open(url)
+                safe_open_url(url)
 
             # you gotta use my modded CTkListbox originaly by Akascape
             def add_checkbox_item(index, item_text):

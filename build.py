@@ -19,6 +19,7 @@ args = [
     "--add-data", "boiiiwd_package/src:settings_tab",
     "--add-data", "boiiiwd_package/src:update_window",
     "--add-data", "boiiiwd_package/src:main",
+    "--add-data", "boiiiwd_package/src/CTkMessagebox:src/CTkMessagebox",
     "--distpath", ".",
     "--hidden-import", "pexpect",
     "--hidden-import", "ptyprocess",

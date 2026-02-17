@@ -8,6 +8,9 @@ from src.settings_tab import SettingsTab
 class BOIIIWD(ctk.CTk):
     def __init__(self):
         super().__init__()
+        # Hide window during initialization to prevent flash
+        self.withdraw()
+
         # configure window
         self.title("BOIII Workshop Downloader - Main")
 
@@ -206,11 +209,9 @@ class BOIIIWD(ctk.CTk):
         self.load_configs()
 
         if check_config("checkforupdates") == "on":
-            self.withdraw()
             try: check_for_updates_func(self, ignore_up_todate=True)
             except: pass
             self.update()
-            self.deiconify()
 
         try:
             self.settings_tab.load_settings("clean_on_finish", "on")
@@ -229,6 +230,9 @@ class BOIIIWD(ctk.CTk):
         # items check for update, ill change all the variables to work this way at a later date
         if self.settings_tab.check_items_var.get():
             self.library_tab.check_for_updates(on_launch=True)
+
+        # Show window after all initialization is complete
+        self.deiconify()
 
     def do_popup(self, event, frame):
         try: frame.tk_popup(event.x_root, event.y_root)
@@ -544,7 +548,7 @@ class BOIIIWD(ctk.CTk):
 
     def open_browser(self):
         link = "https://steamcommunity.com/app/311210/workshop/"
-        webbrowser.open(link)
+        safe_open_url(link)
 
     def settings_launch_game(self):
         launch_game_func(check_config("destinationfolder"), self.settings_tab.edit_startup_exe.get(), self.settings_tab.edit_launch_args.get())
@@ -718,7 +722,7 @@ class BOIIIWD(ctk.CTk):
                 top.destroy()
 
             def view_map_mod():
-                webbrowser.open(url)
+                safe_open_url(url)
 
             def show_description(event):
                 def main_thread():
@@ -815,7 +819,7 @@ class BOIIIWD(ctk.CTk):
                 date_updated_label_tooltip = CTkToolTip(date_updated_label, message="View changelogs", topmost=True)
                 date_updated_label.configure(cursor="hand2")
                 date_updated_label.bind("<Button-1>", lambda e:
-                    webbrowser.open(f"https://steamcommunity.com/sharedfiles/filedetails/changelog/{workshop_id}"))
+                    safe_open_url(f"https://steamcommunity.com/sharedfiles/filedetails/changelog/{workshop_id}"))
             else:
                 date_updated_label = ctk.CTkLabel(info_frame, text=f"Updated: {date_updated}")
 

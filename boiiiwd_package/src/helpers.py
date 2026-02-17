@@ -1,6 +1,40 @@
 import src.shared_vars as main_app
 from src.imports import *
 
+
+# Clean environment for spawning external processes
+# Removes PyInstaller's bundled library paths to prevent SSL conflicts on Arch-based systems
+_CLEAN_ENV = None
+
+def _get_clean_env():
+    global _CLEAN_ENV
+    if _CLEAN_ENV is None:
+        _CLEAN_ENV = os.environ.copy()
+        _CLEAN_ENV.pop('LD_LIBRARY_PATH', None)
+        _CLEAN_ENV.pop('LD_PRELOAD', None)
+    return _CLEAN_ENV
+
+
+def open_external(args, **kwargs):
+    """Spawn external process with clean environment (no PyInstaller library paths)."""
+    kwargs.setdefault('env', _get_clean_env())
+    kwargs.setdefault('start_new_session', True)
+    kwargs.setdefault('stdout', subprocess.DEVNULL)
+    kwargs.setdefault('stderr', subprocess.DEVNULL)
+    return subprocess.Popen(args, **kwargs)
+
+
+def safe_open_url(url):
+    """Open URL in system browser."""
+    try:
+        open_external(['xdg-open', url])
+    except Exception:
+        try:
+            webbrowser.open(url)
+        except Exception as e:
+            print(f"[{get_current_datetime()}] Failed to open URL: {e}")
+
+
 def check_config(name, fallback=None):
     try:
         config = configparser.ConfigParser()
@@ -170,7 +204,7 @@ def check_for_updates_func(window, ignore_up_todate=False):
             result = msg_box.get()
 
             if result == "View":
-                webbrowser.open(
+                safe_open_url(
                     f"https://github.com/{GITHUB_REPO}/releases/latest")
 
             if result == "Yes":
@@ -635,6 +669,8 @@ def check_item_date(down_date, date_updated, format=False):
 
 def get_window_size_from_registry():
     """Get window geometry from separate geometry file."""
+    # Default values if geometry not saved yet
+    default_width, default_height, default_x, default_y = 900, 560, 100, 100
     geometry_file = os.path.join(os.path.dirname(CONFIG_FILE_PATH), "geometry.ini")
     try:
         config = configparser.ConfigParser()
@@ -646,9 +682,9 @@ def get_window_size_from_registry():
             y = config.get("Window", "y", fallback=None)
             if all([width, height, x, y]):
                 return int(width), int(height), int(x), int(y)
-        return None, None, None, None
+        return default_width, default_height, default_x, default_y
     except Exception:
-        return None, None, None, None
+        return default_width, default_height, default_x, default_y
 
 
 def save_window_size_to_registry(width, height, x, y):
@@ -888,13 +924,13 @@ def open_log_file():
                 for term in terminals:
                     if shutil.which(term):
                         if term == 'gnome-terminal':
-                            subprocess.Popen([term, '--', 'nano', log_file], start_new_session=True)
+                            open_external([term, '--', 'nano', log_file])
                         else:
-                            subprocess.Popen([term, '-e', f'nano {log_file}'], start_new_session=True)
+                            open_external([term, '-e', f'nano {log_file}'])
                         print(f"[{get_current_datetime()}] Opened log file with {term} + nano")
                         return
             elif shutil.which(opener[0]):
-                subprocess.Popen(opener + [log_file], start_new_session=True)
+                open_external(opener + [log_file])
                 print(f"[{get_current_datetime()}] Opened log file with {opener[0]}")
                 return
         except Exception:

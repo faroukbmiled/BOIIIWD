@@ -26,7 +26,7 @@ import socket
 import shlex
 from bs4 import BeautifulSoup
 
-from CTkMessagebox import CTkMessagebox
+from .CTkMessagebox import CTkMessagebox
 from PIL import Image
 
 from .CTkListbox.ctk_listbox import CTkListbox

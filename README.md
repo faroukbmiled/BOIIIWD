@@ -10,24 +10,24 @@ A Feature-rich GUI Steam Workshop downloader for [Call of Duty: Black Ops III](h
 
 Before running BOIIIWD, you need to install the following system packages:
 
+**Debian/Ubuntu:**
 ```bash
-# Debian/Ubuntu
-sudo apt-get update
-sudo apt-get install python3-tk lib32gcc-s1
-
-# For 32-bit architecture support (required by SteamCMD)
 sudo dpkg --add-architecture i386
 sudo apt-get update
-sudo apt-get install lib32gcc-s1
+sudo apt-get install python3-tk lib32gcc-s1
 ```
 
+**Fedora:**
 ```bash
-# Fedora
 sudo dnf install python3-tkinter glibc.i686 libgcc.i686
 ```
 
+**Arch:**
 ```bash
-# Arch Linux
+# Enable multilib repository (if not already enabled)
+# Edit /etc/pacman.conf and uncomment [multilib] section
+
+sudo pacman -Syu
 sudo pacman -S tk lib32-gcc-libs
 ```
 
@@ -86,10 +86,17 @@ Install the tkinter package for your distribution (see Requirements above).
 
 ### SteamCMD fails to run
 Make sure 32-bit libraries are installed:
+
+**Debian/Ubuntu:**
 ```bash
 sudo dpkg --add-architecture i386
 sudo apt-get update
 sudo apt-get install lib32gcc-s1
+```
+
+**Arch:**
+```bash
+sudo pacman -S lib32-gcc-libs
 ```
 
 ### GUI doesn't start / Display issues

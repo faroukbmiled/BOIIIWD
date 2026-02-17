@@ -18,7 +18,7 @@ def check_for_updates_func(window, ignore_up_todate=False):
             result = msg_box.get()
 
             if result == "View":
-                webbrowser.open(f"https://github.com/{GITHUB_REPO}/releases/latest")
+                safe_open_url(f"https://github.com/{GITHUB_REPO}/releases/latest")
 
             if result == "Yes":
                 update_window = UpdateWindow(window, LATEST_RELEASE_URL)
