@@ -36,28 +36,20 @@ sudo pacman -S tk lib32-gcc-libs
 - **python3-tk / tkinter**: Required for the GUI (CustomTkinter is built on tkinter)
 - **lib32gcc-s1 / 32-bit libraries**: SteamCMD is a 32-bit application and requires 32-bit libraries to run
 
-## Installation
-
-1. Download [Linux.zip](https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Linux.zip) from the latest release
-2. Extract the archive:
-   ```bash
-   unzip Linux.zip
-   chmod +x BOIIIWD
-   ```
-3. Run BOIIIWD:
-   ```bash
-   ./BOIIIWD
-   ```
-
-### Running from Terminal
-
-Running BOIIIWD from a terminal:
+## Quick Install
 
 ```bash
+# Download
+wget https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Linux.zip
+
+# Extract and make executable
+unzip Linux.zip && chmod +x BOIIIWD
+
+# Run
 ./BOIIIWD
 ```
 
-This allows you to see debug information.
+> **Tip:** Run from terminal to see live output and debug information.
 
 ## Building from Source
 

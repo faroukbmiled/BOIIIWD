@@ -173,7 +173,7 @@ class SettingsTab(ctk.CTkFrame):
 
         # appearance
         self.appearance_mode_label = ctk.CTkLabel(right_frame, text="Appearance:", anchor="w")
-        self.appearance_mode_label.grid(row=5, column=1, padx=20, pady=(150, 0), sticky="nw")
+        self.appearance_mode_label.grid(row=5, column=1, padx=20, pady=(100, 0), sticky="nw")
         self.appearance_mode_optionemenu = ctk.CTkOptionMenu(right_frame, values=["Light", "Dark", "System"],
                                                                        command=master.change_appearance_mode_event)
         self.appearance_mode_optionemenu.grid(row=6, column=1, padx=20, pady=(0, 0), sticky="nw")
