@@ -87,12 +87,6 @@ BOIIIWD stores its configuration in `~/.config/boiiiwd/`:
 - SteamCMD stores its data in `~/Steam/` (not in the steamcmd installation folder)
 - First-time initialization may take a while depending on your internet speed
 
-## Known Limitations
-
-- **No console toggle**: Unlike Windows, there's no "show/hide console" feature. Run from terminal to see output, or use the "View Logs" button in Settings
-- **Self-updater**: The self-update feature downloads updates but may require manual extraction on some systems
-- **Desktop integration**: No automatic .desktop file creation yet - you'll need to create one manually if you want a launcher icon
-
 ## Troubleshooting
 
 ### "No module named 'tkinter'"
