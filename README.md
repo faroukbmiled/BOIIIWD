@@ -16,8 +16,16 @@
 </table>
 
 ## Usage:
+
+### Windows
 - Run [BOIIIWD.exe](https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Release.zip) ([VirusTotal Scan](https://www.virustotal.com/gui/file/5ca1367a82893a1f412b59a52431e9ac4219a67a50c294ee86a7d41473826b14/detection))
-- [Optional] Run as script:```python boiiiwd_package\boiiiwd.py```
+- [Optional] Run as script: `python boiiiwd_package\boiiiwd.py`
+
+### Linux (Experimental)
+- Download [Linux.zip](https://github.com/faroukbmiled/BOIIIWD/releases/latest/download/Linux.zip)
+- See [Linux Branch](https://github.com/faroukbmiled/BOIIIWD/tree/linux) for source code and documentation
+- **Note:** Linux support is experimental and may have issues
+- **Requirements:** `python3-tk`, `lib32gcc-s1` (see Linux branch README for details)
 
 ## Features:
 - Improved download stability

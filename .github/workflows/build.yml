@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
 
     steps:
@@ -44,10 +44,89 @@ jobs:
         run: |
           powershell Compress-Archive -Path BOIIIWD.exe -DestinationPath Release.zip
 
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: Release.zip
+
+      - name: Store version for release
+        run: echo "${{ env.VERSION }}" > version.txt
+
+      - name: Upload version artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: version
+          path: version.txt
+
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout linux branch
+        uses: actions/checkout@v4
+        with:
+          ref: linux
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.3"
+          architecture: "x64"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build Linux executable
+        run: |
+          python build.py
+
+      - name: Create ZIP file
+        run: |
+          zip Linux.zip BOIIIWD
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: Linux.zip
+
+  release:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-release
+
+      - name: Download version artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: version
+
+      - name: Read version
+        id: version
+        run: echo "VERSION=$(cat version.txt)" >> $GITHUB_ENV
+
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "Release.zip"
+          artifacts: "Release.zip,Linux.zip"
           draft: true
           allowUpdates: true
           artifactErrorsFailBuild: true
