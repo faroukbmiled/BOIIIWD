@@ -53,7 +53,7 @@ class SettingsTab(ctk.CTkFrame):
         self.continuous_var = ctk.BooleanVar()
         self.continuous_var.trace_add("write", self.enable_save_button)
         self.checkbox_continuous = ctk.CTkSwitch(left_frame, text="Continuous download", variable=self.continuous_var)
-        self.checkbox_continuous.grid(row=2, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.checkbox_continuous.grid(row=1, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.checkbox_continuous_tooltip = CTkToolTip(self.checkbox_continuous, message="Auto-restart downloads if SteamCMD crashes (resumes, doesn't restart)")
         self.continuous_var.set(self.load_settings("continuous_download"))
 
@@ -61,7 +61,7 @@ class SettingsTab(ctk.CTkFrame):
         self.clean_checkbox_var = ctk.BooleanVar()
         self.clean_checkbox_var.trace_add("write", self.enable_save_button)
         self.clean_checkbox = ctk.CTkSwitch(left_frame, text="Clean on finish", variable=self.clean_checkbox_var)
-        self.clean_checkbox.grid(row=3, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.clean_checkbox.grid(row=2, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.clean_checkbox_tooltip = CTkToolTip(self.clean_checkbox, message="Delete downloaded files from SteamCMD folder after install to save space")
         self.clean_checkbox_var.set(self.load_settings("clean_on_finish", "on"))
 
@@ -69,7 +69,7 @@ class SettingsTab(ctk.CTkFrame):
         self.estimated_progress_var = ctk.BooleanVar()
         self.estimated_progress_var.trace_add("write", self.enable_save_button)
         self.estimated_progress_cb = ctk.CTkSwitch(left_frame, text="Estimated progress bar", variable=self.estimated_progress_var)
-        self.estimated_progress_cb.grid(row=4, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.estimated_progress_cb.grid(row=3, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.estimated_progress_var_tooltip = CTkToolTip(self.estimated_progress_cb, message="Use estimated progress based on elapsed time. When OFF, uses real-time folder size tracking (more accurate but may occasionally jump)")
         self.estimated_progress_var.set(self.load_settings("use_estimated_progress", "off"))
 
@@ -77,7 +77,7 @@ class SettingsTab(ctk.CTkFrame):
         self.show_fails_var = ctk.BooleanVar()
         self.show_fails_var.trace_add("write", self.enable_save_button)
         self.show_fails_cb = ctk.CTkSwitch(left_frame, text="Show fails", variable=self.show_fails_var)
-        self.show_fails_cb.grid(row=5, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.show_fails_cb.grid(row=4, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.show_fails_tooltip = CTkToolTip(self.show_fails_cb, message="Show SteamCMD failure count (reset SteamCMD if count rises quickly)")
         self.show_fails_var.set(self.load_settings("show_fails", "on"))
 
@@ -85,7 +85,7 @@ class SettingsTab(ctk.CTkFrame):
         self.skip_already_installed_var = ctk.BooleanVar()
         self.skip_already_installed_var.trace_add("write", self.enable_save_button)
         self.skip_already_installed_ch = ctk.CTkSwitch(left_frame, text="Skip already installed maps", variable=self.skip_already_installed_var)
-        self.skip_already_installed_ch.grid(row=6, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.skip_already_installed_ch.grid(row=5, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.skip_already_installed_ch_tooltip = CTkToolTip(self.skip_already_installed_ch, message="Skip downloading maps already in library")
         self.skip_already_installed_var.set(self.load_settings("skip_already_installed", "on"))
 
@@ -93,7 +93,7 @@ class SettingsTab(ctk.CTkFrame):
         self.check_items_var = ctk.BooleanVar()
         self.check_items_var.trace_add("write", self.enable_save_button)
         self.check_items_ch = ctk.CTkSwitch(left_frame, text="Check library items on launch", variable=self.check_items_var)
-        self.check_items_ch.grid(row=7, column=1, padx=20, pady=(20, 0), sticky="nw")
+        self.check_items_ch.grid(row=6, column=1, padx=20, pady=(20, 0), sticky="nw")
         self.check_items_tooltip = CTkToolTip(self.check_items_ch, message="Check for item updates on startup")
         self.check_items_var.set(self.load_settings("check_items", "off"))
 
@@ -124,35 +124,35 @@ class SettingsTab(ctk.CTkFrame):
 
         # text input fields
         self.label_destination_folder = ctk.CTkLabel(left_frame, text='Enter Game folder:')
-        self.label_destination_folder.grid(row=8, column=1, padx=20, pady=(20, 0), columnspan=1, sticky="ws")
+        self.label_destination_folder.grid(row=7, column=1, padx=20, pady=(20, 0), columnspan=1, sticky="ws")
 
         self.entry_var1 = ctk.StringVar(value="")
         self.edit_destination_folder = ctk.CTkEntry(left_frame, placeholder_text="game installation folder", textvariable=self.entry_var1)
-        self.edit_destination_folder.grid(row=9, column=1, padx=20, pady=(0, 10), columnspan=1, sticky="ewn")
+        self.edit_destination_folder.grid(row=8, column=1, padx=20, pady=(0, 10), columnspan=1, sticky="ewn")
         self.entry_var1.trace_add("write", self.enable_save_button)
 
         self.button_BOIII_browse = ctk.CTkButton(left_frame, text="Select", command=self.open_BOIII_browser)
-        self.button_BOIII_browse.grid(row=9, column=2, padx=(0, 20), pady=(0, 10), sticky="ewn")
+        self.button_BOIII_browse.grid(row=8, column=2, padx=(0, 20), pady=(0, 10), sticky="ewn")
 
         self.label_steamcmd_path = ctk.CTkLabel(left_frame, text="Enter SteamCMD path:")
-        self.label_steamcmd_path.grid(row=10, column=1, padx=20, pady=(0, 0), columnspan=1, sticky="wn")
+        self.label_steamcmd_path.grid(row=9, column=1, padx=20, pady=(0, 0), columnspan=1, sticky="wn")
 
         self.entry_var2 = ctk.StringVar(value="")
         self.edit_steamcmd_path = ctk.CTkEntry(left_frame, placeholder_text="Enter SteamCMD path", textvariable=self.entry_var2)
-        self.edit_steamcmd_path.grid(row=11, column=1, padx=20, pady=(0, 10), columnspan=1, sticky="ewn")
+        self.edit_steamcmd_path.grid(row=10, column=1, padx=20, pady=(0, 10), columnspan=1, sticky="ewn")
         self.entry_var2.trace_add("write", self.enable_save_button)
 
         self.button_steamcmd_browse = ctk.CTkButton(left_frame, text="Select", command=self.open_steamcmd_path_browser)
-        self.button_steamcmd_browse.grid(row=11, column=2, padx=(0, 20), pady=(0, 10), sticky="ewn")
+        self.button_steamcmd_browse.grid(row=10, column=2, padx=(0, 20), pady=(0, 10), sticky="ewn")
 
         self.label_launch_args = ctk.CTkLabel(left_frame, text='Launch Parameters:')
-        self.label_launch_args.grid(row=12, column=1, padx=20, pady=(0, 0), columnspan=1, sticky="ws")
+        self.label_launch_args.grid(row=11, column=1, padx=20, pady=(0, 0), columnspan=1, sticky="ws")
 
         self.edit_startup_exe = ctk.CTkEntry(left_frame, placeholder_text="exe")
-        self.edit_startup_exe.grid(row=13, column=1, padx=(20,0), pady=(0, 20), columnspan=1, sticky="we")
+        self.edit_startup_exe.grid(row=12, column=1, padx=(20,0), pady=(0, 20), columnspan=1, sticky="we")
 
         self.edit_launch_args = ctk.CTkEntry(left_frame, placeholder_text="launch arguments")
-        self.edit_launch_args.grid(row=13, column=1, padx=(140,20), pady=(0, 20), columnspan=2, sticky="we")
+        self.edit_launch_args.grid(row=12, column=1, padx=(140,20), pady=(0, 20), columnspan=2, sticky="we")
 
         # Check for updates button n Launch game
         self.check_for_updates = ctk.CTkButton(right_frame, text="Check for updates", command=self.settings_check_for_updates)
