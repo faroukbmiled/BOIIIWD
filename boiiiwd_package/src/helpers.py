@@ -103,7 +103,7 @@ def if_internet_available(func=None, launching=False):
                 continue
         # Fallback: try HTTP request
         try:
-            requests.head("https://steamcommunity.com", timeout=3)
+            STEAM_SESSION.head("https://steamcommunity.com", timeout=3)
             return True
         except:
             pass
@@ -287,11 +287,12 @@ def convert_bytes_to_readable(size_in_bytes, no_symb=None):
         size_in_bytes /= 1024.0
 
 
-def get_workshop_file_size(workshop_id, raw=None):
+def get_workshop_file_size(workshop_id, raw=None, soup=None):
     print(f'[{get_current_datetime()}] [Logs] get_workshop_file_size invoked...')
-    url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}&searchtext="
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
+    if soup is None:
+        url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}&searchtext="
+        response = STEAM_SESSION.get(url, timeout=15)
+        soup = BeautifulSoup(response.text, "html.parser")
     file_size_element = soup.find("div", class_="detailsStatRight")
 
     if not file_size_element:
@@ -490,7 +491,7 @@ def get_update_time_from_html(workshop_id):
     url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
 
     try:
-        response = requests.get(url)
+        response = STEAM_SESSION.get(url, timeout=15)
         response.raise_for_status()
         content = response.text
 
@@ -582,7 +583,7 @@ def item_steam_api(id):
             "itemcount": 1,
             "publishedfileids[0]": int(id),
         }
-        info = requests.post(url, data=data)
+        info = STEAM_SESSION.post(url, data=data, timeout=15)
         return info.json()
 
     except Exception as e:
@@ -598,7 +599,7 @@ def get_item_dates(ids):
         for i, id in enumerate(ids):
             data[f"publishedfileids[{i}]"] = int(id)
 
-        info = requests.post(ITEM_INFO_API, data=data)
+        info = STEAM_SESSION.post(ITEM_INFO_API, data=data, timeout=15)
         response_data = info.json()
 
         if "response" in response_data:
@@ -612,6 +613,93 @@ def get_item_dates(ids):
     except Exception as e:
         print("Error: could not fetch all update times. Breaking early.")
         return {}
+
+
+def format_steam_date(ts):
+    dt = datetime.fromtimestamp(int(ts))
+    day = dt.strftime("%d").lstrip("0")
+    hour = dt.strftime("%I").lstrip("0") or "12"
+    return f"{day} {dt.strftime('%b')}, {dt.strftime('%Y')} @ {hour}:{dt.strftime('%M')}{dt.strftime('%p').lower()}"
+
+
+def get_workshop_item_info(workshop_id, need_stars=True):
+    print(f'[{get_current_datetime()}] [Logs] get_workshop_item_info invoked...')
+    info = {
+        "title": "Unknown",
+        "type": "Not specified",
+        "description": "Not available",
+        "date_created": "Unknown",
+        "date_updated": "Not updated",
+        "size": "N/A",
+        "preview_url": None,
+        "stars_url": None,
+        "ratings_text": "Not enough ratings",
+        "url": f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}",
+        "valid": False,
+    }
+    file_size_bytes = 0
+    try:
+        api = item_steam_api(workshop_id)
+        d = api["response"]["publishedfiledetails"][0]
+        if "consumer_app_id" in d:
+            info["valid"] = True
+        if d.get("title"):
+            info["title"] = d["title"]
+        tags = [t.get("tag", "") for t in d.get("tags", [])]
+        for preferred in ("Map", "Mod"):
+            if preferred in tags:
+                info["type"] = preferred
+                break
+        else:
+            if tags:
+                info["type"] = ", ".join(tags)
+        if d.get("description"):
+            info["description"] = d["description"]
+        created = d.get("time_created")
+        updated = d.get("time_updated")
+        if created:
+            info["date_created"] = format_steam_date(created)
+        if updated and created and int(updated) > int(created):
+            info["date_updated"] = format_steam_date(updated)
+        if d.get("preview_url"):
+            info["preview_url"] = d["preview_url"]
+        favorited = d.get("favorited")
+        subscriptions = d.get("subscriptions")
+        if subscriptions is not None or favorited is not None:
+            info["ratings_text"] = f"{subscriptions or 0:,} subs | {favorited or 0:,} favs"
+        try:
+            file_size_bytes = int(d.get("file_size") or 0)
+        except:
+            file_size_bytes = 0
+        if file_size_bytes > 0:
+            info["size"] = convert_bytes_to_readable(file_size_bytes)
+    except Exception as e:
+        print(f"[{get_current_datetime()}] [logs] api info failed: {e}")
+
+    if file_size_bytes <= 0 or need_stars:
+        try:
+            response = STEAM_SESSION.get(info["url"], timeout=15)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, "html.parser")
+            if file_size_bytes <= 0:
+                size = get_workshop_file_size(workshop_id, raw=True, soup=soup)
+                if size:
+                    info["size"] = size
+            if need_stars:
+                try:
+                    info["stars_url"] = soup.find("div", class_="fileRatingDetails").find("img")["src"]
+                except:
+                    pass
+                try:
+                    ratings = soup.find("div", class_="numRatings")
+                    if ratings and ratings.get_text(strip=True):
+                        info["ratings_text"] = ratings.get_text(strip=True)
+                except:
+                    pass
+        except Exception as e:
+            print(f"[{get_current_datetime()}] [logs] html fallback failed: {e}")
+
+    return info
 
 
 def isNullOrWhiteSpace(str):

@@ -20,6 +20,8 @@ import customtkinter as ctk
 import ujson as json
 import psutil
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import socket
 import winreg
 import ctypes
@@ -63,4 +65,38 @@ REGISTRY_KEY_PATH = r"Software\BOIIIWD"
 STEAMCMD_WARNING_COUNTER = 20  # how many times steamcmd fails before showing a non breaking warning
 SECONDS_UNTIL_FAIL_COUNTS = 15  # Minimum steamcmd runtime in seconds before a failed attempt counts as a fail (+1 to fail counter)
 FAIL_THRESHOLD_FALLBACK = 25
-VERSION = "v0.3.8.0"
+VERSION = "v0.3.8.1"
+
+BROWSER_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+}
+
+def _build_steam_session():
+    session = requests.Session()
+    session.headers.update(BROWSER_HEADERS)
+    retry = Retry(
+        total=3,
+        connect=3,
+        read=3,
+        backoff_factor=0.6,
+        backoff_max=6,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=frozenset(["GET", "POST", "HEAD"]),
+        respect_retry_after_header=False,
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=10)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+STEAM_SESSION = _build_steam_session()
