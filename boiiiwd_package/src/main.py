@@ -625,69 +625,31 @@ class BOIIIWD(ctk.CTk):
                 except:
                     show_message("Warning", "Please enter a valid Workshop ID/Link.")
                     return
-            if self.button_download._state == "normal":
-                self.after(1, lambda mid=workshop_id: self.label_file_size.configure(text=f"File size: {get_workshop_file_size(mid ,raw=True)}"))
-
             try:
-                headers = {'Cache-Control': 'no-cache'}
-                url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={workshop_id}"
-                response = requests.get(url, headers=headers)
-                response.raise_for_status()
-                content = response.text
-
-                soup = BeautifulSoup(content, "html.parser")
-
-                try:
-                    type_txt = soup.find("div", class_="rightDetailsBlock").text.strip()
-                    map_mod_type = type_txt if "File Size" not in type_txt else "Not specified"
-                    map_name = soup.find("div", class_="workshopItemTitle").text.strip()
-                    map_size = map_size = get_workshop_file_size(workshop_id, raw=True)
-                    details_stats_container = soup.find("div", class_="detailsStatsContainerRight")
-                    details_stat_elements = details_stats_container.find_all("div", class_="detailsStatRight")
-                    date_created = details_stat_elements[1].text.strip()
-                    try:
-                        ratings = soup.find('div', class_='numRatings')
-                        ratings_text = ratings.get_text()
-                    except:
-                        ratings = "Not found"
-                        ratings_text= "Not enough ratings"
-                    try:
-                        date_updated = details_stat_elements[2].text.strip()
-                    except:
-                        date_updated = "Not updated"
-                    try:
-                            description = soup.find('div', class_='workshopItemDescription').get_text(separator='\n')
-                    except:
-                        description = "Not available"
-
-                    stars_div = soup.find("div", class_="fileRatingDetails")
-                    starts = stars_div.find("img")["src"]
-                except:
+                info = get_workshop_item_info(workshop_id)
+                if not info["valid"]:
                     show_message("Warning", "Please enter a valid Workshop ID/Link\nCouldn't get information.")
                     return
 
+                if self.button_download._state == "normal":
+                    self.after(1, lambda s=info["size"]: self.label_file_size.configure(text=f"File size: {s}"))
+
                 try:
-                    preview_image_element = soup.find("img", id="previewImage")
-                    workshop_item_image_url = preview_image_element["src"]
+                    preview_resp = STEAM_SESSION.get(info["preview_url"], timeout=15) if info["preview_url"] else None
+                    image = Image.open(io.BytesIO(preview_resp.content)) if preview_resp else Image.open(os.path.join(RESOURCES_DIR, "default_library_img.png"))
                 except:
-                    try:
-                        preview_image_element = soup.find("img", id="previewImageMain")
-                        workshop_item_image_url = preview_image_element["src"]
-                    except Exception as e:
-                        show_message("Warning", f"Failed to get preview image ,probably wrong link/id if not please open an issue on github.\n{e}")
-                        return
-
-                starts_image_response = requests.get(starts)
-                stars_image = Image.open(io.BytesIO(starts_image_response.content))
-                stars_image_size = stars_image.size
-
-                image_response = requests.get(workshop_item_image_url)
-                image_response.raise_for_status()
-                image = Image.open(io.BytesIO(image_response.content))
+                    image = Image.open(os.path.join(RESOURCES_DIR, "default_library_img.png"))
                 image_size = image.size
 
-                self.toplevel_info_window(map_name, map_mod_type, map_size, image, image_size, date_created ,
-                                        date_updated, stars_image, stars_image_size, ratings_text, url, workshop_id, description)
+                try:
+                    stars_resp = STEAM_SESSION.get(info["stars_url"], timeout=15) if info["stars_url"] else None
+                    stars_image = Image.open(io.BytesIO(stars_resp.content)) if stars_resp else Image.open(os.path.join(RESOURCES_DIR, "ryuk.png"))
+                except:
+                    stars_image = Image.open(os.path.join(RESOURCES_DIR, "ryuk.png"))
+                stars_image_size = stars_image.size
+
+                self.toplevel_info_window(info["title"], info["type"], info["size"], image, image_size, info["date_created"],
+                                        info["date_updated"], stars_image, stars_image_size, info["ratings_text"], info["url"], workshop_id, info["description"])
 
             except requests.exceptions.RequestException as e:
                 show_message("Error", f"Failed to fetch map information.\nError: {e}", icon="cancel")
