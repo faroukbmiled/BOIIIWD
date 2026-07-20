@@ -11,7 +11,7 @@ def check_for_updates_func(window, ignore_up_todate=False):
         int_current_version = parse_version(current_version)
 
         if latest_version and int_latest_version > int_current_version:
-            msg_box = CTkMessagebox(master=main_app.app, title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}",
+            msg_box = CTkMessagebox(master=window, title="Update Available", message=f"An update is available! Install now?\n\nCurrent Version: {current_version}\nLatest Version: {latest_version}",
                                     option_1="View", option_2="No", option_3="Yes", fade_in_duration=int(1), sound=True,
                                     button_width=70, button_height=28)
 
@@ -30,13 +30,13 @@ def check_for_updates_func(window, ignore_up_todate=False):
         elif int_latest_version < int_current_version:
             if ignore_up_todate:
                 return
-            msg_box = CTkMessagebox(master=main_app.app, title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}",
+            msg_box = CTkMessagebox(master=window, title="Up to Date!", message=f"Unreleased version!\nCurrent Version: {current_version}\nLatest Version: {latest_version}",
                                     option_1="Ok", sound=True, button_width=80, button_height=28)
             result = msg_box.get()
         elif int_latest_version == int_current_version:
             if ignore_up_todate:
                 return
-            msg_box = CTkMessagebox(master=main_app.app, title="Up to Date!", message="No Updates Available!",
+            msg_box = CTkMessagebox(master=window, title="Up to Date!", message="No Updates Available!",
                                     option_1="Ok", sound=True, button_width=80, button_height=28)
             result = msg_box.get()
 
@@ -91,12 +91,23 @@ class UpdateWindow(ctk.CTkToplevel):
         self.update_url = update_url
         self.total_size = None
         self.up_cancelled = False
+        self._progress_determinate = True
+
+    def _set_progress_mode(self, determinate):
+        try:
+            if determinate:
+                self.progress_bar.stop()
+                self.progress_bar.configure(mode="determinate")
+                self.progress_bar.set(0)
+            else:
+                self.progress_bar.configure(mode="indeterminate")
+                self.progress_label.configure(text="")
+                self.progress_bar.start()
+        except: pass
 
     def update_progress_bar(self):
         try:
             update_dir = os.path.join(APPLICATION_PATH, UPDATER_FOLDER)
-            response = requests.get(LATEST_RELEASE_URL, stream=True)
-            response.raise_for_status()
             current_exe = sys.argv[0]
             program_name = os.path.basename(current_exe)
             # On Linux, use BOIIIWD without .exe extension
@@ -105,24 +116,28 @@ class UpdateWindow(ctk.CTkToplevel):
             if not os.path.exists(update_dir):
                 os.makedirs(update_dir)
 
-            self.progress_bar.set(0.0)
-            self.total_size = int(response.headers.get('content-length', 0))
-            self.label_size.configure(text=f"Size: {convert_bytes_to_readable(self.total_size)}")
+            self._progress_determinate = False
+            self.after(0, lambda: self._set_progress_mode(False))
+            self.after(1, lambda: self.label_download.configure(text="Preparing download..."))
             zip_path = os.path.join(update_dir, "latest_version.zip")
 
-            with open(zip_path, "wb") as file:
-                downloaded_size = 0
-                for chunk in response.iter_content(chunk_size=8192):
-                    if self.up_cancelled:
-                        break
-                    if chunk:
-                        file.write(chunk)
-                        downloaded_size += len(chunk)
-                        progress = int((downloaded_size / self.total_size) * 100)
+            browser_ua = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            if os.path.exists(zip_path):
+                os.remove(zip_path)
 
-                        self.after(1, lambda p=progress: self.label_download.configure(text=f"Downloading update..."))
-                        self.after(1, lambda v=progress / 100.0: self.progress_bar.set(v))
-                        self.after(1, lambda p=progress: self.progress_label.configure(text=f"{p}%"))
+            self.total_size = 0
+            try:
+                head = requests.head(LATEST_RELEASE_URL, headers={"User-Agent": browser_ua}, allow_redirects=True, timeout=15)
+                self.total_size = int(head.headers.get("content-length", 0))
+            except:
+                self.total_size = 0
+            if self.total_size:
+                self.after(1, lambda: self.label_size.configure(text=f"Size: {convert_bytes_to_readable(self.total_size)}"))
+
+            complete = self._download_requests(zip_path, browser_ua)
+
+            if not self.up_cancelled and not complete:
+                raise Exception("Download failed after multiple attempts")
 
             if not self.up_cancelled:
                 self.progress_bar.set(1.0)
@@ -139,7 +154,8 @@ class UpdateWindow(ctk.CTkToplevel):
                     elif response == "Ok":
                         script_path = create_update_script(current_exe, new_exe, update_dir, program_name)
                         # On Linux, run the bash script directly
-                        subprocess.Popen(['bash', script_path], start_new_session=True)
+                        clean_env = {k: v for k, v in os.environ.items() if not k.startswith("_PYI_") and k not in ("_MEIPASS2", "LD_LIBRARY_PATH")}
+                        subprocess.Popen(['bash', script_path], start_new_session=True, env=clean_env)
                         sys.exit(0)
                     else:
                         return
@@ -159,6 +175,83 @@ class UpdateWindow(ctk.CTkToplevel):
             self.progress_bar.set(0.0)
             self.label_download.configure(text="Update failed")
             show_message("Error", f"Error installing the update\n{e}", icon="cancel")
+
+    def _download_requests(self, dest, user_agent):
+        base_headers = {"User-Agent": user_agent, "Accept": "application/octet-stream,application/zip,*/*;q=0.8",
+                        "Accept-Language": "en-US,en;q=0.9", "Accept-Encoding": "identity"}
+        piece = 4 * 1024 * 1024
+
+        if not self.total_size:
+            try:
+                head = requests.head(LATEST_RELEASE_URL, headers=base_headers, allow_redirects=True, timeout=15)
+                self.total_size = int(head.headers.get("content-length", 0))
+                if self.total_size:
+                    self.after(1, lambda: self.label_size.configure(text=f"Size: {convert_bytes_to_readable(self.total_size)}"))
+            except:
+                self.total_size = 0
+
+        downloaded = os.path.getsize(dest) if os.path.exists(dest) else 0
+        session = requests.Session()
+        session.headers.update(base_headers)
+        try:
+            with open(dest, "ab" if downloaded else "wb") as file:
+                while (not self.total_size) or downloaded < self.total_size:
+                    if self.up_cancelled:
+                        return False
+                    end = downloaded + piece - 1
+                    if self.total_size:
+                        end = min(end, self.total_size - 1)
+                    range_headers = {"Range": f"bytes={downloaded}-{end}"}
+                    data = b""
+                    piece_ok = False
+                    for attempt in range(12):
+                        if self.up_cancelled:
+                            return False
+                        try:
+                            response = session.get(LATEST_RELEASE_URL, headers=range_headers, timeout=30)
+                            if response.status_code == 416:
+                                self.total_size = downloaded
+                                piece_ok = True
+                                break
+                            response.raise_for_status()
+                            data = response.content
+                            if not self.total_size:
+                                content_range = response.headers.get("Content-Range", "")
+                                if "/" in content_range:
+                                    try:
+                                        self.total_size = int(content_range.split("/")[-1])
+                                        self.after(1, lambda: self.label_size.configure(text=f"Size: {convert_bytes_to_readable(self.total_size)}"))
+                                    except:
+                                        pass
+                            file.write(data)
+                            file.flush()
+                            downloaded += len(data)
+                            piece_ok = True
+                            break
+                        except requests.exceptions.RequestException:
+                            try: session.close()
+                            except: pass
+                            session = requests.Session()
+                            session.headers.update(base_headers)
+                            pct = int((downloaded / self.total_size) * 100) if self.total_size else 0
+                            self.after(1, lambda p=pct: self.label_download.configure(text=f"Downloading update... ({p}%)"))
+                            time.sleep(min(0.4 * (attempt + 1), 3))
+                    if not piece_ok:
+                        return False
+                    if self.total_size:
+                        if not self._progress_determinate:
+                            self._progress_determinate = True
+                            self.after(0, lambda: self._set_progress_mode(True))
+                        progress = min(int((downloaded / self.total_size) * 100), 100)
+                        self.after(1, lambda: self.label_download.configure(text="Downloading update..."))
+                        self.after(1, lambda v=progress / 100.0: self.progress_bar.set(v))
+                        self.after(1, lambda p=progress: self.progress_label.configure(text=f"{p}%"))
+                    if not self.total_size and len(data) < piece:
+                        break
+        finally:
+            try: session.close()
+            except: pass
+        return (not self.total_size) or ((os.path.getsize(dest) if os.path.exists(dest) else 0) >= self.total_size)
 
     def start_update(self):
         self.thread = threading.Thread(target=self.update_progress_bar)

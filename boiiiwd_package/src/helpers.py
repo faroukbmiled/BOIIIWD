@@ -118,20 +118,29 @@ def get_latest_release_version():
 
 def create_update_script(current_exe, new_exe, updater_folder, program_name):
     """Create Linux update script."""
+    new_exe = os.path.abspath(new_exe)
+    dest_exe = os.path.abspath(os.path.join(updater_folder, os.pardir, program_name))
     script_content = f"""#!/bin/bash
-echo "Terminating BOIIIWD..."
-pkill -f "{program_name}" || true
+echo "Terminating {program_name}..."
+pkill -f "{program_name}" 2>/dev/null || true
 
-echo "Replacing BOIIIWD..."
-cd "{updater_folder}"
-mv -f "{new_exe}" "../{program_name}"
-chmod +x "../{program_name}"
+for i in $(seq 1 15); do
+    pgrep -f "{program_name}" >/dev/null 2>&1 || break
+    sleep 1
+done
 
-echo "Starting BOIIIWD..."
-cd ..
-./{program_name} &
+echo "Replacing {program_name}..."
+mv -f "{new_exe}" "{dest_exe}"
+chmod +x "{dest_exe}"
 
-echo "Exiting!"
+echo "Preparing to start..."
+sleep 3
+
+echo "Starting {program_name}..."
+unset _MEIPASS2 _PYI_ARCHIVE_FILE _PYI_APPLICATION_HOME_DIR _PYI_PARENT_PROCESS_LEVEL _PYI_SPLASH_IPC LD_LIBRARY_PATH
+cd "$(dirname "{dest_exe}")"
+"{dest_exe}" &
+
 exit 0
 """
     script_path = os.path.join(updater_folder, "boiiiwd_updater.sh")
