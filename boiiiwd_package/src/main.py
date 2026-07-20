@@ -197,11 +197,7 @@ class BOIIIWD(ctk.CTk):
         self.load_configs()
 
         if check_config("checkforupdates") == "on":
-            self.withdraw()
-            try: check_for_updates_func(self, ignore_up_todate=True)
-            except: pass
-            self.update()
-            self.deiconify()
+            self.after(1000, lambda: check_for_updates_func(self, ignore_up_todate=True))
 
         try:
             self.settings_tab.load_settings("clean_on_finish", "on")

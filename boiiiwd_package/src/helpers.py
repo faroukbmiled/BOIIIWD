@@ -62,23 +62,37 @@ def get_latest_release_version():
 
 
 def create_update_script(current_exe, new_exe, updater_folder, program_name):
-    script_content = f"""
-    @echo off
-    echo Terminating BOIIIWD.exe...
-    taskkill /im "{program_name}" /t /f
+    new_exe = os.path.abspath(new_exe)
+    dest_exe = os.path.abspath(os.path.join(updater_folder, os.pardir, program_name))
+    dest_dir = os.path.dirname(dest_exe)
+    script_content = f"""@echo off
+echo Terminating {program_name}...
+taskkill /im "{program_name}" /t /f >nul 2>&1
 
-    echo Replacing BOIIIWD.exe...
-    cd "{updater_folder}"
-    taskkill /im "{program_name}" /t /f
-    move /y "{new_exe}" "../"{program_name}""
+echo Waiting for {program_name} to close...
+:waitloop
+tasklist /fi "imagename eq {program_name}" | find /i "{program_name}" >nul 2>&1
+if not errorlevel 1 (
+    timeout /t 1 /nobreak >nul
+    goto waitloop
+)
 
-    echo Starting BOIIIWD.exe...
-    cd ..
-    start "" "{current_exe}"
+echo Replacing {program_name}...
+move /y "{new_exe}" "{dest_exe}" >nul
 
-    echo Exiting!
-    exit
-    """
+echo Preparing to start...
+timeout /t 3 /nobreak >nul
+
+echo Starting {program_name}...
+set "_MEIPASS2="
+set "_PYI_ARCHIVE_FILE="
+set "_PYI_APPLICATION_HOME_DIR="
+set "_PYI_PARENT_PROCESS_LEVEL="
+set "_PYI_SPLASH_IPC="
+start "" /D "{dest_dir}" "{dest_exe}"
+
+exit
+"""
 
     script_path = os.path.join(updater_folder, "boiiiwd_updater.bat")
     with open(script_path, "w", encoding='utf-8', errors="ignore") as script_file:
